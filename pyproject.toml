@@ -22,8 +22,11 @@ classifiers = [
 dev = [
     "homeassistant>=2024.1.0",
     "homeassistant-stubs",
+    "mdformat",
+    "mdformat-gfm",
     "mypy",
     "pre-commit",
+    "pymarkdownlnt",
     "ruff>=0.8.0",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
@@ -35,8 +38,11 @@ dev = [
 [dependency-groups]
 lint = [
     "homeassistant-stubs",
+    "mdformat",
+    "mdformat-gfm",
     "mypy",
     "pre-commit",
+    "pymarkdownlnt",
     "ruff>=0.8.0",
 ]
 pytest = [
@@ -281,3 +287,17 @@ max-complexity = 25
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.mdformat]
+wrap = 120
+number = true
+
+[tool.pymarkdown]
+plugins.md013.enabled = true
+plugins.md013.line_length = 120
+plugins.md024.enabled = true
+plugins.md024.siblings_only = true
+plugins.md033.enabled = false
+plugins.md041.enabled = false
+plugins.md050.enabled = true
+plugins.md050.strong_style = "asterisk"
