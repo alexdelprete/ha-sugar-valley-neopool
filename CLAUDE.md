@@ -325,8 +325,9 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 ruff format .
 ruff check . --fix
 
-# Markdown formatting
+# Markdown formatting and linting
 mdformat .
+pymarkdownlnt scan .
 
 # Type checking
 mypy custom_components/sugar_valley_neopool --ignore-missing-imports
@@ -341,6 +342,7 @@ Before committing:
 - [ ] Run `ruff check .` - no errors
 - [ ] Run `ruff format .` - code formatted
 - [ ] Run `mdformat .` - markdown formatted
+- [ ] Run `pymarkdownlnt scan .` - markdown linted
 - [ ] Run `mypy` - no type errors
 - [ ] Test with real device or MQTT simulator
 - [ ] Verify entities appear in Home Assistant
