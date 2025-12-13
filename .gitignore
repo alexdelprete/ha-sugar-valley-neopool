@@ -79,3 +79,4 @@ Thumbs.db
 # Project specific
 *.log
 .ruff_cache/
+settings.local.json
