@@ -56,7 +56,7 @@ ______________________________________________________________________
 
 ### Topic Pattern
 
-```
+```text
 %topic% = Device topic configured in Tasmota (default: "tasmota")
 ```
 
@@ -64,7 +64,7 @@ ______________________________________________________________________
 
 #### 1. Telemetry Topic (Sensor Data)
 
-```
+```text
 tele/%topic%/SENSOR
 ```
 
@@ -75,7 +75,7 @@ tele/%topic%/SENSOR
 
 #### 2. Command Topic
 
-```
+```text
 cmnd/%topic%/<command>
 ```
 
@@ -85,7 +85,7 @@ cmnd/%topic%/<command>
 
 #### 3. Status/Result Topic
 
-```
+```text
 stat/%topic%/RESULT
 ```
 
@@ -97,7 +97,7 @@ stat/%topic%/RESULT
 
 For a device with topic "poolcontroller":
 
-```
+```text
 tele/poolcontroller/SENSOR          # Sensor telemetry
 cmnd/poolcontroller/NPFiltration    # Filtration control command
 cmnd/poolcontroller/NPLight         # Light control command
@@ -512,7 +512,7 @@ Commands are sent to: `cmnd/%topic%/<command>`
 
 **Example:**
 
-```
+```text
 Topic: cmnd/poolcontroller/NPFiltration
 Payload: 1
 ```
@@ -541,7 +541,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPFiltration 0        # Turn off
 NPFiltration 1        # Turn on (last speed)
 NPFiltration 1 2      # Turn on at medium speed
@@ -575,7 +575,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPFiltrationmode 1    # Set to Auto mode
 NPFiltrationmode 3    # Set to Smart mode
 ```
@@ -596,7 +596,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPFiltrationspeed 2   # Set to medium speed
 ```
 
@@ -616,7 +616,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPBoost 0             # Disable boost
 NPBoost ON            # Enable boost (ignore redox)
 NPBoost REDOX         # Enable boost (respect redox limits)
@@ -641,7 +641,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPLight 0             # Turn off
 NPLight 1             # Turn on
 NPLight 2             # Toggle current state
@@ -664,7 +664,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPTime 0              # Sync to local time
 NPTime 1              # Sync to UTC
 NPTime 1673784000     # Set specific timestamp
@@ -682,7 +682,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPpHMin 7.0           # Set minimum pH to 7.0
 NPpHMin 6.8           # Set minimum pH to 6.8
 ```
@@ -699,7 +699,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPpHMax 7.4           # Set maximum pH to 7.4
 NPpHMax 7.6           # Set maximum pH to 7.6
 ```
@@ -716,7 +716,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPRedox 700           # Set redox target to 700 mV
 NPRedox 750           # Set redox target to 750 mV
 ```
@@ -736,7 +736,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPHydrolysis 75       # Set to 75% or 75 g/h
 NPHydrolysis 100      # Set to maximum
 NPHydrolysis 0        # Disable production
@@ -754,7 +754,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPChlorine 1.5        # Set chlorine target to 1.5 ppm
 NPChlorine 2.0        # Set chlorine target to 2.0 ppm
 ```
@@ -771,7 +771,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPIonization 5        # Set ionization to level 5
 NPIonization 0        # Disable ionization
 ```
@@ -790,7 +790,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPControl             # Display current configuration
 ```
 
@@ -811,7 +811,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPTelePeriod 0        # Report only on changes
 NPTelePeriod 60       # Report every 60 seconds
 NPTelePeriod 300      # Report every 5 minutes
@@ -829,7 +829,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPOnError 3           # Retry 3 times on error
 NPOnError 0           # No retries
 ```
@@ -849,7 +849,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPResult 0            # Use decimal format
 NPResult 1            # Use hexadecimal format
 ```
@@ -866,7 +866,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPPHRes 1             # pH with 1 decimal place (7.2)
 NPPHRes 2             # pH with 2 decimal places (7.25)
 ```
@@ -883,7 +883,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPCLRes 1             # Chlorine with 1 decimal place (1.5)
 NPCLRes 2             # Chlorine with 2 decimal places (1.52)
 ```
@@ -900,7 +900,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPIONRes 0            # Ionization as integer
 NPIONRes 1            # Ionization with 1 decimal place
 ```
@@ -920,7 +920,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPSetOption0 1        # Enable validation
 NPSetOption0 0        # Disable validation
 ```
@@ -940,7 +940,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPSetOption1 1        # Enable statistics
 NPSetOption1 0        # Disable statistics
 ```
@@ -970,7 +970,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPRead 0x0500         # Read single register at 0x0500
 NPRead 0x0500 5       # Read 5 consecutive registers starting at 0x0500
 ```
@@ -987,7 +987,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPReadL 0x0500        # Read 32-bit value at 0x0500
 NPReadL 0x0500 3      # Read 3 consecutive 32-bit values
 ```
@@ -1004,7 +1004,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPReadLSB 0x0500      # Read LSB of register at 0x0500
 ```
 
@@ -1020,7 +1020,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPReadMSB 0x0500      # Read MSB of register at 0x0500
 ```
 
@@ -1036,7 +1036,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPWrite 0x0500 1234   # Write 1234 to register 0x0500
 NPWrite 0x0500 100 200 300  # Write multiple values
 ```
@@ -1053,7 +1053,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPWriteL 0x0500 123456  # Write 32-bit value to 0x0500
 ```
 
@@ -1069,7 +1069,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPWriteLSB 0x0500 0xFF  # Write 0xFF to LSB of register
 ```
 
@@ -1085,7 +1085,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPWriteMSB 0x0500 0xFF  # Write 0xFF to MSB of register
 ```
 
@@ -1104,7 +1104,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPBit 0x0500 5        # Read bit 5 of register 0x0500
 NPBit 0x0500 5 1      # Set bit 5 to 1
 NPBit 0x0500 5 0      # Clear bit 5
@@ -1125,7 +1125,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPBitL 0x0500 20      # Read bit 20 of 32-bit register
 NPBitL 0x0500 20 1    # Set bit 20 to 1
 ```
@@ -1142,7 +1142,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPEscape              # Clear all error states
 ```
 
@@ -1156,11 +1156,12 @@ ______________________________________________________________________
 
 **Payload:** None
 
-**Description:** Applies pending register changes to active configuration without persisting to EEPROM. Changes will be lost on device reboot.
+**Description:** Applies pending register changes to active configuration without persisting to
+EEPROM. Changes will be lost on device reboot.
 
 **Examples:**
 
-```
+```text
 NPExec                # Apply changes (temporary)
 ```
 
@@ -1178,7 +1179,7 @@ ______________________________________________________________________
 
 **Examples:**
 
-```
+```text
 NPSave                # Save configuration permanently
 ```
 
@@ -1225,7 +1226,7 @@ ______________________________________________________________________
 
 **pH.State (Integer 0-6):**
 
-```
+```text
 0 = OK (no alarm)
 1 = pH high alarm (>setpoint + 0.8)
 2 = pH low alarm (<setpoint - 0.8)
@@ -1237,7 +1238,7 @@ ______________________________________________________________________
 
 **pH.Pump (Integer 0-2):**
 
-```
+```text
 0 = Inactive
 1 = Dosing (pump on)
 2 = Stopped (pump off)
@@ -1245,7 +1246,7 @@ ______________________________________________________________________
 
 **Hydrolysis.State (String):**
 
-```
+```text
 "OFF"   = Hydrolysis disabled
 "FLOW"  = Flow alarm (no water flow detected)
 "POL1"  = Polarity 1 active (normal operation)
@@ -1254,7 +1255,7 @@ ______________________________________________________________________
 
 **Hydrolysis.Boost (Integer 0-2):**
 
-```
+```text
 0 = Boost off
 1 = Boost on (independent mode)
 2 = Boost on (redox-controlled mode)
@@ -1262,7 +1263,7 @@ ______________________________________________________________________
 
 **Filtration.Speed (Integer 1-3):**
 
-```
+```text
 1 = Low speed
 2 = Medium speed
 3 = High speed
@@ -1270,7 +1271,7 @@ ______________________________________________________________________
 
 **Filtration.Mode (Integer):**
 
-```
+```text
 0  = Manual
 1  = Auto (timer-based)
 2  = Heating
@@ -1520,7 +1521,7 @@ Configure display precision for chemical readings:
 
 **NPPHRes (pH precision):**
 
-```
+```text
 NPPHRes 0  →  7
 NPPHRes 1  →  7.2
 NPPHRes 2  →  7.24
@@ -1529,7 +1530,7 @@ NPPHRes 3  →  7.245
 
 **NPCLRes (Chlorine precision):**
 
-```
+```text
 NPCLRes 0  →  1
 NPCLRes 1  →  1.5
 NPCLRes 2  →  1.52
@@ -1538,7 +1539,7 @@ NPCLRes 3  →  1.523
 
 **NPIONRes (Ionization precision):**
 
-```
+```text
 NPIONRes 0  →  5
 NPIONRes 1  →  5.0
 NPIONRes 2  →  5.00
@@ -1581,7 +1582,7 @@ Hydrolysis runtime provides maintenance insights:
 
 **Total Runtime:**
 
-```
+```text
 "Total": "120T15:30:45"
 ```
 
@@ -1607,21 +1608,21 @@ ______________________________________________________________________
 
 **Discovery:**
 
-```
+```text
 Topic prefix: homeassistant
 Device topic: poolcontroller (or custom name)
 ```
 
 **Telemetry:**
 
-```
+```text
 NPTelePeriod 0        # Report on changes only
 SetOption147 1        # Enable MQTT sensor discovery
 ```
 
 **Precision:**
 
-```
+```text
 NPPHRes 2             # pH: 7.25
 NPCLRes 2             # Chlorine: 1.52 ppm
 NPIONRes 1            # Ionization: 5.0
@@ -1629,7 +1630,7 @@ NPIONRes 1            # Ionization: 5.0
 
 **Options:**
 
-```
+```text
 NPSetOption0 1        # Enable data validation
 NPSetOption1 1        # Enable statistics (ESP32)
 SetOption157 0        # Hide NodeID (privacy)
@@ -1637,7 +1638,7 @@ SetOption157 0        # Hide NodeID (privacy)
 
 **Time Sync:**
 
-```
+```text
 Rule for daily sync:
 Rule1 ON Time#Minute=0 DO NPTime 0 ENDON
 Rule1 1
@@ -1709,14 +1710,14 @@ ______________________________________________________________________
 
 To receive all NeoPool data:
 
-```
+```text
 tele/+/SENSOR           # All devices, sensor data
 tele/poolcontroller/SENSOR  # Specific device
 ```
 
 To monitor command responses:
 
-```
+```text
 stat/+/RESULT           # All devices, command results
 stat/poolcontroller/RESULT  # Specific device
 ```
@@ -1727,7 +1728,7 @@ ______________________________________________________________________
 
 To send commands:
 
-```
+```text
 cmnd/poolcontroller/NPFiltration "1"
 cmnd/poolcontroller/NPpHMin "7.0"
 cmnd/poolcontroller/NPRedox "700"
@@ -1815,7 +1816,8 @@ ______________________________________________________________________
 
 ## Summary
 
-This document provides complete technical reference for integrating Tasmota NeoPool controllers with Home Assistant via MQTT. Key points:
+This document provides complete technical reference for integrating Tasmota NeoPool controllers with
+Home Assistant via MQTT. Key points:
 
 1. **MQTT Structure:** Clear separation of telemetry (`tele/`), commands (`cmnd/`), and status (`stat/`)
 1. **Rich Data:** Comprehensive sensor readings including pH, redox, chlorine, temperature, filtration, etc.
@@ -1837,5 +1839,5 @@ ______________________________________________________________________
 
 **Document Version:** 1.0
 **Last Updated:** 2025-01-15
-**Source:** https://tasmota.github.io/docs/NeoPool/
+**Source:** <https://tasmota.github.io/docs/NeoPool/>
 **License:** Documentation follows Tasmota project licensing

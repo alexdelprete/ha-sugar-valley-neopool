@@ -1,6 +1,6 @@
 # Complete Template Analysis: ha-sinapsi-alfa
 
-**Repository**: https://github.com/alexdelprete/ha-sinapsi-alfa
+**Repository**: <https://github.com/alexdelprete/ha-sinapsi-alfa>
 **Author**: Alessandro Del Prete (@alexdelprete)
 **Purpose**: Home Assistant custom integration for Sinapsi Alfa energy monitoring devices via Modbus TCP
 **License**: MIT
@@ -12,7 +12,7 @@ ______________________________________________________________________
 
 ## 1. COMPLETE FOLDER/FILE STRUCTURE
 
-```
+```text
 ha-sinapsi-alfa/
 ├── .github/
 │   ├── ISSUE_TEMPLATE/
@@ -84,11 +84,15 @@ ______________________________________________________________________
 **Steps**:
 
 1. Checkout repository with PAT or default token
+
 1. Update version in `manifest.json` using `yq`:
+
    ```yaml
    yq -i '.version="${{ github.event.release.tag_name }}"' custom_components/sinapsi_alfa/manifest.json
    ```
+
 1. Create ZIP archive from `custom_components/sinapsi_alfa/` directory
+
 1. Upload ZIP to release assets using `softprops/action-gh-release@v2.5.0`
 
 **Key Features**:
@@ -1027,7 +1031,9 @@ def unix_timestamp_to_iso8601_local_tz(unix_timestamp: int) -> str:
     local_dt = dt.astimezone()
     return local_dt.isoformat()
 
-def log_debug(logger: logging.Logger, context: str, message: str, **kwargs) -> None:
+def log_debug(
+    logger: logging.Logger, context: str, message: str, **kwargs
+) -> None:
     """Structured debug logging."""
     extra = " ".join(f"[{k}={v}]" for k, v in kwargs.items())
     logger.debug("(%s) %s %s", context, message, extra)
@@ -1037,7 +1043,9 @@ def log_info(logger: logging.Logger, context: str, message: str, **kwargs) -> No
     extra = " ".join(f"[{k}={v}]" for k, v in kwargs.items())
     logger.info("(%s) %s %s", context, message, extra)
 
-def log_warning(logger: logging.Logger, context: str, message: str, **kwargs) -> None:
+def log_warning(
+    logger: logging.Logger, context: str, message: str, **kwargs
+) -> None:
     """Structured warning logging."""
     extra = " ".join(f"[{k}={v}]" for k, v in kwargs.items())
     logger.warning("(%s) %s %s", context, message, extra)
@@ -1259,7 +1267,7 @@ updates:
 
 **.gitattributes**:
 
-```
+```text
 * text=auto eol=lf
 ```
 
@@ -1268,7 +1276,7 @@ updates:
 
 **.gitignore**:
 
-```
+```text
 # artifacts
 __pycache__
 .pytest*
@@ -1295,7 +1303,7 @@ ______________________________________________________________________
 
 ### 9.1 Directory Structure
 
-```
+```text
 custom_components/sinapsi_alfa/
 ├── translations/
 │   ├── en.json          # English (required)
@@ -1864,7 +1872,7 @@ ______________________________________________________________________
 
 **Absolute Minimum Files**:
 
-```
+```text
 custom_components/{domain}/
 ├── __init__.py          # Setup and unload
 ├── manifest.json        # Integration metadata
@@ -1873,7 +1881,7 @@ custom_components/{domain}/
 
 **Production-Ready Minimum**:
 
-```
+```text
 custom_components/{domain}/
 ├── translations/
 │   └── en.json         # English translations
@@ -1889,7 +1897,7 @@ custom_components/{domain}/
 
 ### A.2 Repository Root Essentials
 
-```
+```text
 repository/
 ├── .github/
 │   ├── workflows/
@@ -1977,7 +1985,8 @@ ______________________________________________________________________
 
 ## SUMMARY
 
-The **ha-sinapsi-alfa** repository represents a **Gold-tier quality** Home Assistant custom integration with strong Platinum-tier elements. It demonstrates:
+The **ha-sinapsi-alfa** repository represents a **Gold-tier quality** Home Assistant custom
+integration with strong Platinum-tier elements. It demonstrates:
 
 1. **Professional Project Structure**: Complete CI/CD, documentation, and quality tooling
 1. **Modern HA Patterns**: runtime_data, coordinator pattern, config flow, proper error handling

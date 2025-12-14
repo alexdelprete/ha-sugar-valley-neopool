@@ -2,7 +2,8 @@
 
 ## Overview
 
-This guide provides technical details for implementing a Home Assistant custom integration for Tasmota NeoPool pool controllers via MQTT.
+This guide provides technical details for implementing a Home Assistant custom integration for
+Tasmota NeoPool pool controllers via MQTT.
 
 ______________________________________________________________________
 
@@ -207,7 +208,8 @@ ______________________________________________________________________
     "state_topic": "tele/{topic}/SENSOR",
     "value_template": """
         {% set speeds = {1: 'Low', 2: 'Medium', 3: 'High'} %}
-        {{ speeds[value_json.NeoPool.Filtration.Speed | int] | default('Unknown') }}
+        {{ speeds[value_json.NeoPool.Filtration.Speed | int] |
+           default('Unknown') }}
     """,
     "icon": "mdi:speedometer"
 }
@@ -637,7 +639,8 @@ ______________________________________________________________________
     "name": "Filtration",
     "unique_id": "neopool_{device_id}_filtration_switch",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ 'ON' if value_json.NeoPool.Filtration.State == 1 else 'OFF' }}",
+    "value_template":
+        "{{ 'ON' if value_json.NeoPool.Filtration.State == 1 else 'OFF' }}",
     "command_topic": "cmnd/{topic}/NPFiltration",
     "payload_on": "1",
     "payload_off": "0",
@@ -668,7 +671,8 @@ ______________________________________________________________________
     "name": "Relay 1",
     "unique_id": "neopool_{device_id}_relay_1",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ 'ON' if value_json.NeoPool.Relay.State[0] == 1 else 'OFF' }}",
+    "value_template":
+        "{{ 'ON' if value_json.NeoPool.Relay.State[0] == 1 else 'OFF' }}",
     "command_topic": "cmnd/{topic}/NPWrite",
     "payload_on": "0x0408 1",  # Example register address
     "payload_off": "0x0408 0",
@@ -686,7 +690,8 @@ ______________________________________________________________________
     "name": "Heating",
     "unique_id": "neopool_{device_id}_relay_heating",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ 'ON' if value_json.NeoPool.Relay.Heating == 1 else 'OFF' }}",
+    "value_template":
+        "{{ 'ON' if value_json.NeoPool.Relay.Heating == 1 else 'OFF' }}",
     "icon": "mdi:radiator"
 }
 
@@ -1121,7 +1126,7 @@ ______________________________________________________________________
 
 ## Recommended Project Structure
 
-```
+```text
 custom_components/neopool_mqtt/
 ├── __init__.py              # Integration setup
 ├── config_flow.py           # Configuration UI

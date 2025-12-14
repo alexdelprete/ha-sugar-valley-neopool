@@ -1,6 +1,8 @@
 # Home Assistant MQTT Integration API Guide
 
-This document provides a comprehensive guide to using the official Home Assistant MQTT integration as a dependency in custom integrations. It is based on the analysis of the Home Assistant Core MQTT component at `homeassistant/components/mqtt/`.
+This document provides a comprehensive guide to using the official Home Assistant MQTT integration
+as a dependency in custom integrations. It is based on the analysis of the Home Assistant Core MQTT
+component at `homeassistant/components/mqtt/`.
 
 ## Table of Contents
 
@@ -19,7 +21,9 @@ ______________________________________________________________________
 
 ## Overview
 
-The Home Assistant MQTT integration provides a comprehensive framework for MQTT-based integrations. Instead of managing MQTT connections directly, custom integrations should use the official MQTT integration as a dependency.
+The Home Assistant MQTT integration provides a comprehensive framework for MQTT-based
+integrations. Instead of managing MQTT connections directly, custom integrations should use the
+official MQTT integration as a dependency.
 
 ### Key Benefits
 
@@ -249,7 +253,8 @@ The callback receives a `ReceiveMessage` object with the following attributes:
 @dataclass(frozen=True, slots=True)
 class ReceiveMessage:
     topic: str                    # Topic the message was received on
-    payload: str | bytes          # Message payload (str if encoding specified, bytes otherwise)
+    payload: str | bytes          # Message payload (str if encoding specified,
+                                  # bytes otherwise)
     qos: int                      # Quality of Service level
     retain: bool                  # Whether message was retained
     subscribed_topic: str         # Original subscription topic (if wildcards used)
@@ -858,7 +863,7 @@ MQTT Discovery enables automatic entity creation without manual configuration.
 
 The standard discovery topic pattern is:
 
-```
+```text
 <discovery_prefix>/<component>/<node_id>/<object_id>/config
 ```
 
@@ -869,7 +874,7 @@ The standard discovery topic pattern is:
 
 ### Discovery Topic Examples
 
-```
+```text
 homeassistant/sensor/pool/temperature/config
 homeassistant/binary_sensor/pool/filtration/config
 homeassistant/switch/pool/pump/config
@@ -1705,10 +1710,11 @@ This guide covers the essential APIs and patterns for integrating with the Home 
 1. **Discovery**: Use standard discovery topics and payloads for auto-configuration
 1. **Best Practices**: Validate topics, clean up subscriptions, use unique IDs
 
-By following these patterns, custom integrations can properly leverage the HA MQTT integration for reliable, maintainable MQTT communication.
+By following these patterns, custom integrations can properly leverage the HA MQTT integration for
+reliable, maintainable MQTT communication.
 
 ## References
 
-- Home Assistant MQTT Integration: https://github.com/home-assistant/core/tree/dev/homeassistant/components/mqtt
-- MQTT Documentation: https://www.home-assistant.io/integrations/mqtt/
-- MQTT Discovery: https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery
+- Home Assistant MQTT Integration: <https://github.com/home-assistant/core/tree/dev/homeassistant/components/mqtt>
+- MQTT Documentation: <https://www.home-assistant.io/integrations/mqtt/>
+- MQTT Discovery: <https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery>

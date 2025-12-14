@@ -158,7 +158,7 @@ ______________________________________________________________________
 
 ### MQTT Topics
 
-```
+```text
 tele/%topic%/SENSOR         # Telemetry (sensor data)
 cmnd/%topic%/<command>      # Commands
 stat/%topic%/RESULT         # Command responses
@@ -277,7 +277,7 @@ ______________________________________________________________________
 
 ### Tasmota Device Settings
 
-```
+```text
 NPTelePeriod 0           # Report only on changes
 NPSetOption0 1           # Enable data validation
 NPSetOption1 1           # Enable statistics (ESP32)
@@ -429,7 +429,7 @@ ______________________________________________________________________
 
 Documentation follows Tasmota project licensing.
 
-Source: https://tasmota.github.io/docs/NeoPool/
+Source: <https://tasmota.github.io/docs/NeoPool/>
 
 ______________________________________________________________________
 
@@ -437,9 +437,9 @@ ______________________________________________________________________
 
 ### Official Links
 
-- **Tasmota NeoPool Documentation:** https://tasmota.github.io/docs/NeoPool/
-- **Tasmota GitHub:** https://github.com/arendst/Tasmota
-- **Home Assistant MQTT Documentation:** https://www.home-assistant.io/integrations/mqtt/
+- **Tasmota NeoPool Documentation:** <https://tasmota.github.io/docs/NeoPool/>
+- **Tasmota GitHub:** <https://github.com/arendst/Tasmota>
+- **Home Assistant MQTT Documentation:** <https://www.home-assistant.io/integrations/mqtt/>
 
 ### Related Projects
 

@@ -4,7 +4,7 @@
 
 ### Topic Structure
 
-```
+```text
 tele/%topic%/SENSOR         # Telemetry data (periodic or on change)
 cmnd/%topic%/<command>      # Send commands
 stat/%topic%/RESULT         # Command responses
@@ -257,7 +257,8 @@ mqtt:
   switch:
     - name: "Pool Filtration"
       state_topic: "tele/poolcontroller/SENSOR"
-      value_template: "{{ 'ON' if value_json.NeoPool.Filtration.State == 1 else 'OFF' }}"
+      value_template:
+        "{{ 'ON' if value_json.NeoPool.Filtration.State == 1 else 'OFF' }}"
       command_topic: "cmnd/poolcontroller/NPFiltration"
       payload_on: "1"
       payload_off: "0"

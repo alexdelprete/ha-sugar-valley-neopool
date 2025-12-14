@@ -8,9 +8,10 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.components.mqtt import ReceiveMessage, valid_subscribe_topic
+from homeassistant.components.mqtt import valid_subscribe_topic
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import CONF_DEVICE_NAME, CONF_DISCOVERY_PREFIX, DEFAULT_DEVICE_NAME, DOMAIN
 
@@ -24,7 +25,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
+class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for NeoPool MQTT."""
 
     VERSION = 1
@@ -69,7 +70,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
             description_placeholders={"docs_url": "https://tasmota.github.io/docs/NeoPool/"},
         )
 
-    async def async_step_mqtt(self, discovery_info: ReceiveMessage) -> ConfigFlowResult:
+    async def async_step_mqtt(self, discovery_info: MqttServiceInfo) -> ConfigFlowResult:
         """Handle MQTT discovery.
 
         This is triggered when a device publishes to a topic matching
@@ -109,12 +110,17 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     ) -> ConfigFlowResult:
         """Confirm MQTT discovery."""
         if user_input is not None:
-            device_name = user_input.get(CONF_DEVICE_NAME, self._device_name)
+            device_name = (
+                user_input.get(CONF_DEVICE_NAME, self._device_name)
+                or self._device_name
+                or DEFAULT_DEVICE_NAME
+            )
+            discovery_prefix = self._discovery_prefix or ""
             return self.async_create_entry(
                 title=device_name,
                 data={
                     CONF_DEVICE_NAME: device_name,
-                    CONF_DISCOVERY_PREFIX: self._discovery_prefix,
+                    CONF_DISCOVERY_PREFIX: discovery_prefix,
                 },
             )
 
@@ -126,6 +132,6 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
                 }
             ),
             description_placeholders={
-                "device": self._discovery_prefix,
+                "device": self._discovery_prefix or "",
             },
         )
