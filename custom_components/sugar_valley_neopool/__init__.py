@@ -6,7 +6,9 @@ from dataclasses import dataclass, field
 import logging
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
 from .const import (
@@ -41,6 +43,12 @@ type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
 async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> bool:
     """Set up NeoPool MQTT from a config entry."""
     _LOGGER.debug("Setting up NeoPool MQTT integration")
+
+    # Wait for MQTT to be available
+    if not await mqtt.async_wait_for_mqtt_client(hass):
+        raise ConfigEntryNotReady("MQTT integration is not available")
+
+    _LOGGER.debug("MQTT client is available")
 
     device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
     mqtt_topic = entry.data.get(CONF_DISCOVERY_PREFIX, "")

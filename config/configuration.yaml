@@ -1,0 +1,23 @@
+# Home Assistant configuration for local development
+# This config is used when running HA in devcontainer
+
+default_config:
+
+logger:
+  default: info
+  logs:
+    custom_components.sugar_valley_neopool: debug
+    homeassistant.components.mqtt: debug
+
+# MQTT broker configuration
+# Create config/secrets.yaml (gitignored) with:
+#   mqtt_broker: "your-broker-ip"
+#   mqtt_username: "your-username"
+#   mqtt_password: "your-password"
+mqtt:
+  broker: !secret mqtt_broker
+  port: 1883
+  username: !secret mqtt_username
+  password: !secret mqtt_password
+
+debugpy:

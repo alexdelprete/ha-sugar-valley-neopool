@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+# Install the package with all dev dependencies
+python3 -m pip install --upgrade pip
+python3 -m pip install -e ".[dev]"

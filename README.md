@@ -91,6 +91,18 @@ NPTelePeriod 60
 NPResult 2
 ```
 
+## Removal
+
+To remove this integration from Home Assistant:
+
+1. Go to **Settings** → **Devices & Services**
+1. Find the "Sugar Valley NeoPool" integration
+1. Click the three dots menu (⋮) next to it
+1. Select **Delete**
+1. Confirm the deletion
+
+This will remove the integration, all associated devices, and entities from Home Assistant. Your Tasmota device and MQTT broker configuration will remain unchanged.
+
 ## Troubleshooting
 
 ### Enable Debug Logging

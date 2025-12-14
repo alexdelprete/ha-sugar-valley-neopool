@@ -47,9 +47,7 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow-test-coverage
   # 100% test coverage for config flows. Test all flow types: user, discovery,
   # import, reconfigure, reauth, and options flows.
-  config-flow-test-coverage:
-    status: todo
-    comment: Need to create tests directory and config flow tests.
+  config-flow-test-coverage: done  # tests/test_config_flow.py covers user and mqtt flows
 
   # Rule: Dependency transparency
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dependency-transparency
@@ -78,9 +76,7 @@ rules:
   # Rule: The documentation provides removal instructions
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-removal-instructions
   # Include clear, step-by-step guidance for users to remove the integration.
-  docs-removal-instructions:
-    status: exempt
-    comment: Standard Home Assistant integration removal process.
+  docs-removal-instructions: done  # Removal section in README.md
 
   # Rule: Entity events are subscribed in the correct lifecycle methods
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-event-setup
@@ -116,9 +112,7 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-setup
   # Use ConfigEntryNotReady for temporary failures, ConfigEntryAuthFailed for
   # auth issues, ConfigEntryError for permanent failures.
-  test-before-setup:
-    status: exempt
-    comment: MQTT subscriptions are fire-and-forget, no connection test needed.
+  test-before-setup: done  # Checks MQTT availability with mqtt.async_wait_for_mqtt_client()
 
   # Rule: Don't allow the same device or service to be set up twice
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/unique-config-entry
