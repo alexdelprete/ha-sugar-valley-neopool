@@ -31,7 +31,7 @@ A Home Assistant custom integration for **Sugar Valley NeoPool** pool controller
 
 ### Data Flow
 
-```
+```text
 NeoPool Controller (RS485/Modbus)
          ↓
 Tasmota Device (ESP8266/ESP32)
@@ -56,7 +56,7 @@ Home Assistant Entities
 
 ### File Structure
 
-```
+```text
 custom_components/sugar_valley_neopool/
 ├── __init__.py          # Integration setup, device registry
 ├── config_flow.py       # UI configuration + MQTT discovery
@@ -366,7 +366,7 @@ This integration tracks [Home Assistant Quality Scale](https://developers.home-a
 
 | Tier     | Done | Todo | Exempt |
 | -------- | ---- | ---- | ------ |
-| Bronze   | 12   | 1    | 5      |
+| Bronze   | 13   | 1    | 4      |
 | Silver   | 3    | 4    | 3      |
 | Gold     | 5    | 13   | 2      |
 | Platinum | 1    | 0    | 2      |

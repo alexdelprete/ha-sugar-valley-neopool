@@ -29,9 +29,7 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/brands
   # Integrations must provide branding assets in the HA brands repository for
   # consistent recognition and visual identity.
-  brands:
-    status: exempt
-    comment: Custom integration uses local icons, not HA brands repository.
+  brands: done  # Icons in icons/hayward, PR submitted to homeassistant/brands repo
 
   # Rule: Place common patterns in common modules
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/common-modules
