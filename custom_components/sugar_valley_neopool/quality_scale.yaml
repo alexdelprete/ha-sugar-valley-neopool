@@ -1,0 +1,192 @@
+# Home Assistant Integration Quality Scale
+# https://developers.home-assistant.io/docs/core/integration-quality-scale/
+#
+# This is a HACS custom integration, not a core integration.
+# We track these rules for quality improvement purposes.
+
+rules:
+  # ============================================================================
+  # BRONZE TIER (18 rules) - Baseline for new integrations
+  # ============================================================================
+
+  action-setup:
+    status: exempt
+    comment: Integration does not define any service actions.
+
+  appropriate-polling:
+    status: exempt
+    comment: Integration uses MQTT push (local_push), no polling required.
+
+  brands:
+    status: exempt
+    comment: Custom integration uses local icons, not HA brands repository.
+
+  common-modules: done  # helpers.py, entity.py
+
+  config-flow: done  # UI setup via config_flow.py
+
+  config-flow-test-coverage:
+    status: todo
+    comment: Need to create tests directory and config flow tests.
+
+  dependency-transparency: done  # Uses HA mqtt component
+
+  docs-actions:
+    status: exempt
+    comment: Integration does not define any service actions.
+
+  docs-high-level-description: done  # README.md
+
+  docs-installation-instructions: done  # README.md with HACS instructions
+
+  docs-removal-instructions:
+    status: exempt
+    comment: Standard Home Assistant integration removal process.
+
+  entity-event-setup: done  # MQTT callbacks in async_added_to_hass
+
+  entity-unique-id: done  # All entities have unique IDs
+
+  has-entity-name: done  # _attr_has_entity_name = True in base entity
+
+  runtime-data: done  # Uses entry.runtime_data pattern
+
+  test-before-configure: done  # Validates MQTT topic format
+
+  test-before-setup:
+    status: exempt
+    comment: MQTT subscriptions are fire-and-forget, no connection test needed.
+
+  unique-config-entry: done  # Checks unique_id in config flow
+
+  # ============================================================================
+  # SILVER TIER (10 rules) - Enhanced reliability
+  # ============================================================================
+
+  action-exceptions:
+    status: exempt
+    comment: Integration does not define any service actions.
+
+  config-entry-unloading: done  # async_unload_entry implemented
+
+  docs-configuration-parameters:
+    status: todo
+    comment: Document configuration options in README.
+
+  docs-installation-parameters:
+    status: todo
+    comment: Document installation parameters in README.
+
+  entity-unavailable: done  # LWT topic subscription for availability
+
+  integration-owner: done  # @alexdelprete in manifest.json
+
+  log-when-unavailable:
+    status: todo
+    comment: Improve logging for availability state changes.
+
+  parallel-updates:
+    status: todo
+    comment: Need to specify PARALLEL_UPDATES constant.
+
+  reauthentication-flow:
+    status: exempt
+    comment: Integration does not require authentication.
+
+  test-coverage:
+    status: todo
+    comment: Need to create test suite with >95% coverage.
+
+  # ============================================================================
+  # GOLD TIER (20 rules) - Best user experience
+  # ============================================================================
+
+  devices: done  # Creates devices in device registry
+
+  diagnostics:
+    status: todo
+    comment: Implement diagnostics.py for debug information.
+
+  discovery: done  # MQTT discovery via manifest.json mqtt key
+
+  discovery-update-info:
+    status: todo
+    comment: Update device info on discovery updates.
+
+  docs-data-update:
+    status: todo
+    comment: Document how data is updated (MQTT push).
+
+  docs-examples:
+    status: todo
+    comment: Add example configurations and automations.
+
+  docs-known-limitations:
+    status: todo
+    comment: Document known limitations.
+
+  docs-supported-devices:
+    status: todo
+    comment: Document supported NeoPool controller models.
+
+  docs-supported-functions:
+    status: todo
+    comment: Document supported functions and entities.
+
+  docs-troubleshooting:
+    status: todo
+    comment: Add troubleshooting section to documentation.
+
+  docs-use-cases:
+    status: todo
+    comment: Document use cases and automation examples.
+
+  dynamic-devices:
+    status: exempt
+    comment: Single device per config entry, no dynamic device addition.
+
+  entity-category: done  # Uses EntityCategory where appropriate
+
+  entity-device-class: done  # Uses device classes for sensors
+
+  entity-disabled-by-default:
+    status: todo
+    comment: Consider disabling diagnostic sensors by default.
+
+  entity-translations:
+    status: todo
+    comment: Add entity name translations.
+
+  exception-translations:
+    status: todo
+    comment: Add exception message translations.
+
+  icon-translations:
+    status: todo
+    comment: Add icon translations.
+
+  reconfiguration-flow:
+    status: todo
+    comment: Implement options flow for reconfiguration.
+
+  repair-issues:
+    status: todo
+    comment: Implement repair issues for common problems.
+
+  stale-devices:
+    status: exempt
+    comment: Single device per config entry, removed with integration.
+
+  # ============================================================================
+  # PLATINUM TIER (3 rules) - Highest quality
+  # ============================================================================
+
+  async-dependency:
+    status: exempt
+    comment: Uses HA mqtt component which is async.
+
+  inject-websession:
+    status: exempt
+    comment: No HTTP requests, uses MQTT only.
+
+  strict-typing: done  # Full type annotations with mypy validation

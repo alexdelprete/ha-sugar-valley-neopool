@@ -349,6 +349,36 @@ Before committing:
 - [ ] Test commands actually control the device
 - [ ] Check availability updates correctly
 
+## Quality Scale Tracking (MUST DO)
+
+This integration tracks [Home Assistant Quality Scale](https://developers.home-assistant.io/docs/core/integration-quality-scale/) rules in `quality_scale.yaml`.
+
+**When implementing new features or fixing bugs:**
+
+1. Check if the change affects any quality scale rules
+1. Update `quality_scale.yaml` status accordingly:
+   - `done` - Rule is fully implemented
+   - `todo` - Rule needs implementation
+   - `exempt` with `comment` - Rule doesn't apply (explain why)
+1. Aim to complete all Bronze tier rules first, then Silver, Gold, Platinum
+
+**Current Status Summary:**
+
+| Tier     | Done | Todo | Exempt |
+| -------- | ---- | ---- | ------ |
+| Bronze   | 12   | 1    | 5      |
+| Silver   | 3    | 4    | 3      |
+| Gold     | 5    | 13   | 2      |
+| Platinum | 1    | 0    | 2      |
+
+**Priority Todo Items:**
+
+- `config-flow-test-coverage` - Create test suite
+- `test-coverage` - >95% test coverage
+- `diagnostics` - Implement diagnostics.py
+- `parallel-updates` - Specify PARALLEL_UPDATES
+- `reconfiguration-flow` - Add options flow
+
 ## Reference Documentation
 
 - [Tasmota NeoPool Documentation](https://tasmota.github.io/docs/NeoPool/)
