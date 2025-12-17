@@ -20,6 +20,7 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity import EntityCategory
 
 from .const import (
     FILTRATION_MODE_MAP,
@@ -266,6 +267,16 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path="NeoPool.Connection.MBNoResponse",
         value_fn=safe_int,
+        entity_registry_enabled_default=False,
+    ),
+    # Diagnostic sensors
+    NeoPoolSensorEntityDescription(
+        key="powerunit_nodeid",
+        translation_key="powerunit_nodeid",
+        name="Powerunit NodeID",
+        icon="mdi:identifier",
+        json_path="NeoPool.Powerunit.NodeID",
+        entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
     ),
 )

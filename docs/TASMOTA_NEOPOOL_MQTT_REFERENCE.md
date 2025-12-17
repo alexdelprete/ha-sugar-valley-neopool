@@ -231,7 +231,7 @@ System voltage and version information:
 ```json
 "Powerunit": {
   "Version": "V1.2.3",    // Firmware version string
-  "NodeID": "hidden",     // Hidden by default (SetOption157)
+  "NodeID": "ABC123",     // Hardware NodeID (SetOption157 1 required)
   "5V": 5.1,              // 5V rail voltage (float)
   "12V": 12.3,            // 12V rail voltage (float)
   "24-30V": 24.8,         // 24-30V rail voltage (float)
@@ -1633,7 +1633,7 @@ NPIONRes 1            # Ionization: 5.0
 ```text
 NPSetOption0 1        # Enable data validation
 NPSetOption1 1        # Enable statistics (ESP32)
-SetOption157 0        # Hide NodeID (privacy)
+SetOption157 1        # Show NodeID (REQUIRED - auto-configured by integration)
 ```
 
 **Time Sync:**

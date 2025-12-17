@@ -284,7 +284,7 @@ NPSetOption1 1           # Enable statistics (ESP32)
 NPPHRes 2                # pH with 2 decimal places
 NPCLRes 2                # Chlorine with 2 decimal places
 SetOption147 1           # MQTT sensor discovery
-SetOption157 0           # Hide NodeID for privacy
+SetOption157 1           # Show NodeID (auto-configured by integration)
 ```
 
 ### Home Assistant

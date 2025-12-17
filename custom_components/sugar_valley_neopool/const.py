@@ -25,6 +25,8 @@ PLATFORMS: Final[list[Platform]] = [
 # Configuration keys
 CONF_DISCOVERY_PREFIX: Final = "discovery_prefix"
 CONF_DEVICE_NAME: Final = "device_name"
+CONF_NODEID: Final = "nodeid"
+CONF_MIGRATE_YAML: Final = "migrate_yaml"
 
 # Default values
 DEFAULT_DEVICE_NAME: Final = "NeoPool"

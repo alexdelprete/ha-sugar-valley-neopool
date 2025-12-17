@@ -29,7 +29,9 @@ class NeoPoolEntity(Entity):
         """Initialize the entity."""
         self._config_entry = config_entry
         self._entity_key = entity_key
-        self._attr_unique_id = f"{config_entry.entry_id}_{entity_key}"
+        # NodeID-based pattern: neopool_mqtt_{nodeid}_{entity_key}
+        nodeid = config_entry.runtime_data.nodeid
+        self._attr_unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
         self._attr_device_info = get_device_info(config_entry)
         self._attr_available = False
 

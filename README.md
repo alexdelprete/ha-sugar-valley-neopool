@@ -56,6 +56,61 @@ This integration provides comprehensive monitoring and control of your NeoPool s
 1. Extract and copy `custom_components/sugar_valley_neopool` to your `config/custom_components/` directory
 1. Restart Home Assistant
 
+### Migration from YAML Package
+
+If you're currently using the YAML package ([`ha_neopool_mqtt_package.yaml`](docs/ha_neopool_mqtt_package.yaml)):
+
+1. **Keep your YAML configuration** - Don't remove it yet
+1. Install this custom integration through HACS or manually (see above)
+1. Add the integration in Home Assistant:
+   - Go to **Settings** → **Devices & Services** → **Add Integration**
+   - Search for "Sugar Valley NeoPool"
+   - When prompted, check the box **"Migrating from YAML package"**
+   - Enter your YAML MQTT topic (default: `SmartPool`)
+     - If you customized the topic in your YAML package, enter your custom topic
+   - The integration will automatically:
+     - Validate the MQTT topic by checking for NeoPool messages
+     - Configure Tasmota with `SetOption157 1` to expose NodeID
+     - Migrate all existing entities to NodeID-based unique IDs
+     - Preserve all historical data (graphs, statistics, history)
+     - Associate entities with the new config entry
+1. **Verify migration**:
+   - All your entities should appear in the new integration
+   - Check that historical data is intact (graphs should show continuous data)
+   - Test that controls (switches, selects, numbers) work correctly
+1. After confirming everything works, remove the YAML package from your `configuration.yaml`
+
+**No manual steps required** - the integration handles everything automatically, including Tasmota configuration!
+
+#### Why NodeID?
+
+The integration now uses the hardware NodeID from your NeoPool controller to create stable unique identifiers:
+
+- **Pattern**: `neopool_mqtt_{nodeid}_{entity_key}`
+- **Example**: `neopool_mqtt_ABC123_water_temperature`
+- **Benefits**:
+  - Stable IDs that survive MQTT topic changes
+  - Support for multiple NeoPool controllers without conflicts
+  - Hardware-based identification instead of software configuration
+
+#### Troubleshooting Migration
+
+**Problem**: "Cannot read from this MQTT topic"
+
+- **Solution**: Verify your Tasmota device is online and publishing to the topic you entered
+- Check the topic name matches exactly (case-sensitive)
+- Verify MQTT broker is working: look for `tele/{topic}/SENSOR` messages
+
+**Problem**: "Failed to configure NodeID"
+
+- **Solution**: Manually set `SetOption157 1` in Tasmota console, then retry setup
+- Some Tasmota versions may require this to be set manually
+
+**Problem**: Entities appear duplicated after migration
+
+- **Solution**: Remove the old YAML package configuration from `configuration.yaml` and restart Home Assistant
+- The old YAML entities will be automatically migrated to the new integration
+
 ## Configuration
 
 1. Go to **Settings** → **Devices & Services**

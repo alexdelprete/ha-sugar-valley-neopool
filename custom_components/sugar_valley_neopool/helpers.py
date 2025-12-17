@@ -123,3 +123,19 @@ def safe_int(value: Any, default: int | None = None) -> int | None:
 def clamp(value: float, min_val: float, max_val: float) -> float:
     """Clamp a value between min and max."""
     return max(min_val, min(max_val, value))
+
+
+def validate_nodeid(nodeid: str | None) -> bool:
+    """Validate NodeID is present and not 'hidden'.
+
+    Args:
+        nodeid: The NodeID value to validate.
+
+    Returns:
+        True if NodeID is valid (present and not hidden), False otherwise.
+    """
+    if nodeid is None or nodeid == "":
+        return False
+    if isinstance(nodeid, str) and nodeid.lower() in ["hidden", "hidden_by_default"]:
+        return False
+    return True

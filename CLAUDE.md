@@ -166,6 +166,236 @@ async def async_setup_entry(
 ) -> None:
 ```
 
+## NodeID-Based Unique IDs and Automatic Migration
+
+### Why NodeID?
+
+The integration uses the hardware NodeID from the NeoPool controller (via Tasmota) as the foundation for all identifiers:
+
+- **Hardware-based**: NodeID comes from the physical NeoPool controller, not software configuration
+- **Stable**: Survives MQTT topic changes, Tasmota device renames, or Home Assistant reinstalls
+- **Multi-device**: Naturally supports multiple NeoPool controllers without conflicts
+- **Unique**: Each NeoPool controller has a unique NodeID
+
+### Automatic Tasmota Configuration
+
+The integration automatically configures Tasmota to expose the NodeID:
+
+**When NodeID is hidden:**
+
+1. Integration detects NodeID value is "hidden" or missing
+1. Sends MQTT command: `cmnd/{topic}/SetOption157 1`
+1. Waits 2 seconds for Tasmota to process
+1. Subscribes to `tele/{topic}/SENSOR` and waits up to 10 seconds for NodeID
+1. Validates NodeID is present and not "hidden"
+1. Only proceeds if NodeID is successfully configured
+
+**Implementation details:**
+
+```python
+# In config_flow.py
+async def _auto_configure_nodeid(self, device_topic: str) -> dict[str, Any]:
+    """Auto-configure Tasmota SetOption157 to enable NodeID."""
+    await mqtt.async_publish(
+        self.hass,
+        f"cmnd/{device_topic}/SetOption157",
+        "1",
+        qos=1,
+        retain=False,
+    )
+    await asyncio.sleep(2)
+    nodeid = await self._wait_for_nodeid(device_topic)
+    # Returns {"success": bool, "nodeid": str, "error": str}
+```
+
+**NodeID validation:**
+
+```python
+# In helpers.py
+def validate_nodeid(nodeid: str | None) -> bool:
+    """Validate NodeID is present and not 'hidden'."""
+    if nodeid is None or nodeid == "":
+        return False
+    if isinstance(nodeid, str) and nodeid.lower() in ["hidden", "hidden_by_default"]:
+        return False
+    return True
+```
+
+### Unique ID Pattern
+
+**Entity unique_id**: `neopool_mqtt_{nodeid}_{entity_key}`
+
+- Example: `neopool_mqtt_ABC123_water_temperature`
+- Generated in `entity.py` base class `__init__()` method
+- NodeID comes from `config_entry.runtime_data.nodeid`
+- Entity key is passed as parameter (e.g., "water_temperature", "ph_data")
+
+**Device identifier**: `(DOMAIN, nodeid)`
+
+- Tuple format required by Home Assistant device registry
+- Example: `("sugar_valley_neopool", "ABC123")`
+- Used in `async_register_device()` and `get_device_info()`
+
+**Config entry unique_id**: `{DOMAIN}_{nodeid}`
+
+- Example: `sugar_valley_neopool_ABC123`
+- Prevents duplicate config entries for the same device
+- Set in all config flow steps before creating entry
+
+**Code locations:**
+
+```python
+# entity.py - Entity unique_id
+nodeid = config_entry.runtime_data.nodeid
+self._attr_unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+
+# __init__.py - Device identifier
+device_registry.async_get_or_create(
+    config_entry_id=entry.entry_id,
+    identifiers={(DOMAIN, nodeid)},
+    # ...
+)
+
+# config_flow.py - Config entry unique_id
+await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
+self._abort_if_unique_id_configured()
+```
+
+### Config Flow Multi-Step Process
+
+The integration supports three setup paths, all converging to NodeID-based configuration:
+
+**1. YAML Migration Path:**
+
+```
+async_step_user
+    ↓
+async_step_yaml_migration (checkbox)
+    ↓ (if checked)
+async_step_yaml_topic (input + validation)
+    ↓
+_validate_yaml_topic (MQTT subscribe + wait)
+    ↓ (if NodeID hidden)
+_auto_configure_nodeid (SetOption157 1)
+    ↓
+async_step_yaml_confirm (show topic + NodeID)
+    ↓
+async_create_entry (with CONF_MIGRATE_YAML: True)
+```
+
+**2. Manual Setup Path:**
+
+```
+async_step_user
+    ↓
+async_step_yaml_migration (checkbox)
+    ↓ (if not checked)
+async_step_discover_device (manual input)
+    ↓
+_validate_yaml_topic (validates topic)
+    ↓ (if NodeID hidden)
+_auto_configure_nodeid (SetOption157 1)
+    ↓
+async_create_entry
+```
+
+**3. MQTT Discovery Path:**
+
+```
+async_step_mqtt (auto-triggered by MQTT discovery)
+    ↓
+Extract NodeID from discovery payload
+    ↓ (if NodeID hidden)
+_auto_configure_nodeid (SetOption157 1)
+    ↓
+async_step_mqtt_confirm (show discovered device)
+    ↓
+async_create_entry
+```
+
+### Automatic YAML Migration
+
+When users migrate from the YAML package, the integration automatically updates entities:
+
+**Migration trigger:**
+
+- Config flow stores `CONF_MIGRATE_YAML: True` in entry data (YAML path only)
+- `async_setup_entry()` in `__init__.py` always calls `async_migrate_yaml_entities()`
+- Migration runs on every setup, but only finds entities on first run
+
+**Migration process:**
+
+```python
+# __init__.py
+async def async_migrate_yaml_entities(
+    hass: HomeAssistant,
+    entry: NeoPoolConfigEntry,
+    nodeid: str,
+) -> None:
+    """Migrate YAML package entities to new unique_id format."""
+    entity_registry = er.async_get(hass)
+
+    # Find YAML entities (no config_entry_id, starts with "neopool_mqtt_")
+    yaml_entities = [
+        entity for entity in entity_registry.entities.values()
+        if entity.unique_id.startswith("neopool_mqtt_")
+        and entity.config_entry_id is None
+    ]
+
+    # Update each entity
+    for entity in yaml_entities:
+        old_unique_id = entity.unique_id  # e.g., "neopool_mqtt_water_temperature"
+        entity_key = old_unique_id.replace("neopool_mqtt_", "", 1)
+        new_unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+
+        # Update in registry - preserves all historical data
+        entity_registry.async_update_entity(
+            entity.entity_id,
+            new_unique_id=new_unique_id,
+            config_entry_id=entry.entry_id,
+        )
+```
+
+**What gets preserved:**
+
+- All historical data (graphs, statistics, long-term statistics)
+- Entity ID (e.g., `sensor.neopool_water_temperature`)
+- Entity customizations (friendly names, icons, areas, etc.)
+- Automation/script references remain valid
+
+**What changes:**
+
+- `unique_id`: `neopool_mqtt_water_temperature` → `neopool_mqtt_ABC123_water_temperature`
+- `config_entry_id`: `None` → entry ID of new integration
+- Entities now appear under the integration in UI
+
+### Topic Validation
+
+All setup paths validate the MQTT topic before proceeding:
+
+```python
+async def _validate_yaml_topic(self, topic: str, timeout_seconds: int = 10) -> dict[str, Any]:
+    """Validate YAML topic by subscribing and waiting for message."""
+    # Subscribe to tele/{topic}/SENSOR
+    # Wait for NeoPool message or timeout
+    # Extract NodeID from payload
+    # Return {"valid": bool, "nodeid": str, "payload": dict}
+```
+
+**Validation criteria:**
+
+- Topic must be a valid MQTT topic format
+- Must receive a message within timeout (default 10 seconds)
+- Message must be valid JSON
+- JSON must contain "NeoPool" key (confirms it's a NeoPool device)
+- NodeID is extracted from `NeoPool.Powerunit.NodeID`
+
+**Custom topic support:**
+
+- Integration validates ANY topic, not just default "SmartPool"
+- Users can migrate from custom YAML configurations
+- Topic validation ensures device is actually publishing before setup
+
 ## Release Management
 
 ### CRITICAL: Never Create Tags/Releases Without Explicit User Instruction

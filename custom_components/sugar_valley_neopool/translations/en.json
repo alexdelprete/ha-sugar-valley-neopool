@@ -19,17 +19,47 @@
         "data": {
           "device_name": "Device Name"
         }
+      },
+      "yaml_migration": {
+        "title": "YAML Package Migration",
+        "description": "Are you migrating from the YAML package configuration?\n\nCheck this box if you're currently using the `ha_neopool_mqtt_package.yaml` file.",
+        "data": {
+          "migrate_yaml": "Migrating from YAML package"
+        }
+      },
+      "yaml_topic": {
+        "title": "YAML MQTT Topic",
+        "description": "Enter the MQTT topic used in your YAML configuration.\n\nThis is typically 'SmartPool' unless you customized it.",
+        "data": {
+          "yaml_topic": "YAML MQTT Topic"
+        }
+      },
+      "yaml_confirm": {
+        "title": "Confirm Device",
+        "description": "Confirm the device name for your NeoPool controller.\n\n**Topic**: {topic}\n**NodeID**: {nodeid}",
+        "data": {
+          "device_name": "Device Name"
+        }
+      },
+      "discover_device": {
+        "title": "Manual Setup",
+        "description": "Enter your NeoPool device details.\n\nFor more information, see the [Tasmota NeoPool documentation]({docs_url}).",
+        "data": {
+          "device_name": "Device Name",
+          "discovery_prefix": "MQTT Topic (Tasmota device name)"
+        }
       }
     },
     "error": {
       "invalid_topic": "Invalid MQTT topic format",
-      "cannot_connect": "Cannot connect to MQTT broker",
-      "already_configured": "This device is already configured"
+      "invalid_yaml_topic": "Cannot read from this MQTT topic. Please verify the topic is correct and the device is online.",
+      "cannot_connect": "Cannot connect to device. Please verify the topic is correct and the device is online."
     },
     "abort": {
       "already_configured": "This device is already configured",
       "invalid_discovery_info": "Invalid discovery information received",
-      "not_neopool_device": "The discovered device is not a NeoPool controller"
+      "not_neopool_device": "The discovered device is not a NeoPool controller",
+      "nodeid_configuration_failed": "Failed to configure NodeID. Please manually set SetOption157 1 in Tasmota console and try again."
     }
   },
   "entity": {
@@ -99,6 +129,9 @@
       },
       "connection_no_response": {
         "name": "Connection No Response"
+      },
+      "powerunit_nodeid": {
+        "name": "Powerunit NodeID"
       }
     },
     "binary_sensor": {
