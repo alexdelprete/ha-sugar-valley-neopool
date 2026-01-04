@@ -5,9 +5,16 @@ from __future__ import annotations
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
+    CONF_ENABLE_REPAIR_NOTIFICATION,
+    CONF_FAILURES_THRESHOLD,
+    CONF_NODEID,
+    CONF_OFFLINE_TIMEOUT,
+    CONF_RECOVERY_SCRIPT,
     DOMAIN,
 )
 from homeassistant import config_entries
@@ -232,3 +239,156 @@ async def test_mqtt_confirm_default_name(hass: HomeAssistant, mock_setup_entry: 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "NeoPool TestPool"  # Default name
     assert result["data"][CONF_DISCOVERY_PREFIX] == "TestPool"
+
+
+# Options Flow Tests
+
+
+async def test_options_flow_init(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+    """Test options flow initialization."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+
+async def test_options_flow_update(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+    """Test options flow updates options."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={
+            CONF_ENABLE_REPAIR_NOTIFICATION: True,
+            CONF_FAILURES_THRESHOLD: 5,
+            CONF_OFFLINE_TIMEOUT: 120,
+            CONF_RECOVERY_SCRIPT: "",
+        },
+    )
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_ENABLE_REPAIR_NOTIFICATION] is True
+    assert entry.options[CONF_FAILURES_THRESHOLD] == 5
+    assert entry.options[CONF_OFFLINE_TIMEOUT] == 120
+
+
+async def test_options_flow_preserves_existing(
+    hass: HomeAssistant, mock_setup_entry: MagicMock
+) -> None:
+    """Test options flow shows existing values as defaults."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+        options={
+            CONF_ENABLE_REPAIR_NOTIFICATION: False,
+            CONF_FAILURES_THRESHOLD: 10,
+            CONF_OFFLINE_TIMEOUT: 300,
+            CONF_RECOVERY_SCRIPT: "script.pool_recovery",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    assert result["type"] is FlowResultType.FORM
+    # Form should be shown with current options as defaults
+
+
+async def test_options_flow_defaults(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+    """Test options flow uses default values when no options set."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+        options={},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+
+    # Should show form with default values
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+
+# Reconfigure Flow Tests
+
+
+async def test_reconfigure_flow_init(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+    """Test reconfigure flow initialization."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+
+async def test_reconfigure_flow_invalid_topic(
+    hass: HomeAssistant, mock_setup_entry: MagicMock
+) -> None:
+    """Test reconfigure flow with invalid topic."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    result = await entry.start_reconfigure_flow(hass)
+
+    with patch(
+        "homeassistant.components.mqtt.valid_subscribe_topic",
+        side_effect=Exception("Invalid topic"),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            user_input={
+                CONF_DEVICE_NAME: "Updated Pool",
+                CONF_DISCOVERY_PREFIX: "invalid#topic",
+            },
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_DISCOVERY_PREFIX: "invalid_topic"}

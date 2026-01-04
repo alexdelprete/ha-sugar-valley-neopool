@@ -29,31 +29,31 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/brands
   # Integrations must provide branding assets in the HA brands repository for
   # consistent recognition and visual identity.
-  brands: done  # Icons in icons/hayward, PR submitted to homeassistant/brands repo
+  brands: done # Icons in icons/hayward, PR submitted to homeassistant/brands repo
 
   # Rule: Place common patterns in common modules
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/common-modules
   # Coordinators should be in coordinator.py and base entities in entity.py.
   # This increases consistency between integrations.
-  common-modules: done  # helpers.py, entity.py
+  common-modules: done # helpers.py, entity.py
 
   # Rule: Integration needs to be able to be set up via the UI
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow
   # Config flow has been the standard setup method since 2018. Store connection
   # data in ConfigEntry.data and optional settings in ConfigEntry.options.
-  config-flow: done  # UI setup via config_flow.py
+  config-flow: done # UI setup via config_flow.py
 
   # Rule: Full test coverage for the config flow
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-flow-test-coverage
   # 100% test coverage for config flows. Test all flow types: user, discovery,
   # import, reconfigure, reauth, and options flows.
-  config-flow-test-coverage: done  # tests/test_config_flow.py covers user and mqtt flows
+  config-flow-test-coverage: done # tests/test_config_flow.py covers user and mqtt flows
 
   # Rule: Dependency transparency
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dependency-transparency
   # Dependencies must have OSI-approved license, be on PyPI, built from public CI,
   # and correspond to tagged releases in open repositories.
-  dependency-transparency: done  # Uses HA mqtt component
+  dependency-transparency: done # Uses HA mqtt component
 
   # Rule: The documentation describes the provided service actions that can be used
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-actions
@@ -66,59 +66,59 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-high-level-description
   # Provide an overview of what the integrated brand/product/service is and
   # include a link to the brand/product website.
-  docs-high-level-description: done  # README.md
+  docs-high-level-description: done # README.md
 
   # Rule: The documentation provides step-by-step installation instructions
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-installation-instructions
   # Include clear installation guidance with any necessary setup steps and prerequisites.
-  docs-installation-instructions: done  # README.md with HACS instructions
+  docs-installation-instructions: done # README.md with HACS instructions
 
   # Rule: The documentation provides removal instructions
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-removal-instructions
   # Include clear, step-by-step guidance for users to remove the integration.
-  docs-removal-instructions: done  # Removal section in README.md
+  docs-removal-instructions: done # Removal section in README.md
 
   # Rule: Entity events are subscribed in the correct lifecycle methods
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-event-setup
   # Subscribe to events in async_added_to_hass and unsubscribe in
   # async_will_remove_from_hass for proper lifecycle management.
-  entity-event-setup: done  # MQTT callbacks in async_added_to_hass
+  entity-event-setup: done # MQTT callbacks in async_added_to_hass
 
   # Rule: Entities have a unique ID
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-unique-id
   # All entities must have a unique identifier for the entity registry to track
   # entities and allow user customization.
-  entity-unique-id: done  # All entities have unique IDs
+  entity-unique-id: done # All entities have unique IDs
 
   # Rule: Entities use has_entity_name = True
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/has-entity-name
   # Promotes consistency in entity naming. Display name combines device name
   # with entity's specific field name (e.g., "My device temperature").
-  has-entity-name: done  # _attr_has_entity_name = True in base entity
+  has-entity-name: done # _attr_has_entity_name = True in base entity
 
   # Rule: Use ConfigEntry.runtime_data to store runtime data
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/runtime-data
   # Use runtime_data attribute for storing temporary data during the config
   # entry's lifetime. Enables typed data management.
-  runtime-data: done  # Uses entry.runtime_data pattern
+  runtime-data: done # Uses entry.runtime_data pattern
 
   # Rule: Test a connection in the config flow
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-configure
   # Validate user input by testing the connection during configuration flow
   # to catch issues early (DNS, firewall, credentials, etc.).
-  test-before-configure: done  # Validates MQTT topic format
+  test-before-configure: done # Validates MQTT topic format
 
   # Rule: Check during integration initialization if we are able to set it up correctly
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/test-before-setup
   # Use ConfigEntryNotReady for temporary failures, ConfigEntryAuthFailed for
   # auth issues, ConfigEntryError for permanent failures.
-  test-before-setup: done  # Checks MQTT availability with mqtt.async_wait_for_mqtt_client()
+  test-before-setup: done # Checks MQTT availability with mqtt.async_wait_for_mqtt_client()
 
   # Rule: Don't allow the same device or service to be set up twice
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/unique-config-entry
   # Prevent duplicate config entries to avoid duplicated devices and entities
   # with colliding unique identifiers.
-  unique-config-entry: done  # Checks unique_id in config flow
+  unique-config-entry: done # Checks unique_id in config flow
 
   # ============================================================================
   # SILVER TIER (10 rules) - Enhanced reliability
@@ -136,50 +136,44 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/config-entry-unloading
   # Implement async_unload_entry to clean up subscriptions and close connections.
   # Allows reload/remove without restart.
-  config-entry-unloading: done  # async_unload_entry implemented
+  config-entry-unloading: done # async_unload_entry implemented
 
   # Rule: The documentation describes all integration configuration options
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-configuration-parameters
   # Document all available configuration options in the options flow and explain
   # what each option does.
-  docs-configuration-parameters:
-    status: todo
-    comment: Document configuration options in README.
+  docs-configuration-parameters: done # README.md documents runtime options
 
   # Rule: The documentation describes all integration installation parameters
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-installation-parameters
   # Documentation must clearly outline all parameters needed during installation.
-  docs-installation-parameters:
-    status: todo
-    comment: Document installation parameters in README.
+  docs-installation-parameters: done # README.md documents installation parameters
 
   # Rule: Mark entity unavailable if appropriate
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-unavailable
   # Mark entities as unavailable when data cannot be fetched, rather than
   # displaying stale information.
-  entity-unavailable: done  # LWT topic subscription for availability
+  entity-unavailable: done # LWT topic subscription for availability
 
   # Rule: Has an integration owner
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/integration-owner
   # Designate a codeowner who takes responsibility for maintaining the integration.
   # They get notified of new issues and PRs.
-  integration-owner: done  # @alexdelprete in manifest.json
+  integration-owner: done # @alexdelprete in manifest.json
 
   # Rule: If unavailable, log once when unavailable and once when back connected
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/log-when-unavailable
   # Log at info level when device/service becomes unavailable and when restored.
   # Log only once to avoid spamming logs.
-  log-when-unavailable:
-    status: todo
-    comment: Improve logging for availability state changes.
+  log-when-unavailable: done # LWT topic subscription logs availability changes
 
   # Rule: Number of parallel updates is specified
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/parallel-updates
   # Set PARALLEL_UPDATES constant to prevent overwhelming devices with
   # simultaneous requests. Use 1 for most cases, 0 when using coordinators.
   parallel-updates:
-    status: todo
-    comment: Need to specify PARALLEL_UPDATES constant.
+    status: exempt
+    comment: MQTT push integration - no parallel updates needed, not polling.
 
   # Rule: Reauthentication needs to be available via the UI
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reauthentication-flow
@@ -205,85 +199,69 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/devices
   # Create and register devices in the device registry with comprehensive
   # DeviceInfo (connections, names, serial numbers, versions, etc.).
-  devices: done  # Creates devices in device registry
+  devices: done # Creates devices in device registry
 
   # Rule: Implements diagnostics
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/diagnostics
   # Provide diagnostics implementation for gathering debug data. Must exclude
   # sensitive information (passwords, tokens, coordinates).
-  diagnostics:
-    status: todo
-    comment: Implement diagnostics.py for debug information.
+  diagnostics: done # diagnostics.py with redacted sensitive data
 
   # Rule: Devices can be discovered
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery
   # Support device discovery (mDNS, SSDP, Bluetooth, DHCP, HomeKit, MQTT, USB)
   # to make setup easier for users.
-  discovery: done  # MQTT discovery via manifest.json mqtt key
+  discovery: done # MQTT discovery via manifest.json mqtt key
 
   # Rule: Integration uses discovery info to update network information
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/discovery-update-info
   # Automatically update device IP addresses when they change rather than
   # requiring static IPs.
   discovery-update-info:
-    status: todo
-    comment: Update device info on discovery updates.
+    status: exempt
+    comment: MQTT topic-based, no IP addresses to update.
 
   # Rule: The documentation describes how data is updated
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-data-update
   # Document data update mechanisms including polling intervals and push
   # capabilities so users can evaluate if integration meets their needs.
-  docs-data-update:
-    status: todo
-    comment: Document how data is updated (MQTT push).
+  docs-data-update: done # README.md describes MQTT push updates
 
   # Rule: The documentation provides automation examples the user can use
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-examples
   # Include practical automation blueprints showcasing common implementations
   # to help users get started quickly.
-  docs-examples:
-    status: todo
-    comment: Add example configurations and automations.
+  docs-examples: done # README.md has device trigger and recovery script examples
 
   # Rule: The documentation describes known limitations of the integration
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-known-limitations
   # Outline functional constraints and boundaries so users know what to expect.
   # Different from bugs which belong in issue tracker.
-  docs-known-limitations:
-    status: todo
-    comment: Document known limitations.
+  docs-known-limitations: done # README.md has Known Limitations section
 
   # Rule: The documentation describes known supported / unsupported devices
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-devices
   # Document which devices are confirmed to work and which are not supported
   # to help users determine compatibility before purchase.
-  docs-supported-devices:
-    status: todo
-    comment: Document supported NeoPool controller models.
+  docs-supported-devices: done # README.md describes Sugar Valley NeoPool + Tasmota requirement
 
   # Rule: The documentation describes the supported functionality
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-supported-functions
   # Detail all supported entities and platforms so users understand what
   # features they can expect.
-  docs-supported-functions:
-    status: todo
-    comment: Document supported functions and entities.
+  docs-supported-functions: done # README.md lists all sensors, controls, features
 
   # Rule: The documentation provides troubleshooting information
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-troubleshooting
   # Include instructions for resolving common issues with symptoms, causes,
   # and step-by-step solutions.
-  docs-troubleshooting:
-    status: todo
-    comment: Add troubleshooting section to documentation.
+  docs-troubleshooting: done # README.md has Troubleshooting section with common issues
 
   # Rule: The documentation describes use cases
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/docs-use-cases
   # Include use case examples that showcase why users would benefit from the
   # integration to clarify its value and practical applications.
-  docs-use-cases:
-    status: todo
-    comment: Document use cases and automation examples.
+  docs-use-cases: done # README.md describes pool monitoring and control use cases
 
   # Rule: Devices added after integration setup
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/dynamic-devices
@@ -297,61 +275,49 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-category
   # Classify entities with suitable EntityCategory for accurate categorization
   # and visibility in auto-generated dashboards.
-  entity-category: done  # Uses EntityCategory where appropriate
+  entity-category: done # Uses EntityCategory where appropriate
 
   # Rule: Entities use device classes where possible
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-device-class
   # Device classes enable unit conversion, voice control, cloud ecosystem
   # exposure, UI adjustments, and automatic entity naming.
-  entity-device-class: done  # Uses device classes for sensors
+  entity-device-class: done # Uses device classes for sensors
 
   # Rule: Integration disables less popular (or noisy) entities
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-disabled-by-default
   # Disable less commonly-used or noisy entities by default to save resources.
   # Set _attr_entity_registry_enabled_default = False.
-  entity-disabled-by-default:
-    status: todo
-    comment: Consider disabling diagnostic sensors by default.
+  entity-disabled-by-default: done # Diagnostic sensors disabled by default
 
   # Rule: Entities have translated names
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/entity-translations
   # Include translated names using _attr_translation_key and strings.json
   # to support users worldwide.
-  entity-translations:
-    status: todo
-    comment: Add entity name translations.
+  entity-translations: done # 10 language translations (de, en, es, et, fi, fr, it, nb, pt, sv)
 
   # Rule: Exception messages are translatable
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/exception-translations
   # Exceptions should include translation_domain and translation_key parameters
   # with messages in strings.json.
-  exception-translations:
-    status: todo
-    comment: Add exception message translations.
+  exception-translations: done # Config flow errors are translated
 
   # Rule: Entities implement icon translations
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/icon-translations
   # Define icons through translation keys in icons.json rather than in state
   # machine. Supports state-based and range-based icons.
-  icon-translations:
-    status: todo
-    comment: Add icon translations.
+  icon-translations: done # icons.json defines entity icons
 
   # Rule: Integrations should have a reconfigure flow
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/reconfiguration-flow
   # Allow users to update configuration without removing and re-adding the
   # integration (e.g., changing passwords or IP addresses).
-  reconfiguration-flow:
-    status: todo
-    comment: Implement options flow for reconfiguration.
+  reconfiguration-flow: done # async_step_reconfigure in config_flow.py
 
   # Rule: Repair issues and repair flows are used when user intervention is needed
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/repair-issues
   # Use repair issues as a user-friendly mechanism to notify users of problems
   # they can address. Should be actionable and informative.
-  repair-issues:
-    status: todo
-    comment: Implement repair issues for common problems.
+  repair-issues: done # repairs.py with device offline issues
 
   # Rule: Stale devices are removed
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/stale-devices
@@ -385,4 +351,4 @@ rules:
   # https://developers.home-assistant.io/docs/core/integration-quality-scale/rules/strict-typing
   # Implement comprehensive type hints validated by mypy. Include py.typed file
   # and add integration to .strict-typing configuration.
-  strict-typing: done  # Full type annotations with mypy validation
+  strict-typing: done # Full type annotations with mypy validation

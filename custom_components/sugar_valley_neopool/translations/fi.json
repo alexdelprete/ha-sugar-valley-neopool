@@ -1,0 +1,128 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sugar Valley NeoPool -asetukset",
+        "description": "Määritä Sugar Valley NeoPool -allasohjaimen asetukset, joka on yhdistetty Tasmota MQTT:n kautta.",
+        "data": {
+          "mqtt_topic": "Tasmota-laitteen MQTT-aihe",
+          "name": "Laitteen nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "Tasmota-laitteeseen määritetty MQTT-aihe (esim. 'SmartPool'). Integraatio tilaa automaattisesti anturipäivitykset.",
+          "name": "Kutsumanimi NeoPool-allasohjaimeellesi."
+        }
+      },
+      "yaml_migration": {
+        "title": "Määritystapa",
+        "description": "Valitse, miten tämä integraatio määritetään.\n\nJos siirryt YAML-pakettikokoonpanosta, valitse alla oleva ruutu siirtääksesi historialliset tiedot uuteen käyttöliittymäintegraatioon.\n\nJos tämä on uusi asennus, jätä ruutu valitsematta.",
+        "data": {
+          "migrate_yaml": "Siirrä YAML-paketista"
+        },
+        "data_description": {
+          "migrate_yaml": "Valitse tämä, jos sinulla on olemassa olevia entiteettejä YAML-pakettikokoonpanosta, jotka haluat siirtää."
+        }
+      },
+      "yaml_topic": {
+        "title": "YAML-paketin MQTT-aihe",
+        "description": "Syötä MQTT-aihe olemassa olevasta YAML-pakettikokoonpanostasi.\n\n**Tärkeää:** Integraatio määrittää automaattisesti Tasmota-laitteesi paljastamaan NodeID:n, jos sitä ei ole jo tehty.",
+        "data": {
+          "mqtt_topic": "Tasmota-laitteen MQTT-aihe"
+        },
+        "data_description": {
+          "mqtt_topic": "Tasmota-laitteeseen määritetty MQTT-aihe (esim. 'SmartPool')."
+        }
+      },
+      "yaml_confirm": {
+        "title": "Vahvista YAML-siirto",
+        "description": "Valmis siirtymään YAML-paketista.\n\n**MQTT-aihe:** `{mqtt_topic}`\n**Laitteen NodeID:** `{nodeid}`\n\nMäärityksen jälkeen:\n1. Olemassa olevat entiteettisi siirretään uuteen integraatioon\n2. Kaikki historialliset tiedot säilytetään\n3. Voit poistaa YAML-pakettikokoonpanosi\n\nNapsauta **Lähetä** viimeistelläksesi siirron."
+      },
+      "discover_device": {
+        "title": "Määritä NeoPool-laite",
+        "description": "Syötä Tasmota NeoPool -laitteesi tiedot.",
+        "data": {
+          "mqtt_topic": "Tasmota-laitteen MQTT-aihe",
+          "name": "Laitteen nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "Tasmota-laitteeseen määritetty MQTT-aihe.",
+          "name": "Kutsumanimi NeoPool-allasohjaimeellesi."
+        }
+      },
+      "mqtt": {
+        "title": "NeoPool-laite löydetty",
+        "description": "Sugar Valley NeoPool -allasohjain löydettiin MQTT:n kautta.\n\n**Aihe:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`\n\nHaluatko määrittää tämän laitteen?"
+      },
+      "mqtt_confirm": {
+        "title": "Vahvista löydetty laite",
+        "description": "Vahvista löydetyn NeoPool-laitteen asetukset.\n\n**MQTT-aihe:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`",
+        "data": {
+          "name": "Laitteen nimi"
+        },
+        "data_description": {
+          "name": "Kutsumanimi NeoPool-allasohjaimeellesi."
+        }
+      },
+      "reconfigure": {
+        "title": "Määritä Sugar Valley NeoPool uudelleen",
+        "description": "Päivitä NeoPool-ohjaimen yhteysasetukset.\n\n**Nykyinen NodeID:** `{nodeid}`\n**Nykyinen MQTT-aihe:** `{mqtt_topic}`",
+        "data": {
+          "mqtt_topic": "Tasmota-laitteen MQTT-aihe",
+          "name": "Laitteen nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "Tasmota-laitteeseen määritetty MQTT-aihe.",
+          "name": "Kutsumanimi NeoPool-allasohjaimeellesi."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "MQTT-välittäjään ei saada yhteyttä",
+      "invalid_topic": "Virheellinen MQTT-aihemuoto",
+      "no_neopool_data": "NeoPool-tietoja ei vastaanotettu - tarkista aihe ja laitteen yhteys",
+      "timeout": "MQTT-tietojen odotus laitteelta aikakatkaistiin",
+      "unknown": "Odottamaton virhe",
+      "nodeid_required": "NodeID:tä ei voitu hakea laitteelta. Varmista, että Tasmota-laitteesi on verkossa.",
+      "nodeid_configuration_failed": "Tasmota-laitteen määritys NodeID:n paljastamiseksi epäonnistui. Aseta manuaalisesti SetOption157 1 Tasmota-konsolissa."
+    },
+    "abort": {
+      "already_configured": "Laite on jo määritetty",
+      "no_devices_found": "NeoPool-laitteita ei löytynyt verkosta",
+      "mqtt_not_available": "MQTT-integraatio ei ole käytettävissä",
+      "reconfigure_successful": "Uudelleenmääritys onnistui"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sugar Valley NeoPool -asetukset",
+        "description": "Määritä NeoPool-integraatiosi suoritusajan asetukset.",
+        "data": {
+          "recovery_script": "Palautusskripti",
+          "enable_repair_notification": "Ota korjausilmoitukset käyttöön",
+          "failures_threshold": "Virheiden kynnysarvo",
+          "offline_timeout": "Offline-aikakatkaisu (sekuntia)"
+        },
+        "data_description": {
+          "recovery_script": "Valinnainen skripti, joka suoritetaan, kun laite palautuu offline-tilasta (esim. 'script.neopool_recovery').",
+          "enable_repair_notification": "Luo korjausongelmia, kun laite on offline pitkään.",
+          "failures_threshold": "Peräkkäisten offline-tarkistusten määrä ennen korjausongelman luomista (1-10).",
+          "offline_timeout": "Aika sekunteina MQTT-tietojen odottamiseen ennen kuin laite katsotaan offline-tilassa olevaksi (60-3600)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "device_offline": {
+      "title": "NeoPool-laite offline: {device_name}",
+      "description": "NeoPool-laite **{device_name}** (MQTT-aihe: `{mqtt_topic}`) on ollut offline **{offline_duration}**.\n\n## Vianetsintävaiheet\n\n1. Tarkista, että Tasmota-laite on kytketty päälle ja yhdistetty WiFi-verkkoon\n2. Varmista, että MQTT-välittäjä toimii ja on tavoitettavissa\n3. Tarkista Tasmota-laitteen lokit virheiden varalta\n4. Varmista, että NeoPool-ohjain on yhdistetty Tasmota-laitteeseen\n\n## Laitteen tiedot\n\n- **MQTT-aihe:** `{mqtt_topic}`\n- **Offline alkaen:** {offline_since}\n- **Kesto:** {offline_duration}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "device_offline": "Laite siirtyi offline-tilaan",
+      "device_online": "Laite palasi online-tilaan",
+      "device_recovered": "Laite palautui pitkäaikaisesta katkoksesta"
+    }
+  }
+}

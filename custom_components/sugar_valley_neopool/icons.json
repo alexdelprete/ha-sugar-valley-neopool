@@ -1,0 +1,178 @@
+{
+  "entity": {
+    "sensor": {
+      "system_model": {
+        "default": "mdi:information-outline"
+      },
+      "water_temperature": {
+        "default": "mdi:thermometer-water"
+      },
+      "ph_data": {
+        "default": "mdi:ph"
+      },
+      "ph_state": {
+        "default": "mdi:ph"
+      },
+      "ph_pump": {
+        "default": "mdi:ph"
+      },
+      "redox_data": {
+        "default": "mdi:flash"
+      },
+      "hydrolysis_percent": {
+        "default": "mdi:water-opacity"
+      },
+      "hydrolysis_data": {
+        "default": "mdi:water-opacity"
+      },
+      "hydrolysis_state": {
+        "default": "mdi:water-opacity"
+      },
+      "hydrolysis_runtime_total": {
+        "default": "mdi:timer-outline"
+      },
+      "hydrolysis_runtime_part": {
+        "default": "mdi:timer-outline"
+      },
+      "hydrolysis_polarity_changes": {
+        "default": "mdi:swap-horizontal"
+      },
+      "filtration_mode": {
+        "default": "mdi:pump"
+      },
+      "filtration_speed": {
+        "default": "mdi:speedometer"
+      },
+      "powerunit_version": {
+        "default": "mdi:information-outline"
+      },
+      "powerunit_5v": {
+        "default": "mdi:flash"
+      },
+      "powerunit_12v": {
+        "default": "mdi:flash"
+      },
+      "powerunit_24v": {
+        "default": "mdi:flash"
+      },
+      "powerunit_4ma": {
+        "default": "mdi:current-dc"
+      },
+      "connection_requests": {
+        "default": "mdi:source-branch-check"
+      },
+      "connection_responses": {
+        "default": "mdi:source-branch-check"
+      },
+      "connection_no_response": {
+        "default": "mdi:source-branch-check"
+      },
+      "powerunit_nodeid": {
+        "default": "mdi:identifier"
+      }
+    },
+    "binary_sensor": {
+      "modules_ph": {
+        "default": "mdi:ph"
+      },
+      "modules_redox": {
+        "default": "mdi:flash"
+      },
+      "modules_hydrolysis": {
+        "default": "mdi:water-opacity"
+      },
+      "modules_chlorine": {
+        "default": "mdi:water-outline"
+      },
+      "modules_conductivity": {
+        "default": "mdi:flash-triangle"
+      },
+      "modules_ionization": {
+        "default": "mdi:atom"
+      },
+      "relay_ph_state": {
+        "default": "mdi:ph"
+      },
+      "relay_filtration_state": {
+        "default": "mdi:pump"
+      },
+      "relay_light_state": {
+        "default": "mdi:lightbulb"
+      },
+      "relay_acid_state": {
+        "default": "mdi:flask"
+      },
+      "ph_fl1": {
+        "default": "mdi:water-pump"
+      },
+      "hydrolysis_fl1": {
+        "default": "mdi:water-pump"
+      },
+      "hydrolysis_water_flow": {
+        "default": "mdi:water-pump"
+      },
+      "ph_tank_level": {
+        "default": "mdi:cup-water"
+      },
+      "redox_tank_level": {
+        "default": "mdi:cup-water"
+      },
+      "hydrolysis_cover": {
+        "default": "mdi:shield-alert"
+      },
+      "hydrolysis_low_production": {
+        "default": "mdi:alert-circle"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "default": "mdi:pump"
+      },
+      "light": {
+        "default": "mdi:lightbulb"
+      },
+      "aux1": {
+        "default": "mdi:toggle-switch"
+      },
+      "aux2": {
+        "default": "mdi:toggle-switch"
+      },
+      "aux3": {
+        "default": "mdi:toggle-switch"
+      },
+      "aux4": {
+        "default": "mdi:toggle-switch"
+      }
+    },
+    "select": {
+      "filtration_mode": {
+        "default": "mdi:pump"
+      },
+      "filtration_speed": {
+        "default": "mdi:speedometer"
+      },
+      "boost_mode": {
+        "default": "mdi:rocket-launch"
+      }
+    },
+    "number": {
+      "ph_min": {
+        "default": "mdi:ph"
+      },
+      "ph_max": {
+        "default": "mdi:ph"
+      },
+      "redox_setpoint": {
+        "default": "mdi:flash"
+      },
+      "hydrolysis_setpoint": {
+        "default": "mdi:water-percent"
+      }
+    },
+    "button": {
+      "clear_error": {
+        "default": "mdi:alert-remove"
+      }
+    }
+  }
+}

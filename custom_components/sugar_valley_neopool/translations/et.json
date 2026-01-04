@@ -1,0 +1,128 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sugar Valley NeoPool seadistamine",
+        "description": "Seadistage oma Sugar Valley NeoPool basseini kontroller, mis on ühendatud Tasmota MQTT kaudu.",
+        "data": {
+          "mqtt_topic": "Tasmota seadme MQTT teema",
+          "name": "Seadme nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT teema, mis on seadistatud teie Tasmota seadmes (nt 'SmartPool'). Integratsioon tellib automaatselt andurite värskendused.",
+          "name": "Sõbralik nimi teie NeoPool basseini kontrollerile."
+        }
+      },
+      "yaml_migration": {
+        "title": "Seadistamise meetod",
+        "description": "Valige, kuidas seda integratsiooni seadistada.\n\nKui migreerite YAML paketi seadistuselt, märkige allolev ruut, et üle kanda oma ajaloolised andmed uude UI-integratsioon.\n\nKui see on uus installatsioon, jätke ruut märkimata.",
+        "data": {
+          "migrate_yaml": "Migreeri YAML paketist"
+        },
+        "data_description": {
+          "migrate_yaml": "Märkige see, kui teil on olemasolevad olemid YAML paketi seadistusest, mida soovite migreerida."
+        }
+      },
+      "yaml_topic": {
+        "title": "YAML paketi MQTT teema",
+        "description": "Sisestage MQTT teema oma olemasolevast YAML paketi seadistusest.\n\n**Oluline:** Integratsioon seadistab automaatselt teie Tasmota seadme NodeID eksponeerimiseks, kui see pole juba tehtud.",
+        "data": {
+          "mqtt_topic": "Tasmota seadme MQTT teema"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT teema, mis on seadistatud teie Tasmota seadmes (nt 'SmartPool')."
+        }
+      },
+      "yaml_confirm": {
+        "title": "Kinnita YAML migratsioon",
+        "description": "Valmis migreerima YAML paketist.\n\n**MQTT teema:** `{mqtt_topic}`\n**Seadme NodeID:** `{nodeid}`\n\nPärast seadistamist:\n1. Teie olemasolevad olemid migreeritakse uude integratsiooni\n2. Kõik ajaloolised andmed säilitatakse\n3. Saate eemaldada oma YAML paketi seadistuse\n\nKlõpsake **Esita**, et migratsioon lõpule viia."
+      },
+      "discover_device": {
+        "title": "Seadista NeoPool seade",
+        "description": "Sisestage oma Tasmota NeoPool seadme andmed.",
+        "data": {
+          "mqtt_topic": "Tasmota seadme MQTT teema",
+          "name": "Seadme nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT teema, mis on seadistatud teie Tasmota seadmes.",
+          "name": "Sõbralik nimi teie NeoPool basseini kontrollerile."
+        }
+      },
+      "mqtt": {
+        "title": "NeoPool seade avastatud",
+        "description": "Sugar Valley NeoPool basseini kontroller avastati MQTT kaudu.\n\n**Teema:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`\n\nKas soovite selle seadme seadistada?"
+      },
+      "mqtt_confirm": {
+        "title": "Kinnita avastatud seade",
+        "description": "Kinnitage avastatud NeoPool seadme seadistus.\n\n**MQTT teema:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`",
+        "data": {
+          "name": "Seadme nimi"
+        },
+        "data_description": {
+          "name": "Sõbralik nimi teie NeoPool basseini kontrollerile."
+        }
+      },
+      "reconfigure": {
+        "title": "Seadista Sugar Valley NeoPool uuesti",
+        "description": "Värskendage oma NeoPool kontrolleri ühenduse seadeid.\n\n**Praegune NodeID:** `{nodeid}`\n**Praegune MQTT teema:** `{mqtt_topic}`",
+        "data": {
+          "mqtt_topic": "Tasmota seadme MQTT teema",
+          "name": "Seadme nimi"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT teema, mis on seadistatud teie Tasmota seadmes.",
+          "name": "Sõbralik nimi teie NeoPool basseini kontrollerile."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "MQTT vahendajaga ei saa ühendust",
+      "invalid_topic": "Vigane MQTT teema vorming",
+      "no_neopool_data": "NeoPool andmeid ei saadud - kontrollige teemat ja seadme ühenduvust",
+      "timeout": "Seadmelt MQTT andmete ootamise ajalõpp",
+      "unknown": "Ootamatu viga",
+      "nodeid_required": "Seadmelt ei õnnestunud NodeID-d hankida. Palun veenduge, et teie Tasmota seade on võrgus.",
+      "nodeid_configuration_failed": "Tasmota seadme seadistamine NodeID eksponeerimiseks ebaõnnestus. Palun määrake käsitsi SetOption157 1 Tasmota konsoolis."
+    },
+    "abort": {
+      "already_configured": "Seade on juba seadistatud",
+      "no_devices_found": "Võrgust ei leitud NeoPool seadmeid",
+      "mqtt_not_available": "MQTT integratsioon pole saadaval",
+      "reconfigure_successful": "Uuesti seadistamine õnnestus"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sugar Valley NeoPool valikud",
+        "description": "Seadistage oma NeoPool integratsiooni käitusaja seaded.",
+        "data": {
+          "recovery_script": "Taastamise skript",
+          "enable_repair_notification": "Luba parandamise teavitused",
+          "failures_threshold": "Ebaõnnestumiste lävi",
+          "offline_timeout": "Võrguühenduseta ajalõpp (sekundid)"
+        },
+        "data_description": {
+          "recovery_script": "Valikuline skript, mida käivitada, kui seade taastub pärast võrguühenduseta olekut (nt 'script.neopool_recovery').",
+          "enable_repair_notification": "Loo parandamise probleemid, kui seade on pikka aega võrguühenduseta.",
+          "failures_threshold": "Järjestikuste võrguühenduseta kontrollide arv enne parandamise probleemi loomist (1-10).",
+          "offline_timeout": "Aeg sekundites MQTT andmete ootamiseks enne seadme võrguühenduseta pidamist (60-3600)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "device_offline": {
+      "title": "NeoPool seade võrguühenduseta: {device_name}",
+      "description": "NeoPool seade **{device_name}** (MQTT teema: `{mqtt_topic}`) on olnud võrguühenduseta **{offline_duration}**.\n\n## Tõrkeotsingu sammud\n\n1. Kontrollige, et Tasmota seade on toitega ja ühendatud WiFi-ga\n2. Kontrollige, et MQTT vahendaja töötab ja on kättesaadav\n3. Kontrollige Tasmota seadme logisid vigade osas\n4. Veenduge, et NeoPool kontroller on ühendatud Tasmota seadmega\n\n## Seadme andmed\n\n- **MQTT teema:** `{mqtt_topic}`\n- **Võrguühenduseta alates:** {offline_since}\n- **Kestus:** {offline_duration}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "device_offline": "Seade läks võrguühenduseta",
+      "device_online": "Seade tuli tagasi võrku",
+      "device_recovered": "Seade taastus pärast pikaajalist katkestust"
+    }
+  }
+}

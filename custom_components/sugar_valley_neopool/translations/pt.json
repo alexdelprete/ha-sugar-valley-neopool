@@ -1,0 +1,128 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Configuração do Sugar Valley NeoPool",
+        "description": "Configure o seu controlador de piscina Sugar Valley NeoPool conectado via Tasmota MQTT.",
+        "data": {
+          "mqtt_topic": "Tópico MQTT do dispositivo Tasmota",
+          "name": "Nome do dispositivo"
+        },
+        "data_description": {
+          "mqtt_topic": "O tópico MQTT configurado no seu dispositivo Tasmota (ex: 'SmartPool'). A integração subscreverá automaticamente às atualizações dos sensores.",
+          "name": "Um nome amigável para o seu controlador de piscina NeoPool."
+        }
+      },
+      "yaml_migration": {
+        "title": "Método de configuração",
+        "description": "Escolha como configurar esta integração.\n\nSe está a migrar de uma configuração de pacote YAML, marque a caixa abaixo para transferir os seus dados históricos para a nova integração de interface.\n\nSe esta é uma nova instalação, deixe a caixa desmarcada.",
+        "data": {
+          "migrate_yaml": "Migrar do pacote YAML"
+        },
+        "data_description": {
+          "migrate_yaml": "Marque isto se tiver entidades existentes de uma configuração de pacote YAML que deseja migrar."
+        }
+      },
+      "yaml_topic": {
+        "title": "Tópico MQTT do pacote YAML",
+        "description": "Introduza o tópico MQTT da sua configuração de pacote YAML existente.\n\n**Importante:** A integração configurará automaticamente o seu dispositivo Tasmota para expor o NodeID se ainda não estiver feito.",
+        "data": {
+          "mqtt_topic": "Tópico MQTT do dispositivo Tasmota"
+        },
+        "data_description": {
+          "mqtt_topic": "O tópico MQTT configurado no seu dispositivo Tasmota (ex: 'SmartPool')."
+        }
+      },
+      "yaml_confirm": {
+        "title": "Confirmar migração YAML",
+        "description": "Pronto para migrar do pacote YAML.\n\n**Tópico MQTT:** `{mqtt_topic}`\n**NodeID do dispositivo:** `{nodeid}`\n\nApós a configuração:\n1. As suas entidades existentes serão migradas para a nova integração\n2. Todos os dados históricos serão preservados\n3. Pode remover a sua configuração de pacote YAML\n\nClique em **Submeter** para concluir a migração."
+      },
+      "discover_device": {
+        "title": "Configurar dispositivo NeoPool",
+        "description": "Introduza os detalhes do seu dispositivo Tasmota NeoPool.",
+        "data": {
+          "mqtt_topic": "Tópico MQTT do dispositivo Tasmota",
+          "name": "Nome do dispositivo"
+        },
+        "data_description": {
+          "mqtt_topic": "O tópico MQTT configurado no seu dispositivo Tasmota.",
+          "name": "Um nome amigável para o seu controlador de piscina NeoPool."
+        }
+      },
+      "mqtt": {
+        "title": "Dispositivo NeoPool descoberto",
+        "description": "Um controlador de piscina Sugar Valley NeoPool foi descoberto via MQTT.\n\n**Tópico:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`\n\nDeseja configurar este dispositivo?"
+      },
+      "mqtt_confirm": {
+        "title": "Confirmar dispositivo descoberto",
+        "description": "Confirme a configuração do dispositivo NeoPool descoberto.\n\n**Tópico MQTT:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`",
+        "data": {
+          "name": "Nome do dispositivo"
+        },
+        "data_description": {
+          "name": "Um nome amigável para o seu controlador de piscina NeoPool."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurar Sugar Valley NeoPool",
+        "description": "Atualize as definições de conexão para o seu controlador NeoPool.\n\n**NodeID atual:** `{nodeid}`\n**Tópico MQTT atual:** `{mqtt_topic}`",
+        "data": {
+          "mqtt_topic": "Tópico MQTT do dispositivo Tasmota",
+          "name": "Nome do dispositivo"
+        },
+        "data_description": {
+          "mqtt_topic": "O tópico MQTT configurado no seu dispositivo Tasmota.",
+          "name": "Um nome amigável para o seu controlador de piscina NeoPool."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Não foi possível conectar ao broker MQTT",
+      "invalid_topic": "Formato de tópico MQTT inválido",
+      "no_neopool_data": "Nenhum dado NeoPool recebido - verifique o tópico e a conectividade do dispositivo",
+      "timeout": "Tempo limite ao aguardar dados MQTT do dispositivo",
+      "unknown": "Erro inesperado",
+      "nodeid_required": "Não foi possível obter o NodeID do dispositivo. Por favor, certifique-se de que o seu dispositivo Tasmota está online.",
+      "nodeid_configuration_failed": "Falha ao configurar o dispositivo Tasmota para expor o NodeID. Por favor, defina manualmente SetOption157 1 na consola Tasmota."
+    },
+    "abort": {
+      "already_configured": "O dispositivo já está configurado",
+      "no_devices_found": "Nenhum dispositivo NeoPool encontrado na rede",
+      "mqtt_not_available": "A integração MQTT não está disponível",
+      "reconfigure_successful": "Reconfiguração bem-sucedida"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opções do Sugar Valley NeoPool",
+        "description": "Configure as definições de tempo de execução para a sua integração NeoPool.",
+        "data": {
+          "recovery_script": "Script de recuperação",
+          "enable_repair_notification": "Ativar notificações de reparação",
+          "failures_threshold": "Limite de falhas",
+          "offline_timeout": "Tempo limite offline (segundos)"
+        },
+        "data_description": {
+          "recovery_script": "Script opcional a executar quando o dispositivo recupera de estar offline (ex: 'script.neopool_recovery').",
+          "enable_repair_notification": "Criar problemas de reparação quando o dispositivo está offline por um período prolongado.",
+          "failures_threshold": "Número de verificações offline consecutivas antes de criar um problema de reparação (1-10).",
+          "offline_timeout": "Tempo em segundos para aguardar dados MQTT antes de considerar o dispositivo offline (60-3600)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "device_offline": {
+      "title": "Dispositivo NeoPool offline: {device_name}",
+      "description": "O dispositivo NeoPool **{device_name}** (tópico MQTT: `{mqtt_topic}`) está offline há **{offline_duration}**.\n\n## Passos de resolução de problemas\n\n1. Verifique se o dispositivo Tasmota está ligado e conectado ao WiFi\n2. Verifique se o broker MQTT está a funcionar e acessível\n3. Verifique os registos do dispositivo Tasmota para erros\n4. Certifique-se de que o controlador NeoPool está conectado ao dispositivo Tasmota\n\n## Detalhes do dispositivo\n\n- **Tópico MQTT:** `{mqtt_topic}`\n- **Offline desde:** {offline_since}\n- **Duração:** {offline_duration}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "device_offline": "O dispositivo ficou offline",
+      "device_online": "O dispositivo voltou online",
+      "device_recovered": "O dispositivo recuperou após interrupção prolongada"
+    }
+  }
+}

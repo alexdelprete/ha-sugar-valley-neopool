@@ -55,6 +55,18 @@
           "device_name": "Device Name",
           "discovery_prefix": "MQTT Topic (Tasmota device name)"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure NeoPool",
+        "description": "Update your NeoPool device connection settings.",
+        "data": {
+          "device_name": "Device Name",
+          "discovery_prefix": "MQTT Topic"
+        },
+        "data_description": {
+          "device_name": "A friendly name for your pool controller",
+          "discovery_prefix": "The MQTT topic used by your Tasmota device"
+        }
       }
     },
     "error": {
@@ -62,13 +74,48 @@
       "invalid_yaml_topic": "Cannot read from this MQTT topic. Please verify the topic is correct and the device is online.",
       "cannot_connect": "Could not receive messages from this MQTT topic. Verify the topic name and that your device is online.",
       "no_entities_found": "No orphaned entities found with this prefix. Check that:\n1. You removed the YAML package from configuration.yaml\n2. You restarted Home Assistant\n3. The prefix matches your YAML configuration",
-      "confirmation_required": "You must check the confirmation checkbox to proceed with the migration."
+      "confirmation_required": "You must check the confirmation checkbox to proceed with the migration.",
+      "nodeid_configuration_failed": "Failed to configure NodeID on the device."
     },
     "abort": {
       "already_configured": "This device is already configured",
       "invalid_discovery_info": "Invalid discovery information received",
       "not_neopool_device": "The discovered device is not a NeoPool controller",
-      "nodeid_configuration_failed": "Failed to configure NodeID. Please manually set SetOption157 1 in Tasmota console and try again."
+      "nodeid_configuration_failed": "Failed to configure NodeID. Please manually set SetOption157 1 in Tasmota console and try again.",
+      "unique_id_mismatch": "The device NodeID does not match the original configuration."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "NeoPool Runtime Options",
+        "description": "Configure runtime options.\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n\n- `device_name` : Device name\n- `mqtt_topic` : MQTT topic\n- `nodeid` : Device NodeID\n- `failures_count` : Number of consecutive failures",
+        "data": {
+          "recovery_script": "Recovery script (optional, runs when device stops responding)",
+          "enable_repair_notification": "Enable repair notifications",
+          "failures_threshold": "Failures before notification (1-10)",
+          "offline_timeout": "Offline timeout (seconds)"
+        },
+        "data_description": {
+          "recovery_script": "Script to run when device is offline for too long",
+          "enable_repair_notification": "Create a repair issue when device goes offline",
+          "failures_threshold": "Number of consecutive LWT offline messages before triggering notifications",
+          "offline_timeout": "How long the device must be offline before triggering notifications"
+        }
+      }
+    }
+  },
+  "issues": {
+    "device_offline": {
+      "title": "NeoPool device offline: {device_name}",
+      "description": "The NeoPool device **{device_name}** has been offline for an extended period.\n\n**MQTT Topic:** `{mqtt_topic}`\n\nPlease check:\n- The Tasmota device is powered on\n- The device is connected to your network\n- The MQTT broker is running\n- The MQTT topic is correct"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "device_offline": "Device went offline",
+      "device_online": "Device came online",
+      "device_recovered": "Device recovered after being offline"
     }
   },
   "entity": {

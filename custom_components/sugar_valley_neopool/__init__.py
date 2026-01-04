@@ -14,10 +14,18 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from .const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
+    CONF_ENABLE_REPAIR_NOTIFICATION,
+    CONF_FAILURES_THRESHOLD,
     CONF_MIGRATE_YAML,
     CONF_NODEID,
+    CONF_OFFLINE_TIMEOUT,
+    CONF_RECOVERY_SCRIPT,
     CONF_UNIQUE_ID_PREFIX,
     DEFAULT_DEVICE_NAME,
+    DEFAULT_ENABLE_REPAIR_NOTIFICATION,
+    DEFAULT_FAILURES_THRESHOLD,
+    DEFAULT_OFFLINE_TIMEOUT,
+    DEFAULT_RECOVERY_SCRIPT,
     DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
     MANUFACTURER,
@@ -30,6 +38,9 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
+# Config entry version for migrations
+CONFIG_ENTRY_VERSION = 2
+
 
 @dataclass
 class NeoPoolData:
@@ -40,6 +51,7 @@ class NeoPoolData:
     nodeid: str
     sensor_data: dict[str, Any] = field(default_factory=dict)
     available: bool = False
+    device_id: str | None = None  # For device triggers
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -69,14 +81,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Migrate YAML entities if this is first setup
     await async_migrate_yaml_entities(hass, entry, nodeid)
 
-    # Register device in device registry
+    # Register device in device registry and store device_id for triggers
     await async_register_device(hass, entry)
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Register update listener for options changes
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
     _LOGGER.info("NeoPool MQTT integration setup complete for %s", device_name)
     return True
@@ -86,19 +97,58 @@ async def async_unload_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> 
     """Unload a config entry."""
     _LOGGER.debug("Unloading NeoPool MQTT integration")
 
-    # Unload platforms
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    if unload_ok:
+    # Unload platforms - only cleanup runtime_data if successful
+    # ref.: https://developers.home-assistant.io/blog/2025/02/19/new-config-entry-states/
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         _LOGGER.info("NeoPool MQTT integration unloaded successfully")
+    else:
+        _LOGGER.debug("Platform unload failed, skipping cleanup")
 
     return unload_ok
 
 
-async def async_reload_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
-    """Reload config entry."""
-    _LOGGER.debug("Reloading NeoPool MQTT integration")
-    await hass.config_entries.async_reload(entry.entry_id)
+async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:
+    """Migrate old config entry to new format.
+
+    This function handles migration of config entries when the schema version changes.
+    """
+    # Handle downgrade scenario (per HA best practice)
+    if config_entry.version > CONFIG_ENTRY_VERSION:
+        _LOGGER.error(
+            "Cannot downgrade from version %s to %s",
+            config_entry.version,
+            CONFIG_ENTRY_VERSION,
+        )
+        return False
+
+    _LOGGER.info(
+        "Migrating config entry from version %s to %s",
+        config_entry.version,
+        CONFIG_ENTRY_VERSION,
+    )
+
+    if config_entry.version == 1:
+        # Version 1 -> 2: Add options for repair notifications and offline timeout
+        new_options = {**config_entry.options}
+
+        # Add new options with defaults if not present
+        if CONF_ENABLE_REPAIR_NOTIFICATION not in new_options:
+            new_options[CONF_ENABLE_REPAIR_NOTIFICATION] = DEFAULT_ENABLE_REPAIR_NOTIFICATION
+        if CONF_FAILURES_THRESHOLD not in new_options:
+            new_options[CONF_FAILURES_THRESHOLD] = DEFAULT_FAILURES_THRESHOLD
+        if CONF_RECOVERY_SCRIPT not in new_options:
+            new_options[CONF_RECOVERY_SCRIPT] = DEFAULT_RECOVERY_SCRIPT
+        if CONF_OFFLINE_TIMEOUT not in new_options:
+            new_options[CONF_OFFLINE_TIMEOUT] = DEFAULT_OFFLINE_TIMEOUT
+
+        hass.config_entries.async_update_entry(
+            config_entry,
+            options=new_options,
+            version=2,
+        )
+        _LOGGER.info("Migration to version 2 complete")
+
+    return True
 
 
 async def async_migrate_yaml_entities(
@@ -257,6 +307,15 @@ async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) 
         sw_version=VERSION,
         configuration_url="https://tasmota.github.io/docs/NeoPool/",
     )
+
+    # Store device_id in runtime_data for device triggers
+    device = device_registry.async_get_device(identifiers={(DOMAIN, nodeid)})
+    if device:
+        entry.runtime_data.device_id = device.id
+        _LOGGER.debug(
+            "Device ID stored in runtime_data: %s",
+            device.id,
+        )
 
     _LOGGER.debug("Registered device: %s (NodeID: %s)", device_name, nodeid)
 

@@ -11,6 +11,9 @@ DOMAIN: Final = "sugar_valley_neopool"
 NAME: Final = "Sugar Valley NeoPool"
 VERSION: Final = "0.1.0"
 MANUFACTURER: Final = "Sugar Valley"
+MODEL: Final = "NeoPool Controller"
+ATTRIBUTION: Final = "by @alexdelprete"
+ISSUE_URL: Final = "https://github.com/alexdelprete/ha-sugar-valley-neopool/issues"
 
 # Platforms supported
 PLATFORMS: Final[list[Platform]] = [
@@ -22,7 +25,7 @@ PLATFORMS: Final[list[Platform]] = [
     Platform.BUTTON,
 ]
 
-# Configuration keys
+# Configuration keys (data - changed via reconfigure)
 CONF_DISCOVERY_PREFIX: Final = "discovery_prefix"
 CONF_DEVICE_NAME: Final = "device_name"
 CONF_NODEID: Final = "nodeid"
@@ -30,11 +33,29 @@ CONF_MIGRATE_YAML: Final = "migrate_yaml"
 CONF_UNIQUE_ID_PREFIX: Final = "unique_id_prefix"
 CONF_CONFIRM_MIGRATION: Final = "confirm_migration"
 
+# Configuration keys (options - changed via options flow)
+CONF_ENABLE_REPAIR_NOTIFICATION: Final = "enable_repair_notification"
+CONF_FAILURES_THRESHOLD: Final = "failures_threshold"
+CONF_RECOVERY_SCRIPT: Final = "recovery_script"
+CONF_OFFLINE_TIMEOUT: Final = "offline_timeout"
+
 # Default values
 DEFAULT_DEVICE_NAME: Final = "NeoPool"
 DEFAULT_DISCOVERY_PREFIX: Final = "tele/"
 DEFAULT_UNIQUE_ID_PREFIX: Final = "neopool_mqtt_"
 DEFAULT_MQTT_TOPIC: Final = "SmartPool"
+
+# Options flow defaults
+DEFAULT_ENABLE_REPAIR_NOTIFICATION: Final = True
+DEFAULT_FAILURES_THRESHOLD: Final = 3
+DEFAULT_RECOVERY_SCRIPT: Final = ""
+DEFAULT_OFFLINE_TIMEOUT: Final = 300  # 5 minutes in seconds
+
+# Options flow validation bounds
+MIN_FAILURES_THRESHOLD: Final = 1
+MAX_FAILURES_THRESHOLD: Final = 10
+MIN_OFFLINE_TIMEOUT: Final = 60  # 1 minute
+MAX_OFFLINE_TIMEOUT: Final = 3600  # 1 hour
 
 # MQTT Topics - Tasmota NeoPool patterns
 TOPIC_SENSOR: Final = "tele/{device}/SENSOR"

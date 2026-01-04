@@ -11,27 +11,61 @@ import voluptuous as vol
 
 from homeassistant.components import mqtt
 from homeassistant.components.mqtt import valid_subscribe_topic
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.core import callback
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.entity_registry import RegistryEntry
+from homeassistant.helpers.selector import (
+    EntitySelector,
+    EntitySelectorConfig,
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
+)
 from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
 
 from .const import (
     CONF_CONFIRM_MIGRATION,
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
+    CONF_ENABLE_REPAIR_NOTIFICATION,
+    CONF_FAILURES_THRESHOLD,
     CONF_MIGRATE_YAML,
     CONF_NODEID,
+    CONF_OFFLINE_TIMEOUT,
+    CONF_RECOVERY_SCRIPT,
     CONF_UNIQUE_ID_PREFIX,
     DEFAULT_DEVICE_NAME,
+    DEFAULT_ENABLE_REPAIR_NOTIFICATION,
+    DEFAULT_FAILURES_THRESHOLD,
     DEFAULT_MQTT_TOPIC,
+    DEFAULT_OFFLINE_TIMEOUT,
+    DEFAULT_RECOVERY_SCRIPT,
     DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
+    MAX_FAILURES_THRESHOLD,
+    MAX_OFFLINE_TIMEOUT,
+    MIN_FAILURES_THRESHOLD,
+    MIN_OFFLINE_TIMEOUT,
 )
 from .helpers import get_nested_value, validate_nodeid
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@callback
+def get_topics_from_config(hass: HomeAssistant) -> set[str | None]:
+    """Return the MQTT topics already configured."""
+    return {
+        config_entry.data.get(CONF_DISCOVERY_PREFIX)
+        for config_entry in hass.config_entries.async_entries(DOMAIN)
+    }
+
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -41,11 +75,17 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
+class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):  # type: ignore[call-arg]
     """Handle a config flow for NeoPool MQTT."""
 
     VERSION = 1
     MINOR_VERSION = 0
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> NeoPoolOptionsFlow:
+        """Initiate Options Flow Instance."""
+        return NeoPoolOptionsFlow()
 
     def __init__(self) -> None:
         """Initialize the config flow."""
@@ -575,3 +615,152 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             unsubscribe()
 
         return received_nodeid
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of the integration."""
+        reconfigure_entry = self._get_reconfigure_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            device_name = user_input[CONF_DEVICE_NAME]
+            discovery_prefix = user_input[CONF_DISCOVERY_PREFIX]
+
+            _LOGGER.debug(
+                "Reconfigure requested: name=%s, topic=%s",
+                device_name,
+                discovery_prefix,
+            )
+
+            # Validate MQTT topic format
+            try:
+                valid_subscribe_topic(f"tele/{discovery_prefix}/SENSOR")
+            except vol.Invalid:
+                errors[CONF_DISCOVERY_PREFIX] = "invalid_topic"
+
+            if not errors:
+                # Test connection with new topic
+                validation_result = await self._validate_yaml_topic(discovery_prefix)
+
+                if not validation_result["valid"]:
+                    errors["base"] = "cannot_connect"
+                else:
+                    nodeid = validation_result.get("nodeid")
+
+                    # If NodeID is hidden, auto-configure Tasmota
+                    if not validate_nodeid(nodeid):
+                        config_result = await self._auto_configure_nodeid(discovery_prefix)
+                        if not config_result["success"]:
+                            errors["base"] = "nodeid_configuration_failed"
+                        else:
+                            nodeid = config_result["nodeid"]
+
+                    if not errors:
+                        # Verify unique ID matches before updating
+                        await self.async_set_unique_id(f"{DOMAIN}_{nodeid}")
+                        self._abort_if_unique_id_mismatch()
+
+                        _LOGGER.debug(
+                            "Connection test passed, applying reconfigure: nodeid=%s",
+                            nodeid,
+                        )
+                        return self.async_update_reload_and_abort(
+                            reconfigure_entry,
+                            title=device_name,
+                            data_updates={
+                                CONF_DEVICE_NAME: device_name,
+                                CONF_DISCOVERY_PREFIX: discovery_prefix,
+                                CONF_NODEID: nodeid,
+                            },
+                        )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_DEVICE_NAME,
+                        default=reconfigure_entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME),
+                    ): cv.string,
+                    vol.Required(
+                        CONF_DISCOVERY_PREFIX,
+                        default=reconfigure_entry.data.get(
+                            CONF_DISCOVERY_PREFIX, DEFAULT_MQTT_TOPIC
+                        ),
+                    ): cv.string,
+                },
+            ),
+            errors=errors,
+        )
+
+
+class NeoPoolOptionsFlow(OptionsFlowWithReload):
+    """Config flow options handler with auto-reload."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            _LOGGER.debug(
+                "Options updated: enable_repair=%s, failures_threshold=%s, "
+                "offline_timeout=%s, recovery_script=%s",
+                user_input.get(CONF_ENABLE_REPAIR_NOTIFICATION),
+                user_input.get(CONF_FAILURES_THRESHOLD),
+                user_input.get(CONF_OFFLINE_TIMEOUT),
+                user_input.get(CONF_RECOVERY_SCRIPT),
+            )
+            return self.async_create_entry(data=user_input)
+
+        # Get current options with defaults
+        current_options = self.config_entry.options
+        enable_repair = current_options.get(
+            CONF_ENABLE_REPAIR_NOTIFICATION, DEFAULT_ENABLE_REPAIR_NOTIFICATION
+        )
+        failures_threshold = current_options.get(
+            CONF_FAILURES_THRESHOLD, DEFAULT_FAILURES_THRESHOLD
+        )
+        recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
+        offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    # 1. Recovery script (runs when device goes offline after threshold)
+                    vol.Optional(
+                        CONF_RECOVERY_SCRIPT,
+                        default=recovery_script,
+                    ): EntitySelector(
+                        EntitySelectorConfig(domain="script"),
+                    ),
+                    # 2. Enable repair notifications checkbox
+                    vol.Required(
+                        CONF_ENABLE_REPAIR_NOTIFICATION,
+                        default=enable_repair,
+                    ): cv.boolean,
+                    # 3. Failures threshold as input box (not slider)
+                    vol.Required(
+                        CONF_FAILURES_THRESHOLD,
+                        default=failures_threshold,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_FAILURES_THRESHOLD,
+                            max=MAX_FAILURES_THRESHOLD,
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    # 4. Offline timeout (how long device must be offline before notification)
+                    vol.Required(
+                        CONF_OFFLINE_TIMEOUT,
+                        default=offline_timeout,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_OFFLINE_TIMEOUT,
+                            max=MAX_OFFLINE_TIMEOUT,
+                            mode=NumberSelectorMode.BOX,
+                            unit_of_measurement="seconds",
+                        )
+                    ),
+                },
+            ),
+        )

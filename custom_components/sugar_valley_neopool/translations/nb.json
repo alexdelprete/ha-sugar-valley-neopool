@@ -1,0 +1,128 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sugar Valley NeoPool-oppsett",
+        "description": "Konfigurer din Sugar Valley NeoPool bassengkontroller tilkoblet via Tasmota MQTT.",
+        "data": {
+          "mqtt_topic": "Tasmota-enhetens MQTT-emne",
+          "name": "Enhetsnavn"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT-emnet konfigurert i Tasmota-enheten din (f.eks. 'SmartPool'). Integrasjonen abonnerer automatisk på sensoroppdateringer.",
+          "name": "Et vennlig navn for NeoPool-bassengkontrolleren din."
+        }
+      },
+      "yaml_migration": {
+        "title": "Konfigurasjonsmetode",
+        "description": "Velg hvordan du vil konfigurere denne integrasjonen.\n\nHvis du migrerer fra en YAML-pakke-konfigurasjon, kryss av boksen nedenfor for å overføre historiske data til den nye UI-integrasjonen.\n\nHvis dette er en ny installasjon, la boksen være uavkrysset.",
+        "data": {
+          "migrate_yaml": "Migrer fra YAML-pakke"
+        },
+        "data_description": {
+          "migrate_yaml": "Kryss av dette hvis du har eksisterende entiteter fra en YAML-pakke-konfigurasjon du ønsker å migrere."
+        }
+      },
+      "yaml_topic": {
+        "title": "YAML-pakke MQTT-emne",
+        "description": "Skriv inn MQTT-emnet fra din eksisterende YAML-pakke-konfigurasjon.\n\n**Viktig:** Integrasjonen vil automatisk konfigurere Tasmota-enheten din til å eksponere NodeID hvis det ikke allerede er gjort.",
+        "data": {
+          "mqtt_topic": "Tasmota-enhetens MQTT-emne"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT-emnet konfigurert i Tasmota-enheten din (f.eks. 'SmartPool')."
+        }
+      },
+      "yaml_confirm": {
+        "title": "Bekreft YAML-migrering",
+        "description": "Klar til å migrere fra YAML-pakke.\n\n**MQTT-emne:** `{mqtt_topic}`\n**Enhetens NodeID:** `{nodeid}`\n\nEtter konfigurasjon:\n1. Dine eksisterende entiteter vil bli migrert til den nye integrasjonen\n2. Alle historiske data bevares\n3. Du kan fjerne YAML-pakke-konfigurasjonen din\n\nKlikk **Send** for å fullføre migreringen."
+      },
+      "discover_device": {
+        "title": "Konfigurer NeoPool-enhet",
+        "description": "Skriv inn detaljene for Tasmota NeoPool-enheten din.",
+        "data": {
+          "mqtt_topic": "Tasmota-enhetens MQTT-emne",
+          "name": "Enhetsnavn"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT-emnet konfigurert i Tasmota-enheten din.",
+          "name": "Et vennlig navn for NeoPool-bassengkontrolleren din."
+        }
+      },
+      "mqtt": {
+        "title": "NeoPool-enhet oppdaget",
+        "description": "En Sugar Valley NeoPool bassengkontroller ble oppdaget via MQTT.\n\n**Emne:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`\n\nVil du konfigurere denne enheten?"
+      },
+      "mqtt_confirm": {
+        "title": "Bekreft oppdaget enhet",
+        "description": "Bekreft konfigurasjonen av den oppdagede NeoPool-enheten.\n\n**MQTT-emne:** `{mqtt_topic}`\n**NodeID:** `{nodeid}`",
+        "data": {
+          "name": "Enhetsnavn"
+        },
+        "data_description": {
+          "name": "Et vennlig navn for NeoPool-bassengkontrolleren din."
+        }
+      },
+      "reconfigure": {
+        "title": "Rekonfigurer Sugar Valley NeoPool",
+        "description": "Oppdater tilkoblingsinnstillingene for NeoPool-kontrolleren din.\n\n**Nåværende NodeID:** `{nodeid}`\n**Nåværende MQTT-emne:** `{mqtt_topic}`",
+        "data": {
+          "mqtt_topic": "Tasmota-enhetens MQTT-emne",
+          "name": "Enhetsnavn"
+        },
+        "data_description": {
+          "mqtt_topic": "MQTT-emnet konfigurert i Tasmota-enheten din.",
+          "name": "Et vennlig navn for NeoPool-bassengkontrolleren din."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunne ikke koble til MQTT-megler",
+      "invalid_topic": "Ugyldig MQTT-emneformat",
+      "no_neopool_data": "Ingen NeoPool-data mottatt - sjekk emne og enhetstilkobling",
+      "timeout": "Tidsavbrudd ved venting på MQTT-data fra enhet",
+      "unknown": "Uventet feil",
+      "nodeid_required": "Kunne ikke hente NodeID fra enheten. Vennligst sørg for at Tasmota-enheten er online.",
+      "nodeid_configuration_failed": "Kunne ikke konfigurere Tasmota-enheten til å eksponere NodeID. Vennligst sett manuelt SetOption157 1 i Tasmota-konsollen."
+    },
+    "abort": {
+      "already_configured": "Enheten er allerede konfigurert",
+      "no_devices_found": "Ingen NeoPool-enheter funnet på nettverket",
+      "mqtt_not_available": "MQTT-integrasjon er ikke tilgjengelig",
+      "reconfigure_successful": "Rekonfigurering vellykket"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Sugar Valley NeoPool-alternativer",
+        "description": "Konfigurer kjøretidsinnstillinger for NeoPool-integrasjonen din.",
+        "data": {
+          "recovery_script": "Gjenopprettingsskript",
+          "enable_repair_notification": "Aktiver reparasjonsvarsler",
+          "failures_threshold": "Feilterskel",
+          "offline_timeout": "Frakoblet tidsavbrudd (sekunder)"
+        },
+        "data_description": {
+          "recovery_script": "Valgfritt skript som kjøres når enheten gjenopprettes etter å ha vært frakoblet (f.eks. 'script.neopool_recovery').",
+          "enable_repair_notification": "Opprett reparasjonsproblemer når enheten er frakoblet i lengre tid.",
+          "failures_threshold": "Antall påfølgende frakoblingssjekker før et reparasjonsproblem opprettes (1-10).",
+          "offline_timeout": "Tid i sekunder å vente på MQTT-data før enheten anses som frakoblet (60-3600)."
+        }
+      }
+    }
+  },
+  "issues": {
+    "device_offline": {
+      "title": "NeoPool-enhet frakoblet: {device_name}",
+      "description": "NeoPool-enheten **{device_name}** (MQTT-emne: `{mqtt_topic}`) har vært frakoblet i **{offline_duration}**.\n\n## Feilsøkingstrinn\n\n1. Sjekk at Tasmota-enheten har strøm og er koblet til WiFi\n2. Verifiser at MQTT-megleren kjører og er tilgjengelig\n3. Sjekk Tasmota-enhetslogger for feil\n4. Sørg for at NeoPool-kontrolleren er koblet til Tasmota-enheten\n\n## Enhetsdetaljer\n\n- **MQTT-emne:** `{mqtt_topic}`\n- **Frakoblet siden:** {offline_since}\n- **Varighet:** {offline_duration}"
+    }
+  },
+  "device_automation": {
+    "trigger_type": {
+      "device_offline": "Enheten ble frakoblet",
+      "device_online": "Enheten kom tilbake online",
+      "device_recovered": "Enheten gjenopprettet etter langvarig avbrudd"
+    }
+  }
+}

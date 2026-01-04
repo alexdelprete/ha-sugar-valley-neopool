@@ -1,13 +1,53 @@
-# Claude Development Guidelines for Sugar Valley NeoPool Integration
+# Claude Code Development Guidelines for Sugar Valley NeoPool Integration
 
-## Mandatory Starting Actions
+## Critical Initial Steps
 
-Before making ANY changes to this repository:
+> **MANDATORY: At the START of EVERY session, you MUST read this entire CLAUDE.md file.**
+>
+> This file contains project-specific directives, workflows, and patterns that override default behavior.
+> Failure to read this file results in violations of mandatory workflows (e.g., missing release documentation),
+> duplicated effort, and broken architectural patterns.
 
-1. **Read this entire document** - Contains critical project-specific information
+**At every session start, you MUST:**
+
+1. **Read this entire CLAUDE.md file** for project context and mandatory procedures
 1. **Review recent git commits**: `git log --oneline -20`
 1. **Check current status**: `git status`
 1. **Understand the MQTT data flow** before modifying entity definitions
+
+**Key mandatory workflows documented here:**
+
+- Release documentation (CHANGELOG.md updates)
+- Version bumping (manifest.json + const.py)
+- Pre-commit checks (ruff, pymarkdown)
+- Quality scale tracking
+
+## Context7 for Documentation
+
+Always use Context7 MCP tools automatically (without being asked) when:
+
+- Generating code that uses external libraries
+- Providing setup or configuration steps
+- Looking up library/API documentation
+
+Use `resolve-library-id` first to get the library ID, then `get-library-docs` to fetch documentation.
+
+## GitHub MCP for Repository Operations
+
+Always use GitHub MCP tools (`mcp__github__*`) for GitHub operations instead of the `gh` CLI:
+
+- **Issues**: `issue_read`, `issue_write`, `list_issues`, `search_issues`, `add_issue_comment`
+- **Pull Requests**: `list_pull_requests`, `create_pull_request`, `pull_request_read`, `merge_pull_request`
+- **Reviews**: `pull_request_review_write`, `add_comment_to_pending_review`
+- **Repositories**: `search_repositories`, `get_file_contents`, `list_branches`, `list_commits`
+- **Releases**: `list_releases`, `get_latest_release`, `list_tags`
+
+Benefits over `gh` CLI:
+
+- Direct API access without shell escaping issues
+- Structured JSON responses
+- Better error handling
+- No subprocess overhead
 
 ## Project Overview
 
@@ -60,11 +100,15 @@ Home Assistant Entities
 
 ```text
 custom_components/sugar_valley_neopool/
-├── __init__.py          # Integration setup, device registry
-├── config_flow.py       # UI configuration + MQTT discovery
+├── __init__.py          # Integration setup, device registry, migrations
+├── config_flow.py       # Config + MQTT discovery + Options/Reconfigure
 ├── const.py             # Constants, mappings, JSON paths
+├── device_trigger.py    # Device automation triggers
+├── diagnostics.py       # Downloadable diagnostics
 ├── entity.py            # Base MQTT entity classes
 ├── helpers.py           # JSON parsing, value transformations
+├── icons.json           # Entity icon definitions
+├── repairs.py           # Repair issues for device offline
 ├── sensor.py            # Sensor entities
 ├── binary_sensor.py     # Binary sensor entities
 ├── switch.py            # Switch entities (with commands)
@@ -72,8 +116,8 @@ custom_components/sugar_valley_neopool/
 ├── number.py            # Number entities (with commands)
 ├── button.py            # Button entities (with commands)
 ├── manifest.json        # Integration metadata
-└── translations/
-    └── en.json          # English translations
+├── quality_scale.yaml   # HA Quality Scale tracking
+└── translations/        # 10 languages (de, en, es, et, fi, fr, it, nb, pt, sv)
 ```
 
 ## Coding Standards
@@ -400,22 +444,69 @@ async def _validate_yaml_topic(
 - Users can migrate from custom YAML configurations
 - Topic validation ensures device is actually publishing before setup
 
-## Release Management
+## Release Management - CRITICAL
 
-### CRITICAL: Never Create Tags/Releases Without Explicit User Instruction
+> **STOP: NEVER create git tags or GitHub releases without explicit user command.**
+> This is a hard rule. Always stop after commit/push and wait for user instruction.
 
-Release process:
+**Published releases are FROZEN** - Never modify documentation for released versions.
 
-1. Update version in `manifest.json` AND `const.py` (must match)
-1. Update `CHANGELOG.md` with changes
-1. Commit changes
-1. Create GitHub release (triggers workflow)
-1. Workflow creates ZIP and attaches to release
+**Master branch = Next Release** - All commits target the next version with version bumped
+in manifest.json and const.py.
+
+### Version Bumping Rules
+
+> **IMPORTANT: Do NOT bump version during a session. All changes go into the CURRENT unreleased version.**
+
+- The version in `manifest.json` and `const.py` represents the NEXT release being prepared
+- **NEVER bump version until user commands "tag and release"**
+- Multiple features/fixes can be added to the same unreleased version
+- Only bump to a NEW version number AFTER the current version is released
 
 ### Version Locations (Must Be Synchronized)
 
 1. `custom_components/sugar_valley_neopool/manifest.json` → `"version": "X.Y.Z"`
 1. `custom_components/sugar_valley_neopool/const.py` → `VERSION = "X.Y.Z"`
+
+### Complete Release Workflow
+
+> **IMPORTANT: Version Validation**
+> The release workflow VALIDATES that tag, manifest.json, and const.py versions all match.
+> You MUST update versions BEFORE creating the release, not after.
+
+| Step | Tool | Action |
+| ---- | ---- | ------ |
+| 1 | Edit | Update `CHANGELOG.md` with version summary |
+| 2 | Edit | Ensure `manifest.json` and `const.py` have correct version |
+| 3 | Bash | Run linting: `ruff format .`, `ruff check . --fix`, `pymarkdown scan .` |
+| 4 | Bash | `git add . && git commit -m "..."` |
+| 5 | Bash | `git push` |
+| 6 | **STOP** | Wait for user "tag and release" command |
+| 7 | **Checklist** | Display Release Readiness Checklist (see below) |
+| 8 | Bash | `git tag -a vX.Y.Z -m "Release vX.Y.Z"` |
+| 9 | Bash | `git push --tags` |
+| 10 | gh CLI | `gh release create vX.Y.Z --title "vX.Y.Z" --generate-notes` |
+| 11 | GitHub Actions | Validates versions match, then auto-uploads ZIP asset |
+| 12 | Edit | Bump versions in `manifest.json` and `const.py` to next version |
+
+### Release Readiness Checklist (MANDATORY)
+
+> **When user commands "tag and release", ALWAYS display this checklist BEFORE proceeding.**
+
+```markdown
+## Release Readiness Checklist
+
+| Item | Status |
+|------|--------|
+| Version in `manifest.json` | X.Y.Z |
+| Version in `const.py` | X.Y.Z |
+| CHANGELOG.md updated | Updated |
+| GitHub Actions (lint/test/validate) | PASSING |
+| Working tree clean | Clean |
+| Git tag | vX.Y.Z created/pushed |
+```
+
+Verify ALL items before proceeding with tag creation. If any item fails, fix it first.
 
 ## NeoPool-Specific Details
 
@@ -550,38 +641,71 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 # Payloads: "Online" or "Offline"
 ```
 
-## Pre-Commit Checklist (MUST DO)
+## Pre-Commit Configuration
 
-**Before committing and pushing**, always run formatting and linting tools on the whole codebase:
+Linting tools and settings are defined in `.pre-commit-config.yaml`:
+
+| Hook | Tool | Purpose |
+| ---- | ---- | ------- |
+| ruff | `ruff check --no-fix` | Python linting |
+| ruff-format | `ruff format --check` | Python formatting |
+| jsonlint | `uvx --from demjson3 jsonlint` | JSON validation |
+| yamllint | `uvx yamllint -d "{...}"` | YAML linting (inline config) |
+| pymarkdown | `pymarkdown scan` | Markdown linting |
+
+All hooks use `language: system` (local tools) with `verbose: true` for visibility.
+
+## Pre-Commit Checks (MANDATORY)
+
+> **CRITICAL: ALWAYS run pre-commit checks before ANY git commit.**
+> This is a hard rule - no exceptions. Never commit without passing all checks.
+
+```bash
+uvx pre-commit run --all-files
+```
+
+Or run individual tools:
 
 ```bash
 # Python formatting and linting
 ruff format .
 ruff check . --fix
 
-# Markdown formatting and linting
-mdformat .
-pymarkdownlnt scan .
+# Markdown linting
+pymarkdown scan .
 
 # Type checking
 mypy custom_components/sugar_valley_neopool --ignore-missing-imports
 ```
 
-All commands must pass without errors before committing.
+All checks must pass before committing. This applies to ALL commits, not just releases.
+
+### Windows Shell Notes
+
+When running shell commands on Windows, stray `nul` files may be created (Windows null device artifact).
+Check for and delete them after command execution:
+
+```bash
+rm nul  # if it exists
+```
 
 ## Testing Checklist
 
 Before committing:
 
+- [ ] Run `uvx pre-commit run --all-files` - all hooks pass
 - [ ] Run `ruff check .` - no errors
 - [ ] Run `ruff format .` - code formatted
-- [ ] Run `mdformat .` - markdown formatted
-- [ ] Run `pymarkdownlnt scan .` - markdown linted
+- [ ] Run `pymarkdown scan .` - markdown linted
 - [ ] Run `mypy` - no type errors
 - [ ] Test with real device or MQTT simulator
 - [ ] Verify entities appear in Home Assistant
 - [ ] Test commands actually control the device
 - [ ] Check availability updates correctly
+
+> **CRITICAL: NEVER modify production code to make tests pass. Always fix the tests instead.**
+> Production code is the source of truth. If tests fail, the tests are wrong - not the production code.
+> The only exception is when production code has an actual bug that tests correctly identified.
 
 ## Quality Scale Tracking (MUST DO)
 
@@ -596,22 +720,10 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
    - `exempt` with `comment` - Rule doesn't apply (explain why)
 1. Aim to complete all Bronze tier rules first, then Silver, Gold, Platinum
 
-**Current Status Summary:**
-
-| Tier     | Done | Todo | Exempt |
-| -------- | ---- | ---- | ------ |
-| Bronze   | 13   | 1    | 4      |
-| Silver   | 3    | 4    | 3      |
-| Gold     | 5    | 13   | 2      |
-| Platinum | 1    | 0    | 2      |
-
 **Priority Todo Items:**
 
 - `config-flow-test-coverage` - Create test suite
 - `test-coverage` - >95% test coverage
-- `diagnostics` - Implement diagnostics.py
-- `parallel-updates` - Specify PARALLEL_UPDATES
-- `reconfiguration-flow` - Add options flow
 
 ## Reference Documentation
 
@@ -621,3 +733,31 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
 - [Project docs/](docs/) folder contains detailed analysis documents
 
 [qs]: https://developers.home-assistant.io/docs/core/integration-quality-scale/
+
+## Do's and Don'ts
+
+**DO:**
+
+- Run `uvx pre-commit run --all-files` before EVERY commit
+- Read CLAUDE.md at session start
+- Use `runtime_data` for data storage (not `hass.data[DOMAIN]`)
+- Use `@callback` decorator for MQTT message handlers
+- Log with `%s` formatting (not f-strings)
+- Handle missing data gracefully
+- Update both manifest.json AND const.py for version bumps
+- Get approval before creating tags/releases
+- Subscribe to LWT topic for availability
+- Use NodeID-based unique IDs for entities
+
+**NEVER:**
+
+- Commit without running pre-commit checks first
+- Modify production code to make tests pass - fix the tests instead
+- Use `hass.data[DOMAIN][entry_id]` - use `runtime_data` instead
+- Shadow Python builtins (A001)
+- Use f-strings in logging (G004)
+- Create git tags or GitHub releases without explicit user instruction
+- Forget to update VERSION in both manifest.json AND const.py
+- Ignore LWT (Last Will and Testament) for availability
+- Use blocking calls in async context
+- Close GitHub issues without explicit user instruction

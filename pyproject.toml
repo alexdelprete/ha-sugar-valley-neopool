@@ -30,6 +30,7 @@ dev = [
     "pre-commit",
     "pymarkdownlnt",
     "ruff>=0.8.0",
+    "ty",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "pytest-cov",
@@ -46,6 +47,7 @@ lint = [
     "pre-commit",
     "pymarkdownlnt",
     "ruff>=0.8.0",
+    "ty",
 ]
 pytest = [
     "pytest>=8.0.0",
@@ -82,6 +84,16 @@ relative_files = true
 
 [tool.coverage.report]
 show_missing = true
+
+# ty type checker configuration (Rust-based, faster than mypy)
+[tool.ty.environment]
+python-version = "3.13"
+python-platform = "linux"
+
+[tool.ty.rules]
+# Promote warnings to errors for strictness
+deprecated = "error"
+redundant-cast = "error"
 
 [tool.mypy]
 python_version = "3.13"
