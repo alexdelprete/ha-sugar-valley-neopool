@@ -278,8 +278,8 @@ class TestNeoPoolSelect:
             "custom_components.sugar_valley_neopool.entity.mqtt.async_publish",
             new_callable=AsyncMock,
         ) as mock_publish:
-            # Select "Boost" option (value 1)
-            await select.async_select_option("Boost")
+            # Select "On" option (value 1) - BOOST_MODE_MAP has {0: "Off", 1: "On", 2: "On (Redox)"}
+            await select.async_select_option("On")
 
             mock_publish.assert_called_once()
             call_args = mock_publish.call_args
