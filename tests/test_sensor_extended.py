@@ -39,7 +39,9 @@ class TestSensorDescriptionsExtended:
         for desc in SENSOR_DESCRIPTIONS:
             has_name = desc.name is not None
             has_translation_key = desc.translation_key is not None
-            assert has_name or has_translation_key, f"Sensor {desc.key} missing name/translation_key"
+            assert has_name or has_translation_key, (
+                f"Sensor {desc.key} missing name/translation_key"
+            )
 
 
 class TestNeoPoolSensorExtended:

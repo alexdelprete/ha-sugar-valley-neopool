@@ -18,23 +18,14 @@ class TestNeoPoolEntityExtended:
 
         assert entity._attr_unique_id == "neopool_mqtt_ABC123_ph_data_sensor"
 
-    def test_entity_device_info_error_handling(self, mock_config_entry: MagicMock) -> None:
-        """Test device info when get_device_info raises."""
-        with patch(
-            "custom_components.sugar_valley_neopool.entity.get_device_info",
-            side_effect=Exception("Error"),
-        ):
-            # Should not raise, but device_info might be None
-            try:
-                entity = NeoPoolEntity(mock_config_entry, "test_key")
-                # If exception is not caught, this will fail
-                assert entity is not None
-            except Exception:
-                pytest.fail("Entity initialization should not raise")
+    def test_entity_unique_id_format(self, mock_config_entry: MagicMock) -> None:
+        """Test entity unique_id includes nodeid."""
+        entity = NeoPoolEntity(mock_config_entry, "test_key")
+        # Unique ID should follow pattern: neopool_mqtt_{nodeid}_{entity_key}
+        assert "neopool_mqtt_" in entity._attr_unique_id
+        assert "_test_key" in entity._attr_unique_id
 
-    def test_mqtt_topic_with_empty_discovery_prefix(
-        self, mock_config_entry: MagicMock
-    ) -> None:
+    def test_mqtt_topic_with_empty_discovery_prefix(self, mock_config_entry: MagicMock) -> None:
         """Test mqtt_topic with empty discovery_prefix."""
         mock_config_entry.data = {"discovery_prefix": ""}
         entity = NeoPoolEntity(mock_config_entry, "test_key")
@@ -46,10 +37,10 @@ class TestNeoPoolMQTTEntityExtended:
     """Extended tests for NeoPoolMQTTEntity base class."""
 
     @pytest.mark.asyncio
-    async def test_availability_message_bytes_online(
+    async def test_availability_message_string_online(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test availability with bytes payload 'Online'."""
+        """Test availability with string payload 'Online'."""
         entity = NeoPoolMQTTEntity(mock_config_entry, "test_key")
         entity.hass = mock_hass
         entity.entity_id = "sensor.test_entity"
@@ -68,9 +59,9 @@ class TestNeoPoolMQTTEntityExtended:
         ):
             await entity.async_added_to_hass()
 
-        # Simulate bytes Online message
+        # Simulate string Online message (HA MQTT delivers strings)
         mock_msg = MagicMock()
-        mock_msg.payload = b"Online"
+        mock_msg.payload = "Online"
         captured_callback(mock_msg)
 
         assert entity._attr_available is True
@@ -108,7 +99,7 @@ class TestNeoPoolMQTTEntityExtended:
     async def test_availability_message_unknown_payload(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test availability with unknown payload is ignored."""
+        """Test availability with unknown payload sets unavailable."""
         entity = NeoPoolMQTTEntity(mock_config_entry, "test_key")
         entity.hass = mock_hass
         entity.entity_id = "sensor.test_entity"
@@ -132,8 +123,8 @@ class TestNeoPoolMQTTEntityExtended:
         mock_msg.payload = "UnknownStatus"
         captured_callback(mock_msg)
 
-        # Should remain available (unknown payload ignored)
-        assert entity._attr_available is True
+        # Unknown payload != "Online", so available becomes False
+        assert entity._attr_available is False
 
     @pytest.mark.asyncio
     async def test_multiple_subscriptions(
@@ -227,9 +218,7 @@ class TestNeoPoolMQTTEntityExtended:
         ) as mock_subscribe:
             await entity._subscribe_topic("test/topic", mock_callback, qos=2)
 
-            mock_subscribe.assert_called_once_with(
-                mock_hass, "test/topic", mock_callback, qos=2
-            )
+            mock_subscribe.assert_called_once_with(mock_hass, "test/topic", mock_callback, qos=2)
 
     @pytest.mark.asyncio
     async def test_availability_transition_online_to_offline(

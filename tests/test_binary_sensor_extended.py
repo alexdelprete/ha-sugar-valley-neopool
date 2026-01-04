@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -30,10 +29,11 @@ class TestBinarySensorDescriptionsExtended:
         # Should have some inverted sensors (FL1, Tank level, etc.)
         assert len(inverted) >= 2
 
-    def test_aux_relay_descriptions(self) -> None:
-        """Test aux relay binary sensor descriptions."""
-        aux_descs = [d for d in BINARY_SENSOR_DESCRIPTIONS if "aux" in d.key.lower()]
-        assert len(aux_descs) >= 4  # Should have aux1-4
+    def test_module_descriptions_exist(self) -> None:
+        """Test module binary sensor descriptions exist."""
+        module_descs = [d for d in BINARY_SENSOR_DESCRIPTIONS if "modules" in d.key.lower()]
+        # Should have module presence sensors (pH, Redox, Hydrolysis, Chlorine)
+        assert len(module_descs) >= 4
 
 
 class TestNeoPoolBinarySensorExtended:

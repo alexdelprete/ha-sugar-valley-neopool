@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from custom_components.sugar_valley_neopool.helpers import (
     bit_to_bool,
     clamp,
@@ -59,15 +57,16 @@ class TestParseRuntimeDurationExtended:
 
     def test_max_precision(self) -> None:
         """Test maximum precision with seconds."""
+        # 1 second = 1/3600 hours = 0.000277... rounds to 0.0 with round(x, 2)
         result = parse_runtime_duration("0T00:00:01")
-        assert result == pytest.approx(0.0003, abs=0.0001)
+        assert result == 0.0  # Rounds to 0.0 with 2 decimal places
 
     def test_large_days(self) -> None:
         """Test with large number of days."""
         result = parse_runtime_duration("999T23:59:59")
         assert result is not None
-        # 999*24 + 23 + 59/60 + 59/3600 = 24000 + approximately
-        assert result > 24000
+        # 999*24 + 23 + 59/60 + 59/3600 = 23976 + 23.9997 = 23999.9997
+        assert result >= 23999.0
 
     def test_malformed_time_part(self) -> None:
         """Test with malformed time part."""
@@ -93,7 +92,7 @@ class TestParseJsonPayloadExtended:
 
     def test_bytes_with_unicode(self) -> None:
         """Test bytes with unicode characters."""
-        result = parse_json_payload('{"name": "Café"}'.encode("utf-8"))
+        result = parse_json_payload('{"name": "Café"}'.encode())
         assert result == {"name": "Café"}
 
     def test_complex_nested_json(self) -> None:

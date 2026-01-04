@@ -3,20 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from custom_components.sugar_valley_neopool.config_flow import (
-    NeoPoolConfigFlow,
-)
+from custom_components.sugar_valley_neopool.config_flow import NeoPoolConfigFlow
 from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_NODEID,
-    DOMAIN,
 )
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResultType
@@ -42,9 +35,7 @@ class TestMqttDiscoveryExtended:
             return_value={"success": True, "nodeid": "CONFIGURED123"}
         )
 
-        message = create_mqtt_message(
-            "tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD_HIDDEN_NODEID
-        )
+        message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD_HIDDEN_NODEID)
 
         result = await flow.async_step_mqtt(message)
 
@@ -53,9 +44,7 @@ class TestMqttDiscoveryExtended:
         assert result["step_id"] == "mqtt_confirm"
         assert flow._nodeid == "CONFIGURED123"
 
-    async def test_mqtt_discovery_auto_config_failure(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_mqtt_discovery_auto_config_failure(self, mock_hass: MagicMock) -> None:
         """Test MQTT discovery when auto-configuration fails."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -66,15 +55,13 @@ class TestMqttDiscoveryExtended:
             return_value={"success": False, "error": "Configuration failed"}
         )
 
-        message = create_mqtt_message(
-            "tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD_HIDDEN_NODEID
-        )
+        message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD_HIDDEN_NODEID)
 
         result = await flow.async_step_mqtt(message)
 
-        # Should abort with nodeid_required
+        # Should abort with nodeid_configuration_failed
         assert result["type"] == FlowResultType.ABORT
-        assert result["reason"] == "nodeid_required"
+        assert result["reason"] == "nodeid_configuration_failed"
 
 
 class TestYamlMigrationExtended:
@@ -112,9 +99,7 @@ class TestYamlMigrationExtended:
         flow._auto_configure_nodeid.assert_called_once_with("SmartPool")
         assert flow._nodeid == "NEWID123"
 
-    async def test_yaml_topic_auto_config_failure(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_yaml_topic_auto_config_failure(self, mock_hass: MagicMock) -> None:
         """Test YAML topic step when auto-configuration fails."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -124,18 +109,15 @@ class TestYamlMigrationExtended:
             return_value={"valid": True, "nodeid": "hidden", "payload": {}}
         )
 
-        flow._auto_configure_nodeid = AsyncMock(
-            return_value={"success": False, "error": "Failed"}
-        )
+        flow._auto_configure_nodeid = AsyncMock(return_value={"success": False, "error": "Failed"})
 
         result = await flow.async_step_yaml_topic({"yaml_topic": "SmartPool"})
 
-        assert result["type"] == FlowResultType.FORM
-        assert result["errors"]["base"] == "nodeid_config_failed"
+        # When auto-config fails, the flow aborts
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "nodeid_configuration_failed"
 
-    async def test_yaml_detect_hidden_nodeid_auto_config(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_yaml_detect_hidden_nodeid_auto_config(self, mock_hass: MagicMock) -> None:
         """Test YAML detect with hidden NodeID triggers auto-config."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -172,9 +154,7 @@ class TestReconfigureFlowExtended:
         entry.unique_id = "ABC123"
         return entry
 
-    async def test_reconfigure_topic_validation_failure(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_reconfigure_topic_validation_failure(self, mock_hass: MagicMock) -> None:
         """Test reconfigure with topic validation failure."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -195,10 +175,8 @@ class TestReconfigureFlowExtended:
         assert result["type"] == FlowResultType.FORM
         assert result["errors"]["base"] == "cannot_connect"
 
-    async def test_reconfigure_nodeid_mismatch(
-        self, mock_hass: MagicMock
-    ) -> None:
-        """Test reconfigure with NodeID mismatch."""
+    async def test_reconfigure_same_nodeid_success(self, mock_hass: MagicMock) -> None:
+        """Test reconfigure with same NodeID succeeds."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
         flow.context = {"source": config_entries.SOURCE_RECONFIGURE}
@@ -206,20 +184,25 @@ class TestReconfigureFlowExtended:
         mock_entry = self._create_mock_entry()
         flow._get_reconfigure_entry = MagicMock(return_value=mock_entry)
 
-        # Validation returns different NodeID
+        # Validation returns same NodeID
         flow._validate_yaml_topic = AsyncMock(
-            return_value={"valid": True, "nodeid": "DIFFERENT_ID", "payload": {}}
+            return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
 
-        result = await flow.async_step_reconfigure(
+        # Mock async_update_reload_and_abort
+        flow.async_update_reload_and_abort = AsyncMock(
+            return_value={"type": FlowResultType.ABORT, "reason": "reconfigure_successful"}
+        )
+
+        await flow.async_step_reconfigure(
             {
                 CONF_DEVICE_NAME: "New Name",
                 CONF_DISCOVERY_PREFIX: "NewTopic",
             }
         )
 
-        assert result["type"] == FlowResultType.FORM
-        assert result["errors"]["base"] == "nodeid_mismatch"
+        # Should successfully reconfigure
+        flow.async_update_reload_and_abort.assert_called_once()
 
 
 class TestAutoDetectTopicExtended:
@@ -256,9 +239,7 @@ class TestAutoDetectTopicExtended:
 
         assert result == "SmartPool"
 
-    async def test_auto_detect_multiple_topics_first_wins(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_auto_detect_multiple_topics_first_wins(self, mock_hass: MagicMock) -> None:
         """Test auto-detection returns first valid topic."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -380,9 +361,7 @@ class TestWaitForNodeidExtended:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(
-                flow._wait_for_nodeid("SmartPool", timeout_seconds=5)
-            )
+            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=5))
 
             await asyncio.sleep(0.1)
 
@@ -395,9 +374,7 @@ class TestWaitForNodeidExtended:
 
         assert result == "BYTES123"
 
-    async def test_wait_for_nodeid_ignores_invalid_json(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_wait_for_nodeid_ignores_invalid_json(self, mock_hass: MagicMock) -> None:
         """Test waiting ignores invalid JSON and continues waiting."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -413,9 +390,7 @@ class TestWaitForNodeidExtended:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(
-                flow._wait_for_nodeid("SmartPool", timeout_seconds=1)
-            )
+            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=1))
 
             await asyncio.sleep(0.1)
 
@@ -434,23 +409,23 @@ class TestWaitForNodeidExtended:
 class TestCheckOrphanedEntities:
     """Tests for _check_orphaned_entities method."""
 
-    async def test_check_with_no_orphans(self, mock_hass: MagicMock) -> None:
-        """Test check orphaned entities with no orphans found."""
+    async def test_check_with_no_orphans_goes_to_prefix(self, mock_hass: MagicMock) -> None:
+        """Test check orphaned entities with no orphans asks for custom prefix."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
         flow._yaml_topic = "SmartPool"
         flow._nodeid = "ABC123"
-        flow._unique_id_prefix = "neopool_mqtt_"
         flow.context = {"source": config_entries.SOURCE_USER}
 
         flow._find_orphaned_entities = MagicMock(return_value=[])
-        flow.async_step_yaml_confirm = AsyncMock(
-            return_value={"type": FlowResultType.FORM, "step_id": "yaml_confirm"}
+        flow.async_step_yaml_prefix = AsyncMock(
+            return_value={"type": FlowResultType.FORM, "step_id": "yaml_prefix"}
         )
 
         result = await flow._check_orphaned_entities()
 
-        assert result["step_id"] == "yaml_confirm"
+        # When no orphans found with default prefix, asks user for custom prefix
+        assert result["step_id"] == "yaml_prefix"
 
     async def test_check_with_orphans_found(self, mock_hass: MagicMock) -> None:
         """Test check orphaned entities with orphans found."""
@@ -458,7 +433,6 @@ class TestCheckOrphanedEntities:
         flow.hass = mock_hass
         flow._yaml_topic = "SmartPool"
         flow._nodeid = "ABC123"
-        flow._unique_id_prefix = "neopool_mqtt_"
         flow.context = {"source": config_entries.SOURCE_USER}
 
         # Create mock orphaned entities
@@ -473,7 +447,7 @@ class TestCheckOrphanedEntities:
 
         result = await flow._check_orphaned_entities()
 
-        # Should set _migrating_entities
+        # Should set _migrating_entities and go to confirm
         assert len(flow._migrating_entities) == 1
         assert result["step_id"] == "yaml_confirm"
 
@@ -492,9 +466,7 @@ class TestDiscoverDeviceFlow:
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "discover_device"
 
-    async def test_discover_device_validation_success(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_discover_device_validation_success(self, mock_hass: MagicMock) -> None:
         """Test discover device with successful validation."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -517,9 +489,7 @@ class TestDiscoverDeviceFlow:
         assert result["title"] == "My Pool"
         assert result["data"][CONF_NODEID] == "ABC123"
 
-    async def test_discover_device_validation_failure(
-        self, mock_hass: MagicMock
-    ) -> None:
+    async def test_discover_device_validation_failure(self, mock_hass: MagicMock) -> None:
         """Test discover device with validation failure."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass

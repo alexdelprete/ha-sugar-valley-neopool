@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import (
+    CONFIG_ENTRY_VERSION,
     NeoPoolData,
     async_migrate_entry,
     async_migrate_yaml_entities,
@@ -20,7 +21,6 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_MIGRATE_YAML,
     CONF_NODEID,
     CONF_UNIQUE_ID_PREFIX,
-    DEFAULT_DEVICE_NAME,
     DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
 )
@@ -52,9 +52,7 @@ class TestAsyncSetupEntryExtended:
                 "homeassistant.components.mqtt.async_wait_for_mqtt_client",
                 return_value=True,
             ),
-            patch.object(
-                hass.config_entries, "async_forward_entry_setups", return_value=True
-            ),
+            patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
             patch(
                 "custom_components.sugar_valley_neopool.async_migrate_yaml_entities",
                 return_value={"entities_migrated": 0},
@@ -83,12 +81,8 @@ class TestAsyncSetupEntryExtended:
                 "homeassistant.components.mqtt.async_wait_for_mqtt_client",
                 return_value=True,
             ),
-            patch.object(
-                hass.config_entries, "async_forward_entry_setups", return_value=True
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.async_register_device"
-            ) as mock_register,
+            patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
+            patch("custom_components.sugar_valley_neopool.async_register_device") as mock_register,
         ):
             await async_setup_entry(hass, entry)
 
@@ -139,9 +133,7 @@ class TestAsyncUnloadEntryExtended:
             sensor_data={"temp": 28.5},
         )
 
-        with patch.object(
-            hass.config_entries, "async_unload_platforms", return_value=True
-        ):
+        with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
             result = await async_unload_entry(hass, entry)
 
         assert result is True
@@ -153,8 +145,6 @@ class TestAsyncMigrateEntryExtended:
     @pytest.mark.asyncio
     async def test_migrate_already_current_version(self, hass: HomeAssistant) -> None:
         """Test migration when already at current version."""
-        from custom_components.sugar_valley_neopool import CONFIG_ENTRY_VERSION
-
         entry = MockConfigEntry(
             domain=DOMAIN,
             version=CONFIG_ENTRY_VERSION,
@@ -254,9 +244,7 @@ class TestAsyncMigrateYamlEntitiesExtended:
         assert result["entities_found"] == 1
 
     @pytest.mark.asyncio
-    async def test_migrate_multiple_entities_same_domain(
-        self, hass: HomeAssistant
-    ) -> None:
+    async def test_migrate_multiple_entities_same_domain(self, hass: HomeAssistant) -> None:
         """Test migration of multiple entities in same domain."""
         entity_registry = er.async_get(hass)
 
