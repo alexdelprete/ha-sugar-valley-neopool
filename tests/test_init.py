@@ -11,6 +11,7 @@ from custom_components.sugar_valley_neopool import (
     CONFIG_ENTRY_VERSION,
     NeoPoolData,
     async_migrate_entry,
+    async_migrate_yaml_entities,
     async_register_device,
     async_remove_config_entry_device,
     async_setup_entry,
@@ -22,20 +23,23 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
+    CONF_MIGRATE_YAML,
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONF_UNIQUE_ID_PREFIX,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
     DEFAULT_FAILURES_THRESHOLD,
     DEFAULT_OFFLINE_TIMEOUT,
     DEFAULT_RECOVERY_SCRIPT,
+    DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
     VERSION,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 
 class TestAsyncSetupEntry:
@@ -378,3 +382,234 @@ class TestConfigEntryVersion:
     def test_config_entry_version(self) -> None:
         """Test CONFIG_ENTRY_VERSION is defined."""
         assert CONFIG_ENTRY_VERSION == 2
+
+
+class TestAsyncMigrateYamlEntities:
+    """Tests for async_migrate_yaml_entities function."""
+
+    @pytest.mark.asyncio
+    async def test_skip_when_not_yaml_migration(self, hass: HomeAssistant) -> None:
+        """Test migration is skipped when not a YAML migration."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                # No CONF_MIGRATE_YAML key
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        assert result["entities_found"] == 0
+        assert result["entities_migrated"] == 0
+
+    @pytest.mark.asyncio
+    async def test_skip_when_migrate_yaml_false(self, hass: HomeAssistant) -> None:
+        """Test migration is skipped when migrate_yaml is False."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: False,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        assert result["entities_found"] == 0
+
+    @pytest.mark.asyncio
+    async def test_migrate_entities_success(self, hass: HomeAssistant) -> None:
+        """Test successful entity migration."""
+        # Create orphaned entities in registry
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="neopool_mqtt_water_temperature",
+            suggested_object_id="neopool_water_temperature",
+        )
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="neopool_mqtt_ph_data",
+            suggested_object_id="neopool_ph",
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "XYZ789",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "XYZ789")
+
+        assert result["entities_found"] == 2
+        assert result["entities_migrated"] == 2
+        assert len(result["errors"]) == 0
+
+        # Verify entities were updated
+        updated_entity = entity_registry.async_get("sensor.neopool_water_temperature")
+        assert updated_entity.unique_id == "neopool_mqtt_XYZ789_water_temperature"
+        assert updated_entity.config_entry_id == entry.entry_id
+
+    @pytest.mark.asyncio
+    async def test_migrate_with_custom_prefix(self, hass: HomeAssistant) -> None:
+        """Test migration with custom unique_id prefix."""
+        # Create orphaned entity with custom prefix
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="custom_prefix_temperature",
+            suggested_object_id="custom_temp",
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: "custom_prefix_",
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        assert result["entities_found"] == 1
+        assert result["entities_migrated"] == 1
+
+        # Verify entity was updated with correct new unique_id
+        updated_entity = entity_registry.async_get("sensor.custom_temp")
+        assert updated_entity.unique_id == "neopool_mqtt_ABC123_temperature"
+
+    @pytest.mark.asyncio
+    async def test_no_orphaned_entities_found(self, hass: HomeAssistant) -> None:
+        """Test when no orphaned entities are found."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        assert result["entities_found"] == 0
+        assert result["entities_migrated"] == 0
+        assert len(result["steps"]) >= 1
+
+    @pytest.mark.asyncio
+    async def test_excludes_already_configured_entities(self, hass: HomeAssistant) -> None:
+        """Test that entities with config_entry_id are excluded."""
+        # Create another config entry
+        other_entry = MockConfigEntry(
+            domain="other_domain",
+            data={},
+        )
+        other_entry.add_to_hass(hass)
+
+        # Create entity already associated with a config entry
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="neopool_mqtt_configured_sensor",
+            suggested_object_id="configured_sensor",
+            config_entry=other_entry,
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        # Should not find the already-configured entity
+        assert result["entities_found"] == 0
+
+    @pytest.mark.asyncio
+    async def test_migration_summary_steps(self, hass: HomeAssistant) -> None:
+        """Test that migration summary includes proper steps."""
+        # Create orphaned entity
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="neopool_mqtt_test_sensor",
+            suggested_object_id="test_sensor",
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+        # Verify steps are recorded
+        assert len(result["steps"]) >= 2
+        step_names = [step["name"] for step in result["steps"]]
+        assert "Find orphaned entities" in step_names
+        assert "Migrate entities" in step_names
+
+    @pytest.mark.asyncio
+    async def test_shows_persistent_notification(self, hass: HomeAssistant) -> None:
+        """Test that migration shows persistent notification."""
+        # Create orphaned entity
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform="mqtt",
+            unique_id="neopool_mqtt_notif_test",
+            suggested_object_id="notif_test",
+        )
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_NODEID: "ABC123",
+                CONF_MIGRATE_YAML: True,
+                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
+            },
+        )
+        entry.add_to_hass(hass)
+
+        with patch(
+            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
+        ) as mock_notify:
+            await async_migrate_yaml_entities(hass, entry, "ABC123")
+
+            mock_notify.assert_called_once()
+            call_args = mock_notify.call_args
+            assert "NeoPool" in call_args[1]["title"]
+            assert call_args[1]["notification_id"] == "neopool_migration_summary"
