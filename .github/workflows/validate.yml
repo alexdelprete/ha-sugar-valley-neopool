@@ -1,4 +1,4 @@
-name: Validate
+name: "Validate"
 
 on:
   workflow_dispatch:
@@ -8,24 +8,32 @@ on:
     - cron: "0 0 * * *"
 
 jobs:
-  hassfest:
-    name: Hassfest Validation
-    runs-on: ubuntu-latest
+  hassfest: # https://developers.home-assistant.io/blog/2020/04/16/hassfest
+    name: "Hassfest Validation"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6"
+        with:
+          token: ${{ secrets.WORKFLOW_PAT || github.token }}
+          ref: ${{ github.head_ref }}
 
-      - name: Hassfest validation
-        uses: home-assistant/actions/hassfest@master
+      - name: "Run hassfest validation"
+        uses: "home-assistant/actions/hassfest@master"
 
-  hacs:
-    name: HACS Validation
-    runs-on: ubuntu-latest
+  hacs: # https://github.com/hacs/action
+    name: "HACS Validation"
+    runs-on: "ubuntu-latest"
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: "Checkout the repository"
+        uses: "actions/checkout@v6"
+        with:
+          token: ${{ secrets.WORKFLOW_PAT || github.token }}
+          ref: ${{ github.head_ref }}
 
-      - name: HACS validation
-        uses: hacs/action@main
+      - name: "Run HACS validation"
+        uses: "hacs/action@main"
         with:
           category: "integration"
+          # Remove 'ignore' when brand images are added to home-assistant/brands
+          # ignore: "brands"

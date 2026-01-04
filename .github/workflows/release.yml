@@ -53,7 +53,7 @@ jobs:
           fi
 
           echo ""
-          echo "All versions match: $TAG_VERSION"
+          echo "✓ All versions match: $TAG_VERSION"
 
       - name: "ZIP the integration directory"
         shell: "bash"
