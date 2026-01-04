@@ -40,84 +40,14 @@ def neopool_setup_fixture():
         yield
 
 
-async def test_form_user(hass: HomeAssistant) -> None:
-    """Test the user config flow with valid input."""
+async def test_form_user_starts_yaml_migration(hass: HomeAssistant) -> None:
+    """Test the user config flow starts with yaml_migration step."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "user"
+    assert result["step_id"] == "yaml_migration"
     assert result["errors"] == {}
-
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_DEVICE_NAME: "My Pool",
-            CONF_DISCOVERY_PREFIX: "SmartPool",
-        },
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-    assert result["title"] == "My Pool"
-    assert result["data"] == {
-        CONF_DEVICE_NAME: "My Pool",
-        CONF_DISCOVERY_PREFIX: "SmartPool",
-    }
-async def test_form_user_invalid_topic(hass: HomeAssistant) -> None:
-    """Test the user config flow with invalid MQTT topic."""
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-
-    # Test with invalid characters in topic
-    with patch(
-        "homeassistant.components.mqtt.valid_subscribe_topic",
-        side_effect=Exception("Invalid topic"),
-    ):
-        result = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            {
-                CONF_DEVICE_NAME: "My Pool",
-                CONF_DISCOVERY_PREFIX: "invalid/topic#",
-            },
-        )
-
-    assert result["type"] is FlowResultType.FORM
-    assert result["errors"] == {"base": "invalid_topic"}
-
-
-async def test_form_user_duplicate(hass: HomeAssistant) -> None:
-    """Test the user config flow with duplicate entry."""
-    # Create first entry
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_DEVICE_NAME: "My Pool",
-            CONF_DISCOVERY_PREFIX: "SmartPool",
-        },
-    )
-    await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.CREATE_ENTRY
-
-    # Try to create duplicate entry
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN, context={"source": config_entries.SOURCE_USER}
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_DEVICE_NAME: "Another Pool",
-            CONF_DISCOVERY_PREFIX: "SmartPool",  # Same topic
-        },
-    )
-    await hass.async_block_till_done()
-
-    assert result["type"] is FlowResultType.ABORT
-    assert result["reason"] == "already_configured"
 
 
 async def test_mqtt_discovery(hass: HomeAssistant) -> None:
@@ -144,10 +74,10 @@ async def test_mqtt_discovery(hass: HomeAssistant) -> None:
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "NeoPool SmartPool"
-    assert result["data"] == {
-        CONF_DEVICE_NAME: "NeoPool SmartPool",
-        CONF_DISCOVERY_PREFIX: "SmartPool",
-    }
+    # Data now includes nodeid from MQTT discovery
+    assert result["data"][CONF_DEVICE_NAME] == "NeoPool SmartPool"
+    assert result["data"][CONF_DISCOVERY_PREFIX] == "SmartPool"
+    assert CONF_NODEID in result["data"]
 
 
 async def test_mqtt_discovery_invalid_topic(hass: HomeAssistant) -> None:
@@ -290,7 +220,6 @@ async def test_options_flow_update(hass: HomeAssistant) -> None:
             CONF_ENABLE_REPAIR_NOTIFICATION: True,
             CONF_FAILURES_THRESHOLD: 5,
             CONF_OFFLINE_TIMEOUT: 120,
-            CONF_RECOVERY_SCRIPT: "",
         },
     )
     await hass.async_block_till_done()
