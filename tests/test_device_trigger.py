@@ -150,23 +150,40 @@ class TestAsyncAttachTrigger:
     @pytest.mark.asyncio
     async def test_attach_trigger_event_config(self, hass: HomeAssistant) -> None:
         """Test the event config passed to event_trigger."""
+        device_id = "my_device_id"
+        trigger_type = "device_recovered"
         config = {
             CONF_PLATFORM: "device",
             CONF_DOMAIN: DOMAIN,
-            CONF_DEVICE_ID: "my_device_id",
-            CONF_TYPE: "device_recovered",
+            CONF_DEVICE_ID: device_id,
+            CONF_TYPE: trigger_type,
         }
 
-        with patch.object(
-            event_trigger, "async_attach_trigger", return_value=MagicMock()
-        ) as mock_attach:
+        captured_event_config = None
+
+        def capture_schema(config_dict):
+            nonlocal captured_event_config
+            captured_event_config = config_dict
+            return config_dict
+
+        with (
+            patch(
+                "custom_components.sugar_valley_neopool.device_trigger.event_trigger.TRIGGER_SCHEMA",
+                side_effect=capture_schema,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.device_trigger.event_trigger.async_attach_trigger",
+                return_value=MagicMock(),
+            ),
+        ):
             await async_attach_trigger(hass, config, MagicMock(), {"trigger_id": "test"})
 
-            call_args = mock_attach.call_args
-            event_config = call_args[0][1]
-            assert event_config[event_trigger.CONF_EVENT_TYPE] == f"{DOMAIN}_event"
-            assert event_config[event_trigger.CONF_EVENT_DATA][CONF_DEVICE_ID] == "my_device_id"
-            assert event_config[event_trigger.CONF_EVENT_DATA][CONF_TYPE] == "device_recovered"
+        # Verify the event config structure
+        assert captured_event_config is not None
+        assert captured_event_config["platform"] == "event"
+        assert captured_event_config["event_type"] == f"{DOMAIN}_event"
+        assert captured_event_config["event_data"][CONF_DEVICE_ID] == device_id
+        assert captured_event_config["event_data"][CONF_TYPE] == trigger_type
 
 
 class TestTriggerSchema:
