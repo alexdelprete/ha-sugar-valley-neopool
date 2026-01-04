@@ -12,6 +12,9 @@ import pytest
 from custom_components.sugar_valley_neopool import NeoPoolData
 from custom_components.sugar_valley_neopool.const import DOMAIN
 
+# Register pytest-homeassistant-custom-component plugin
+pytest_plugins = ["pytest_homeassistant_custom_component"]
+
 
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(

@@ -29,16 +29,18 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from .conftest import SAMPLE_NEOPOOL_PAYLOAD, create_mqtt_message
 
-# Skip reason for tests requiring full integration loading
-# This is a known limitation with editable installs in CI environments
-# See: https://github.com/MatthewFlamm/pytest-homeassistant-custom-component/discussions/160
-SKIP_INTEGRATION_LOADING = (
-    "Skipped: HA integration loading fails in CI due to editable install path issues"
-)
+
+@pytest.fixture(name="neopool_setup", autouse=True)
+def neopool_setup_fixture():
+    """Mock neopool entry setup to avoid loading the full integration."""
+    with patch(
+        "custom_components.sugar_valley_neopool.async_setup_entry",
+        return_value=True,
+    ):
+        yield
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_form_user(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_form_user(hass: HomeAssistant) -> None:
     """Test the user config flow with valid input."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -62,11 +64,7 @@ async def test_form_user(hass: HomeAssistant, mock_setup_entry: MagicMock) -> No
         CONF_DEVICE_NAME: "My Pool",
         CONF_DISCOVERY_PREFIX: "SmartPool",
     }
-    assert len(mock_setup_entry.mock_calls) == 1
-
-
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_form_user_invalid_topic(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_form_user_invalid_topic(hass: HomeAssistant) -> None:
     """Test the user config flow with invalid MQTT topic."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
@@ -89,8 +87,7 @@ async def test_form_user_invalid_topic(hass: HomeAssistant, mock_setup_entry: Ma
     assert result["errors"] == {"base": "invalid_topic"}
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_form_user_duplicate(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_form_user_duplicate(hass: HomeAssistant) -> None:
     """Test the user config flow with duplicate entry."""
     # Create first entry
     result = await hass.config_entries.flow.async_init(
@@ -123,8 +120,7 @@ async def test_form_user_duplicate(hass: HomeAssistant, mock_setup_entry: MagicM
     assert result["reason"] == "already_configured"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_discovery(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_mqtt_discovery(hass: HomeAssistant) -> None:
     """Test MQTT discovery with valid NeoPool payload."""
     message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
 
@@ -154,10 +150,7 @@ async def test_mqtt_discovery(hass: HomeAssistant, mock_setup_entry: MagicMock) 
     }
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_discovery_invalid_topic(
-    hass: HomeAssistant, mock_setup_entry: MagicMock
-) -> None:
+async def test_mqtt_discovery_invalid_topic(hass: HomeAssistant) -> None:
     """Test MQTT discovery with invalid topic format."""
     message = create_mqtt_message("invalid/topic/format", SAMPLE_NEOPOOL_PAYLOAD)
 
@@ -171,8 +164,7 @@ async def test_mqtt_discovery_invalid_topic(
     assert result["reason"] == "invalid_discovery_info"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_discovery_not_neopool(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_mqtt_discovery_not_neopool(hass: HomeAssistant) -> None:
     """Test MQTT discovery with non-NeoPool payload."""
     non_neopool_payload: dict[str, Any] = {
         "Sensor": {"Temperature": 25.0},
@@ -190,10 +182,7 @@ async def test_mqtt_discovery_not_neopool(hass: HomeAssistant, mock_setup_entry:
     assert result["reason"] == "not_neopool_device"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_discovery_invalid_json(
-    hass: HomeAssistant, mock_setup_entry: MagicMock
-) -> None:
+async def test_mqtt_discovery_invalid_json(hass: HomeAssistant) -> None:
     """Test MQTT discovery with invalid JSON payload."""
     message = MagicMock()
     message.topic = "tele/SmartPool/SENSOR"
@@ -209,8 +198,7 @@ async def test_mqtt_discovery_invalid_json(
     assert result["reason"] == "invalid_discovery_info"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_discovery_duplicate(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_mqtt_discovery_duplicate(hass: HomeAssistant) -> None:
     """Test MQTT discovery with already configured device."""
     # First discovery
     message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
@@ -237,8 +225,7 @@ async def test_mqtt_discovery_duplicate(hass: HomeAssistant, mock_setup_entry: M
     assert result["reason"] == "already_configured"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_mqtt_confirm_default_name(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_mqtt_confirm_default_name(hass: HomeAssistant) -> None:
     """Test MQTT confirmation uses default device name."""
     message = create_mqtt_message("tele/TestPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
 
@@ -263,8 +250,7 @@ async def test_mqtt_confirm_default_name(hass: HomeAssistant, mock_setup_entry: 
     assert result["data"][CONF_DISCOVERY_PREFIX] == "TestPool"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_options_flow_init(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_options_flow_init(hass: HomeAssistant) -> None:
     """Test options flow initialization."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -283,8 +269,7 @@ async def test_options_flow_init(hass: HomeAssistant, mock_setup_entry: MagicMoc
     assert result["step_id"] == "init"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_options_flow_update(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_options_flow_update(hass: HomeAssistant) -> None:
     """Test options flow updates options."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -316,8 +301,7 @@ async def test_options_flow_update(hass: HomeAssistant, mock_setup_entry: MagicM
     assert entry.options[CONF_OFFLINE_TIMEOUT] == 120
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_reconfigure_flow_init(hass: HomeAssistant, mock_setup_entry: MagicMock) -> None:
+async def test_reconfigure_flow_init(hass: HomeAssistant) -> None:
     """Test reconfigure flow initialization."""
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -335,10 +319,7 @@ async def test_reconfigure_flow_init(hass: HomeAssistant, mock_setup_entry: Magi
     assert result["step_id"] == "reconfigure"
 
 
-@pytest.mark.skip(reason=SKIP_INTEGRATION_LOADING)
-async def test_reconfigure_flow_invalid_topic(
-    hass: HomeAssistant, mock_setup_entry: MagicMock
-) -> None:
+async def test_reconfigure_flow_invalid_topic(hass: HomeAssistant) -> None:
     """Test reconfigure flow with invalid topic."""
     entry = MockConfigEntry(
         domain=DOMAIN,

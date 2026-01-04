@@ -70,7 +70,6 @@ ignore-words-list = "hass"
 [tool.pytest.ini_options]
 addopts = """
   --timeout=20
-  --import-mode=importlib
   --cov=custom_components.sugar_valley_neopool
   --cov-report=term-missing
 """
