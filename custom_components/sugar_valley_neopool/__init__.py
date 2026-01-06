@@ -188,21 +188,26 @@ async def _apply_entity_id_mapping(
     nodeid = entry.runtime_data.nodeid
     updated_count = 0
 
+    # Entity domains to search - integration creates entities across these platforms
+    domains = ["sensor", "binary_sensor", "switch", "select", "number", "button"]
+
     for entity_key, target_object_id in entity_id_mapping.items():
         # Find the entity by its unique_id (NodeID-based pattern)
         unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
-        entity_entry = entity_registry.async_get_entity_id_by_unique_id(DOMAIN, unique_id)
 
-        if entity_entry is None:
+        # Search across all possible domains since entity_key doesn't indicate domain
+        current_entity_id = None
+        for domain in domains:
+            entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if entity_id:
+                current_entity_id = entity_id
+                break
+
+        if current_entity_id is None:
             _LOGGER.debug("Entity with unique_id %s not found in registry, skipping", unique_id)
             continue
 
-        # Get current entity_id and determine domain
-        current_entity = entity_registry.async_get(entity_entry)
-        if current_entity is None:
-            continue
-
-        current_entity_id = current_entity.entity_id
+        # Determine domain from current entity_id
         domain = current_entity_id.split(".", 1)[0]
         target_entity_id = f"{domain}.{target_object_id}"
 
