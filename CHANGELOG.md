@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-01-06
+
+### Added
+
+- Active YAML entity detection: config flow now detects existing entities before migration
+  and shows a summary step with migration results
+
+### Changed
+
+- Improved config flow: added new `yaml_migration_result` step showing migration summary
+  with entity counts and unique_id prefix information
+
+### Fixed
+
+- Fixed test mock for `_find_active_entities` in yaml_confirm flow
+
 ## [0.2.1] - 2026-01-06
 
 ### Changed
