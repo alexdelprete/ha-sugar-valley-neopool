@@ -191,16 +191,12 @@ class TestAsyncVerifyMigration:
         """Test verification returns early when recorder import fails."""
         entity_id_mapping = {"water_temp": "neopool_water_temp"}
 
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.get_last_state_changes",
-                side_effect=ImportError("No recorder"),
-            ),
-            patch.dict("sys.modules", {"homeassistant.components.recorder.history": None}),
-        ):
+        # Simulate recorder module not being importable by removing it from sys.modules
+        # and ensuring the import inside async_verify_migration fails
+        with patch.dict("sys.modules", {"homeassistant.components.recorder.history": None}):
             result = await async_verify_migration(hass, entity_id_mapping)
 
-        # Should return early with warning
+        # Should return early with warning - recorder not in components
         assert result["verified"] == 0
         assert result["no_history"] == 0
 
@@ -233,7 +229,7 @@ class TestAsyncVerifyMigration:
         mock_history = {"sensor.neopool_water_temp": [mock_state]}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             return_value=mock_history,
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
@@ -253,7 +249,7 @@ class TestAsyncVerifyMigration:
         mock_history: dict = {}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             return_value=mock_history,
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
@@ -275,7 +271,7 @@ class TestAsyncVerifyMigration:
         mock_history = {"sensor.neopool_water_temp": [mock_state]}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             return_value=mock_history,
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
