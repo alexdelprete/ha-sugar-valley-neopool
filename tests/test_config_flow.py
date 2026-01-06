@@ -1047,7 +1047,9 @@ class TestPerformMigration:
         flow._migrating_entities = [entity1, entity2]
 
         mock_registry = MagicMock()
-        mock_registry.async_update_entity = MagicMock()
+        # Set up entities to simulate no collision
+        mock_registry.entities.values.return_value = [entity1, entity2]
+        mock_registry.async_remove = MagicMock()
 
         with patch(
             "homeassistant.helpers.entity_registry.async_get",
@@ -1060,6 +1062,9 @@ class TestPerformMigration:
         assert len(result["entities_failed"]) == 0
         assert "sensor.neopool_water_temp" in result["migrated_list"]
         assert "sensor.neopool_ph_data" in result["migrated_list"]
+        # Verify entity_id_mapping is populated
+        assert "water_temp" in result["entity_id_mapping"]
+        assert "ph_data" in result["entity_id_mapping"]
 
     async def test_perform_migration_partial_failure(self, mock_hass: MagicMock) -> None:
         """Test migration with some failures."""
@@ -1079,10 +1084,10 @@ class TestPerformMigration:
         flow._migrating_entities = [entity1, entity2]
 
         mock_registry = MagicMock()
-        # First call succeeds, second fails
-        mock_registry.async_update_entity = MagicMock(
-            side_effect=[None, ValueError("Update failed")]
-        )
+        # Set up entities to simulate no collision
+        mock_registry.entities.values.return_value = [entity1, entity2]
+        # First call succeeds (async_remove), second fails
+        mock_registry.async_remove = MagicMock(side_effect=[None, ValueError("Remove failed")])
 
         with patch(
             "homeassistant.helpers.entity_registry.async_get",
@@ -1104,6 +1109,7 @@ class TestPerformMigration:
         flow._migrating_entities = []
 
         mock_registry = MagicMock()
+        mock_registry.entities.values.return_value = []
 
         with patch(
             "homeassistant.helpers.entity_registry.async_get",
@@ -1114,6 +1120,7 @@ class TestPerformMigration:
         assert result["entities_found"] == 0
         assert result["entities_migrated"] == 0
         assert len(result["entities_failed"]) == 0
+        assert result["entity_id_mapping"] == {}
 
 
 class TestYamlMigrationResultStep:
@@ -1137,11 +1144,11 @@ class TestYamlMigrationResultStep:
 
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "yaml_migration_result"
-        # Production code uses single 'description' placeholder with formatted content
-        description = result["description_placeholders"]["description"]
-        assert "✓ Success" in description
-        assert "Entities found: **5**" in description
-        assert "Entities migrated: **5**" in description
+        # Production code uses individual placeholders
+        placeholders = result["description_placeholders"]
+        assert placeholders["entities_found"] == "5"
+        assert placeholders["entities_migrated"] == "5"
+        assert placeholders["errors_count"] == "0"
 
     async def test_migration_result_partial_success(self, mock_hass: MagicMock) -> None:
         """Test migration result shows partial success status."""
@@ -1159,10 +1166,11 @@ class TestYamlMigrationResultStep:
 
         result = await flow.async_step_yaml_migration_result(None)
 
-        # Production code uses single 'description' placeholder with formatted content
-        description = result["description_placeholders"]["description"]
-        assert "⚠️ Partial Success" in description
-        assert "Errors: **2**" in description
+        # Production code uses individual placeholders
+        placeholders = result["description_placeholders"]
+        assert placeholders["entities_found"] == "5"
+        assert placeholders["entities_migrated"] == "3"
+        assert placeholders["errors_count"] == "2"
 
     async def test_migration_result_all_failed(self, mock_hass: MagicMock) -> None:
         """Test migration result shows failed status when all fail."""
@@ -1180,9 +1188,11 @@ class TestYamlMigrationResultStep:
 
         result = await flow.async_step_yaml_migration_result(None)
 
-        # Production code uses single 'description' placeholder with formatted content
-        description = result["description_placeholders"]["description"]
-        assert "✗ Failed" in description
+        # Production code uses individual placeholders
+        placeholders = result["description_placeholders"]
+        assert placeholders["entities_found"] == "2"
+        assert placeholders["entities_migrated"] == "0"
+        assert placeholders["errors_count"] == "2"
 
     async def test_migration_result_creates_entry(self, mock_hass: MagicMock) -> None:
         """Test migration result creates entry when user submits."""
@@ -1197,6 +1207,7 @@ class TestYamlMigrationResultStep:
             "entities_migrated": 3,
             "entities_failed": [],
             "migrated_list": ["sensor.a", "sensor.b", "sensor.c"],
+            "entity_id_mapping": {},
         }
         flow.async_set_unique_id = AsyncMock()
         flow._abort_if_unique_id_configured = MagicMock()
@@ -1207,7 +1218,8 @@ class TestYamlMigrationResultStep:
         assert result["title"] == "NeoPool SmartPool"
         assert result["data"]["nodeid"] == "ABC123"
         assert result["data"]["migrate_yaml"] is True
-        assert result["data"]["migration_completed"] is True
+        # Production code includes entity_id_mapping, not migration_completed
+        assert "entity_id_mapping" in result["data"]
 
 
 class TestFormatMigratedEntityList:
