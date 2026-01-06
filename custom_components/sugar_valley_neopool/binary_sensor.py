@@ -70,7 +70,6 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="modules_conductivity",
         translation_key="modules_conductivity",
         name="Conductivity Module",
-        icon="mdi:resistor",
         json_path="NeoPool.Modules.Conductivity",
     ),
     NeoPoolBinarySensorEntityDescription(
