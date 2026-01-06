@@ -11,57 +11,21 @@ from custom_components.sugar_valley_neopool import (
     CONFIG_ENTRY_VERSION,
     NeoPoolData,
     async_migrate_entry,
-    async_migrate_yaml_entities,
     async_setup_entry,
     async_unload_entry,
 )
 from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
-    CONF_MIGRATE_YAML,
     CONF_NODEID,
-    CONF_UNIQUE_ID_PREFIX,
-    DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import entity_registry as er
 
 
 class TestAsyncSetupEntryExtended:
     """Extended tests for async_setup_entry function."""
-
-    @pytest.mark.asyncio
-    async def test_setup_entry_calls_migration(self, hass: HomeAssistant) -> None:
-        """Test setup entry calls YAML migration when configured."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-                CONF_MIGRATE_YAML: True,
-                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
-            },
-        )
-        entry.add_to_hass(hass)
-
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_wait_for_mqtt_client",
-                return_value=True,
-            ),
-            patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
-            patch(
-                "custom_components.sugar_valley_neopool.async_migrate_yaml_entities",
-                return_value={"entities_migrated": 0},
-            ) as mock_migrate,
-        ):
-            result = await async_setup_entry(hass, entry)
-
-        assert result is True
-        mock_migrate.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_setup_entry_registers_device(self, hass: HomeAssistant) -> None:
@@ -180,149 +144,6 @@ class TestAsyncMigrateEntryExtended:
         assert entry.data[CONF_DEVICE_NAME] == "My Pool"
         assert entry.data[CONF_DISCOVERY_PREFIX] == "CustomTopic"
         assert entry.data[CONF_NODEID] == "CUSTOM123"
-
-
-class TestAsyncMigrateYamlEntitiesExtended:
-    """Extended tests for async_migrate_yaml_entities function."""
-
-    @pytest.mark.asyncio
-    async def test_migrate_handles_registry_error(self, hass: HomeAssistant) -> None:
-        """Test migration handles entity registry errors gracefully."""
-        entity_registry = er.async_get(hass)
-
-        # Create entity that might cause issues
-        entity_registry.async_get_or_create(
-            domain="sensor",
-            platform="mqtt",
-            unique_id="neopool_mqtt_test_sensor",
-            suggested_object_id="test_sensor",
-        )
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_NODEID: "ABC123",
-                CONF_MIGRATE_YAML: True,
-                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
-            },
-        )
-        entry.add_to_hass(hass)
-
-        # Should not raise
-        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
-
-        assert "entities_found" in result
-        assert "errors" in result
-
-    @pytest.mark.asyncio
-    async def test_migrate_different_prefixes(self, hass: HomeAssistant) -> None:
-        """Test migration with different unique_id prefixes."""
-        entity_registry = er.async_get(hass)
-
-        # Create entities with different prefix
-        entity_registry.async_get_or_create(
-            domain="sensor",
-            platform="mqtt",
-            unique_id="custom_pool_temp",
-            suggested_object_id="custom_temp",
-        )
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_NODEID: "ABC123",
-                CONF_MIGRATE_YAML: True,
-                CONF_UNIQUE_ID_PREFIX: "custom_pool_",
-            },
-        )
-        entry.add_to_hass(hass)
-
-        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
-
-        assert result["entities_found"] == 1
-
-    @pytest.mark.asyncio
-    async def test_migrate_multiple_entities_same_domain(self, hass: HomeAssistant) -> None:
-        """Test migration of multiple entities in same domain (delete-and-recreate)."""
-        entity_registry = er.async_get(hass)
-
-        # Create multiple sensor entities
-        for i in range(5):
-            entity_registry.async_get_or_create(
-                domain="sensor",
-                platform="mqtt",
-                unique_id=f"neopool_mqtt_sensor_{i}",
-                suggested_object_id=f"sensor_{i}",
-            )
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_NODEID: "ABC123",
-                CONF_MIGRATE_YAML: True,
-                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
-            },
-        )
-        entry.add_to_hass(hass)
-
-        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
-
-        assert result["entities_found"] == 5
-        assert result["entities_migrated"] == 5
-
-        # Verify entities were DELETED (new behavior)
-        for i in range(5):
-            deleted_entity = entity_registry.async_get(f"sensor.sensor_{i}")
-            assert deleted_entity is None
-
-    @pytest.mark.asyncio
-    async def test_migrate_mixed_platforms(self, hass: HomeAssistant) -> None:
-        """Test migration of entities across different domains (delete-and-recreate)."""
-        entity_registry = er.async_get(hass)
-
-        # Create entities in different domains (all on mqtt platform)
-        entity_registry.async_get_or_create(
-            domain="sensor",
-            platform="mqtt",
-            unique_id="neopool_mqtt_temperature",
-            suggested_object_id="temperature",
-        )
-        entity_registry.async_get_or_create(
-            domain="binary_sensor",
-            platform="mqtt",
-            unique_id="neopool_mqtt_pump_running",
-            suggested_object_id="pump_running",
-        )
-        entity_registry.async_get_or_create(
-            domain="switch",
-            platform="mqtt",
-            unique_id="neopool_mqtt_filtration",
-            suggested_object_id="filtration",
-        )
-
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_NODEID: "ABC123",
-                CONF_MIGRATE_YAML: True,
-                CONF_UNIQUE_ID_PREFIX: DEFAULT_UNIQUE_ID_PREFIX,
-            },
-        )
-        entry.add_to_hass(hass)
-
-        result = await async_migrate_yaml_entities(hass, entry, "ABC123")
-
-        assert result["entities_found"] == 3
-        assert result["entities_migrated"] == 3
-
-        # Verify all entities were DELETED (new behavior)
-        assert entity_registry.async_get("sensor.temperature") is None
-        assert entity_registry.async_get("binary_sensor.pump_running") is None
-        assert entity_registry.async_get("switch.filtration") is None
 
 
 class TestNeoPoolDataExtended:
