@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migration abgeschlossen",
-        "description": "## Migrationsergebnisse\n\n**Status:** {status}\n\n### Zusammenfassung:\n- Gefundene Entities: **{entities_found}**\n- Migrierte Entities: **{entities_migrated}**\n- Fehler: **{entities_failed}**\n\n### Migrierte Entities:\n{migrated_list}\n\n### Fehler:\n{failed_list}\n\n---\n\nKlicken Sie auf **Absenden**, um die Einrichtung abzuschließen.",
+        "description": "{description}",
         "data": {}
       },
       "discover_device": {

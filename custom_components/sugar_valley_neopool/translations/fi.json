@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Siirto valmis",
-        "description": "## Siirron tulokset\n\n**Tila:** {status}\n\n### Yhteenveto:\n- Löydetyt entiteetit: **{entities_found}**\n- Siirretyt entiteetit: **{entities_migrated}**\n- Virheet: **{entities_failed}**\n\n### Siirretyt entiteetit:\n{migrated_list}\n\n### Virheet:\n{failed_list}\n\n---\n\nNapsauta **Lähetä** viimeistelläksesi asennuksen.",
+        "description": "{description}",
         "data": {}
       },
       "discover_device": {

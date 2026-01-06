@@ -486,16 +486,27 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         else:
             status = "✗ Failed"
 
+        # Build detailed description since empty forms don't show description_placeholders
+        description = (
+            f"## Migration Results\n\n"
+            f"**Status:** {status}\n\n"
+            f"### Summary:\n"
+            f"- Entities found: **{result.get('entities_found', 0)}**\n"
+            f"- Entities migrated: **{result.get('entities_migrated', 0)}**\n"
+            f"- Errors: **{len(failed_entries)}**\n\n"
+            f"### Migrated Entities:\n{migrated_list}\n\n"
+        )
+
+        if failed_entries:
+            description += f"### Errors:\n{failed_list}\n\n"
+
+        description += "---\n\nClick **Submit** to complete the setup."
+
         return self.async_show_form(
             step_id="yaml_migration_result",
             data_schema=vol.Schema({}),
             description_placeholders={
-                "status": status,
-                "entities_found": str(result.get("entities_found", 0)),
-                "entities_migrated": str(result.get("entities_migrated", 0)),
-                "entities_failed": str(len(failed_entries)),
-                "migrated_list": migrated_list,
-                "failed_list": failed_list or "None",
+                "description": description,
             },
         )
 

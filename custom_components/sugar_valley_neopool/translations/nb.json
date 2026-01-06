@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migrering fullført",
-        "description": "## Migreringsresultater\n\n**Status:** {status}\n\n### Sammendrag:\n- Entiteter funnet: **{entities_found}**\n- Entiteter migrert: **{entities_migrated}**\n- Feil: **{entities_failed}**\n\n### Migrerte entiteter:\n{migrated_list}\n\n### Feil:\n{failed_list}\n\n---\n\nKlikk på **Send** for å fullføre oppsettet.",
+        "description": "{description}",
         "data": {}
       },
       "discover_device": {
