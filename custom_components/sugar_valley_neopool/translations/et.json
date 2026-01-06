@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migratsioon lõpetatud",
-        "description": "## Migratsiooni tulemused\n\n**Olemeid töödeldud**: {entities_found}\n**Edukalt migreeritud**: {entities_migrated}\n**Ebaõnnestunud**: {entities_failed}\n\n### Migreeritud olemid:\n{migrated_list}\n\n---\n\n{error_section}\n\nKlõpsake **Esita**, et seadistamine lõpetada.",
+        "description": "## Migratsiooni tulemused\n\n**Olemeid töödeldud**: {entities_found}\n**Edukalt migreeritud**: {entities_migrated}\n**Ebaõnnestunud**: {errors_count}\n\n### Migreeritud olemid:\n{migrated_list}\n\n---\n\n{failed_list}\n\nKlõpsake **Esita**, et seadistamine lõpetada.",
         "data": {}
       },
       "discover_device": {

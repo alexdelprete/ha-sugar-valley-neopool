@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migration terminée",
-        "description": "## Résultats de la migration\n\n**Entités traitées**: {entities_found}\n**Migrées avec succès**: {entities_migrated}\n**Échouées**: {entities_failed}\n\n### Entités migrées:\n{migrated_list}\n\n---\n\n{error_section}\n\nCliquez sur **Soumettre** pour terminer la configuration.",
+        "description": "## Résultats de la migration\n\n**Entités traitées**: {entities_found}\n**Migrées avec succès**: {entities_migrated}\n**Échouées**: {errors_count}\n\n### Entités migrées:\n{migrated_list}\n\n---\n\n{failed_list}\n\nCliquez sur **Soumettre** pour terminer la configuration.",
         "data": {}
       },
       "discover_device": {
