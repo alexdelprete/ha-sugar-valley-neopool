@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -52,6 +53,7 @@ class NeoPoolData:
     sensor_data: dict[str, Any] = field(default_factory=dict)
     available: bool = False
     device_id: str | None = None  # For device triggers
+    entity_id_mapping: dict[str, str] = field(default_factory=dict)  # For YAML migration
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -86,6 +88,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Verify migration if applicable
+    if entry.runtime_data.entity_id_mapping:
+        verification = await async_verify_migration(hass, entry.runtime_data.entity_id_mapping)
+        _LOGGER.info(
+            "Migration verification: %d verified, %d no history, %d failed",
+            verification["verified"],
+            verification["no_history"],
+            len(verification["failed"]),
+        )
 
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
@@ -156,16 +168,15 @@ async def async_migrate_yaml_entities(
     entry: NeoPoolConfigEntry,
     nodeid: str,
 ) -> dict[str, Any]:
-    """Migrate YAML package entities to new unique_id format.
+    """Migrate YAML entities by deleting old MQTT entities.
 
-    Old format: {prefix}{key}
-    New format: neopool_mqtt_{nodeid}_{key}
+    The integration creates new entities with matching entity_ids
+    (from registry), preserving historical data.
 
-    This preserves historical data by updating entity unique_ids in the registry.
+    Key insight: We find entities by unique_id prefix, but get the actual
+    entity_id from the registry (handles user customization).
+
     Returns a summary dict with migration results.
-
-    Note: Migration may have already been performed during config flow.
-    This function handles legacy entries and edge cases.
     """
     summary: dict[str, Any] = {
         "steps": [],
@@ -174,97 +185,164 @@ async def async_migrate_yaml_entities(
         "errors": [],
     }
 
-    # Skip if migration was already performed during config flow
-    if entry.data.get("migration_completed", False):
-        _LOGGER.debug("Migration already completed during config flow, skipping")
-        return summary
-
-    # Only run if YAML migration was requested
+    # Skip if not a YAML migration
     if not entry.data.get(CONF_MIGRATE_YAML, False):
-        _LOGGER.debug("Not a YAML migration, skipping entity migration")
+        _LOGGER.debug("Not a YAML migration, skipping")
         return summary
 
-    # Get the prefix (default or custom from config flow)
     prefix = entry.data.get(CONF_UNIQUE_ID_PREFIX, DEFAULT_UNIQUE_ID_PREFIX)
-
     entity_registry = er.async_get(hass)
 
-    # Find all migratable entities with the prefix
-    # Includes orphaned entities (no config_entry_id) and entities owned by other platforms
-    # (e.g., "mqtt" from YAML package)
-    yaml_entities = [
+    # Find MQTT platform entities by unique_id prefix
+    mqtt_entities = [
         entity
         for entity in entity_registry.entities.values()
-        if entity.unique_id.startswith(prefix)
-        and (entity.config_entry_id is None or entity.platform != DOMAIN)
+        if entity.unique_id.startswith(prefix) and entity.platform == "mqtt"
     ]
 
-    summary["entities_found"] = len(yaml_entities)
+    summary["entities_found"] = len(mqtt_entities)
     summary["steps"].append(
         {
-            "name": "Find migratable entities",
-            "status": "success" if yaml_entities else "skipped",
-            "detail": f"Found {len(yaml_entities)} entities with prefix '{prefix}'",
+            "name": "Find MQTT entities",
+            "status": "success" if mqtt_entities else "skipped",
+            "detail": f"Found {len(mqtt_entities)} MQTT entities with prefix '{prefix}'",
         }
     )
 
-    if not yaml_entities:
-        _LOGGER.debug("No YAML entities found to migrate with prefix '%s'", prefix)
+    if not mqtt_entities:
+        _LOGGER.debug("No MQTT entities found to migrate")
         return summary
 
-    _LOGGER.info(
-        "Found %d YAML package entities to migrate to NodeID-based unique_ids",
-        len(yaml_entities),
-    )
+    _LOGGER.info("Found %d MQTT entities to migrate", len(mqtt_entities))
 
-    # Migrate each entity
-    for entity in yaml_entities:
-        old_unique_id = entity.unique_id
+    # Build mapping and delete old entities
+    entity_id_mapping: dict[str, str] = {}
 
+    for entity in mqtt_entities:
         try:
-            # Extract entity key from old unique_id
-            entity_key = old_unique_id.replace(prefix, "", 1)
+            # Extract entity_key (part after prefix in unique_id)
+            entity_key = entity.unique_id.replace(prefix, "", 1)
 
-            # New format: neopool_mqtt_{nodeid}_{key}
-            new_unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+            # Get ACTUAL entity_id from registry (handles user customization!)
+            # e.g., "sensor.my_pool_water_temperature" -> "my_pool_water_temperature"
+            actual_entity_id = entity.entity_id
+            object_id = actual_entity_id.split(".", 1)[1]
 
-            # Update entity unique_id and associate with this config entry
-            entity_registry.async_update_entity(
-                entity.entity_id,
-                new_unique_id=new_unique_id,
-                config_entry_id=entry.entry_id,
-            )
+            # Check for collision: is this object_id used by another entity?
+            collision_found = False
+            for other in entity_registry.entities.values():
+                if other.entity_id != actual_entity_id:
+                    if other.entity_id.endswith(f".{object_id}"):
+                        summary["errors"].append(
+                            f"{actual_entity_id}: object_id collision with {other.entity_id}"
+                        )
+                        collision_found = True
+                        break
 
+            if collision_found:
+                continue
+
+            # Map: entity_key -> actual object_id
+            entity_id_mapping[entity_key] = object_id
+
+            # DELETE the old MQTT entity
+            entity_registry.async_remove(entity.entity_id)
             summary["entities_migrated"] += 1
+
             _LOGGER.info(
-                "Migrated entity %s: %s -> %s",
-                entity.entity_id,
-                old_unique_id,
-                new_unique_id,
+                "Deleted MQTT entity %s (key: %s, will recreate with same entity_id)",
+                actual_entity_id,
+                entity_key,
             )
         except Exception as e:  # noqa: BLE001
-            error_msg = f"{entity.entity_id}: {e}"
-            summary["errors"].append(error_msg)
-            _LOGGER.error("Failed to migrate entity %s: %s", entity.entity_id, e)
+            summary["errors"].append(f"{entity.entity_id}: {e}")
+            _LOGGER.error("Failed to delete entity %s: %s", entity.entity_id, e)
 
-    # Add migration step result
-    if summary["errors"]:
-        status = "partial"
-    else:
-        status = "success"
+    # Store mapping in runtime_data for entity creation
+    entry.runtime_data.entity_id_mapping = entity_id_mapping
 
     summary["steps"].append(
         {
-            "name": "Migrate entities",
-            "status": status,
-            "detail": f"Migrated {summary['entities_migrated']}/{summary['entities_found']}",
+            "name": "Delete and map entities",
+            "status": "success" if not summary["errors"] else "partial",
+            "detail": f"Deleted {summary['entities_migrated']}/{summary['entities_found']}",
         }
     )
 
-    # Show persistent notification with summary
+    # Show notification
     await _show_migration_summary(hass, summary)
 
     return summary
+
+
+async def async_verify_migration(
+    hass: HomeAssistant,
+    entity_id_mapping: dict[str, str],
+) -> dict[str, Any]:
+    """Verify migration preserved historical data.
+
+    Uses recorder history API to check if entities have state history
+    from before the migration (older than 1 hour).
+    Works for ALL entity types.
+    """
+    # Import here to avoid circular imports and optional dependency
+    try:
+        from homeassistant.components.recorder.history import (  # noqa: PLC0415
+            get_last_state_changes,
+        )
+    except ImportError:
+        _LOGGER.warning("Recorder not available, skipping migration verification")
+        return {"verified": 0, "no_history": 0, "failed": ["Recorder not available"]}
+
+    results: dict[str, Any] = {
+        "verified": 0,
+        "no_history": 0,
+        "failed": [],
+    }
+
+    domains = ["sensor", "binary_sensor", "switch", "select", "number", "button"]
+    now = datetime.now(tz=UTC)
+
+    for object_id in entity_id_mapping.values():
+        found = False
+        for domain in domains:
+            entity_id = f"{domain}.{object_id}"
+
+            try:
+                # Get last state change for this entity_id (blocking call)
+                history = await hass.async_add_executor_job(
+                    get_last_state_changes,
+                    hass,
+                    1,  # number_of_states - just need 1 to confirm
+                    entity_id,
+                )
+
+                if history.get(entity_id):
+                    states = history[entity_id]
+                    if states:
+                        last_state = states[0]
+                        # If last_changed is older than 1 hour, history was preserved
+                        last_changed = last_state.last_changed
+                        if last_changed.tzinfo is None:
+                            last_changed = last_changed.replace(tzinfo=UTC)
+                        if last_changed < now - timedelta(hours=1):
+                            results["verified"] += 1
+                            _LOGGER.debug(
+                                "Migration verified for %s: history from %s",
+                                entity_id,
+                                last_state.last_changed,
+                            )
+                            found = True
+                            break  # Found in this domain, move to next entity
+
+            except Exception as e:  # noqa: BLE001
+                results["failed"].append(f"{entity_id}: {e}")
+                _LOGGER.warning("Failed to verify %s: %s", entity_id, e)
+
+        if not found:
+            results["no_history"] += 1
+
+    return results
 
 
 async def _show_migration_summary(hass: HomeAssistant, summary: dict[str, Any]) -> None:

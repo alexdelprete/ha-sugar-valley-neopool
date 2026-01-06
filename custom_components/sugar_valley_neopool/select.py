@@ -109,7 +109,7 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
         description: NeoPoolSelectEntityDescription,
     ) -> None:
         """Initialize the select."""
-        super().__init__(config_entry, description.key)
+        super().__init__(config_entry, description.key, "select")
         self.entity_description = description
         self._attr_current_option: str | None = None
         self._attr_options = description.options or []

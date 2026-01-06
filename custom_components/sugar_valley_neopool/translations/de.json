@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "NeoPool neu konfigurieren",
-        "description": "Aktualisieren Sie die Verbindungseinstellungen Ihres NeoPool-Geräts.",
+        "description": "Aktualisieren Sie die Verbindungseinstellungen Ihres NeoPool-Geräts.\n\n**Hinweis:** Das Ändern des Gerätenamens aktualisiert den Integrationstitel. Aktivieren Sie **Entitäts-IDs neu generieren**, wenn die Entity-IDs auch den neuen Namen widerspiegeln sollen.",
         "data": {
           "device_name": "Gerätename",
+          "regenerate_entity_ids": "Entitäts-IDs neu generieren",
           "discovery_prefix": "MQTT-Topic"
         },
         "data_description": {
           "device_name": "Ein freundlicher Name für Ihren Pool-Controller",
+          "regenerate_entity_ids": "Entitäts-IDs aktualisieren, um den neuen Gerätenamen widerzuspiegeln (z.B. sensor.neopool_ph → sensor.mypool_ph)",
           "discovery_prefix": "Das MQTT-Topic Ihres Tasmota-Geräts"
         }
       }
@@ -99,19 +101,15 @@
   "options": {
     "step": {
       "init": {
-        "title": "NeoPool Laufzeitoptionen",
-        "description": "Konfigurieren Sie Geräte- und Laufzeitoptionen.\n\n**Wiederherstellungsskript-Variablen:**\nWenn konfiguriert, erhält das Wiederherstellungsskript diese Variablen:\n\n- `device_name` : Gerätename\n- `mqtt_topic` : MQTT-Topic\n- `nodeid` : Geräte-NodeID\n- `failures_count` : Anzahl aufeinanderfolgender Fehler",
+        "title": "NeoPool Optionen",
+        "description": "Konfigurieren Sie Laufzeitoptionen für Offline-Erkennung und Wiederherstellung.\n\n**Wiederherstellungsskript-Variablen:**\nWenn konfiguriert, erhält das Wiederherstellungsskript diese Variablen:\n\n- `device_name` : Gerätename\n- `mqtt_topic` : MQTT-Topic\n- `nodeid` : Geräte-NodeID\n- `failures_count` : Anzahl aufeinanderfolgender Fehler",
         "data": {
-          "device_name": "Gerätename",
-          "regenerate_entity_ids": "Entitäts-IDs neu generieren",
-          "recovery_script": "Wiederherstellungsskript (optional, wird ausgeführt wenn das Gerät nicht mehr reagiert)",
+          "recovery_script": "Wiederherstellungsskript (optional)",
           "enable_repair_notification": "Reparaturbenachrichtigungen aktivieren",
           "failures_threshold": "Fehler vor Benachrichtigung (1-10)",
           "offline_timeout": "Offline-Timeout (Sekunden)"
         },
         "data_description": {
-          "device_name": "Benutzerdefinierter Name für das Gerät (wird in Entitätsnamen verwendet)",
-          "regenerate_entity_ids": "Entitäts-IDs aktualisieren, um den neuen Gerätenamen widerzuspiegeln (nur bei Gerätenamenänderung)",
           "recovery_script": "Skript, das ausgeführt wird, wenn das Gerät zu lange offline ist",
           "enable_repair_notification": "Erstellt ein Reparaturproblem, wenn das Gerät offline geht",
           "failures_threshold": "Anzahl aufeinanderfolgender LWT-Offline-Nachrichten vor Auslösung der Benachrichtigungen",

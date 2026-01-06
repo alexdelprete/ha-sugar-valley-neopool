@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Reconfigurer NeoPool",
-        "description": "Mettez à jour les paramètres de connexion de votre appareil NeoPool.",
+        "description": "Mettez à jour les paramètres de connexion de votre appareil NeoPool.\n\n**Note :** Changer le nom de l'appareil mettra à jour le titre de l'intégration. Cochez **Régénérer les IDs d'entités** si vous souhaitez également que les IDs d'entités reflètent le nouveau nom.",
         "data": {
           "device_name": "Nom de l'appareil",
+          "regenerate_entity_ids": "Régénérer les IDs d'entités",
           "discovery_prefix": "Sujet MQTT"
         },
         "data_description": {
           "device_name": "Un nom convivial pour votre contrôleur de piscine",
+          "regenerate_entity_ids": "Mettre à jour les IDs d'entités pour correspondre au nouveau nom de l'appareil (ex: sensor.neopool_ph → sensor.mapiscine_ph)",
           "discovery_prefix": "Le sujet MQTT utilisé par votre dispositif Tasmota"
         }
       }
@@ -102,16 +104,12 @@
         "title": "Options d'exécution NeoPool",
         "description": "Configurez les options de l'appareil et d'exécution.\n\n**Variables du script de récupération :**\nLorsqu'il est configuré, le script de récupération reçoit ces variables :\n\n- `device_name` : Nom de l'appareil\n- `mqtt_topic` : Sujet MQTT\n- `nodeid` : NodeID de l'appareil\n- `failures_count` : Nombre d'échecs consécutifs",
         "data": {
-          "device_name": "Nom de l'appareil",
-          "regenerate_entity_ids": "Régénérer les IDs d'entités",
           "recovery_script": "Script de récupération (optionnel, s'exécute lorsque l'appareil cesse de répondre)",
           "enable_repair_notification": "Activer les notifications de réparation",
           "failures_threshold": "Échecs avant notification (1-10)",
           "offline_timeout": "Délai d'expiration hors ligne (secondes)"
         },
         "data_description": {
-          "device_name": "Nom personnalisé pour l'appareil (utilisé dans les noms d'entités)",
-          "regenerate_entity_ids": "Mettre à jour les IDs d'entités pour correspondre au nouveau nom de l'appareil (uniquement lors du changement de nom)",
           "recovery_script": "Script à exécuter lorsque l'appareil est hors ligne trop longtemps",
           "enable_repair_notification": "Créer un problème de réparation lorsque l'appareil passe hors ligne",
           "failures_threshold": "Nombre de messages LWT hors ligne consécutifs avant de déclencher les notifications",

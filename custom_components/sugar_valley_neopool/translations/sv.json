@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Omkonfigurera NeoPool",
-        "description": "Uppdatera dina NeoPool-enhets anslutningsinställningar.",
+        "description": "Uppdatera dina NeoPool-enhets anslutningsinställningar.\n\n**Notera:** Att ändra enhetsnamnet uppdaterar integrationens titel. Kryssa i **Regenerera entitets-ID:n** om du också vill att entitets-ID:n ska återspegla det nya namnet.",
         "data": {
           "device_name": "Enhetsnamn",
+          "regenerate_entity_ids": "Regenerera entitets-ID:n",
           "discovery_prefix": "MQTT-ämne"
         },
         "data_description": {
           "device_name": "Ett vänligt namn för din poolkontroller",
+          "regenerate_entity_ids": "Uppdatera entitets-ID:n för att matcha det nya enhetsnamnet (t.ex. sensor.neopool_ph → sensor.minpool_ph)",
           "discovery_prefix": "MQTT-ämnet som används av din Tasmota-enhet"
         }
       }
@@ -102,16 +104,12 @@
         "title": "NeoPool körtidsalternativ",
         "description": "Konfigurera enhets- och körtidsalternativ.\n\n**Återställningsskriptvariabler:**\nNär det är konfigurerat får återställningsskriptet dessa variabler:\n\n- `device_name` : Enhetsnamn\n- `mqtt_topic` : MQTT-ämne\n- `nodeid` : Enhetens NodeID\n- `failures_count` : Antal på varandra följande fel",
         "data": {
-          "device_name": "Enhetsnamn",
-          "regenerate_entity_ids": "Regenerera entitets-ID:n",
           "recovery_script": "Återställningsskript (valfritt, körs när enheten slutar svara)",
           "enable_repair_notification": "Aktivera reparationsaviseringar",
           "failures_threshold": "Fel innan avisering (1-10)",
           "offline_timeout": "Offline-timeout (sekunder)"
         },
         "data_description": {
-          "device_name": "Anpassat namn för enheten (används i entitetsnamn)",
-          "regenerate_entity_ids": "Uppdatera entitets-ID:n för att matcha det nya enhetsnamnet (endast när namnet ändras)",
           "recovery_script": "Skript att köra när enheten är offline för länge",
           "enable_repair_notification": "Skapa ett reparationsproblem när enheten går offline",
           "failures_threshold": "Antal på varandra följande LWT offline-meddelanden innan aviseringar utlöses",

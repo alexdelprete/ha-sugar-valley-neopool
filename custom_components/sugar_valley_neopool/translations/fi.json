@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Määritä NeoPool uudelleen",
-        "description": "Päivitä NeoPool-laitteesi yhteysasetukset.",
+        "description": "Päivitä NeoPool-laitteesi yhteysasetukset.\n\n**Huomautus:** Laitteen nimen muuttaminen päivittää integraation otsikon. Valitse **Luo entiteetti-ID:t uudelleen**, jos haluat myös entiteetti-ID:ien heijastavan uutta nimeä.",
         "data": {
           "device_name": "Laitteen nimi",
+          "regenerate_entity_ids": "Luo entiteetti-ID:t uudelleen",
           "discovery_prefix": "MQTT-aihe"
         },
         "data_description": {
           "device_name": "Ystävällinen nimi allasohjaimeellesi",
+          "regenerate_entity_ids": "Päivitä entiteetti-ID:t vastaamaan uutta laitteen nimeä (esim. sensor.neopool_ph → sensor.omaallas_ph)",
           "discovery_prefix": "Tasmota-laitteesi käyttämä MQTT-aihe"
         }
       }
@@ -102,16 +104,12 @@
         "title": "NeoPool-ajonaikaiset asetukset",
         "description": "Määritä laite- ja ajonaikaiset asetukset.\n\n**Palautusskriptin muuttujat:**\nKun määritetty, palautusskripti saa nämä muuttujat:\n\n- `device_name` : Laitteen nimi\n- `mqtt_topic` : MQTT-aihe\n- `nodeid` : Laitteen NodeID\n- `failures_count` : Peräkkäisten virheiden määrä",
         "data": {
-          "device_name": "Laitteen nimi",
-          "regenerate_entity_ids": "Luo entiteetti-ID:t uudelleen",
           "recovery_script": "Palautusskripti (valinnainen, suoritetaan kun laite lakkaa vastaamasta)",
           "enable_repair_notification": "Ota korjausilmoitukset käyttöön",
           "failures_threshold": "Virheet ennen ilmoitusta (1-10)",
           "offline_timeout": "Offline-aikakatkaisu (sekuntia)"
         },
         "data_description": {
-          "device_name": "Mukautettu nimi laitteelle (käytetään entiteettien nimissä)",
-          "regenerate_entity_ids": "Päivitä entiteetti-ID:t vastaamaan uutta laitteen nimeä (vain kun nimi muuttuu)",
           "recovery_script": "Skripti, joka suoritetaan kun laite on ollut liian kauan offline-tilassa",
           "enable_repair_notification": "Luo korjausongelma kun laite menee offline-tilaan",
           "failures_threshold": "Peräkkäisten LWT offline-viestien määrä ennen ilmoitusten laukaisua",

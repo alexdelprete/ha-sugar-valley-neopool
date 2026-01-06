@@ -106,7 +106,7 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
         description: NeoPoolSwitchEntityDescription,
     ) -> None:
         """Initialize the switch."""
-        super().__init__(config_entry, description.key)
+        super().__init__(config_entry, description.key, "switch")
         self.entity_description = description
         self._attr_is_on: bool | None = None
 

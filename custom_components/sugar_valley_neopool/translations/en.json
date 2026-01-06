@@ -41,6 +41,13 @@
           "unique_id_prefix": "Unique ID Prefix"
         }
       },
+      "yaml_detect_confirm": {
+        "title": "Detected NeoPool Entities",
+        "description": "We detected NeoPool YAML entities:\n\n• **Unique ID prefix**: `{prefix}`\n• **Entities found**: {entity_count}\n• **Confidence**: {confidence}%\n\n**Matched patterns**:\n{matched_signatures}\n\n---\n\nIf this is correct, check the box below to proceed.\nIf not, uncheck it to enter a custom prefix manually.",
+        "data": {
+          "confirm_detection": "Yes, this is correct - proceed with migration"
+        }
+      },
       "yaml_active_warning": {
         "title": "YAML Package Still Active",
         "description": "## ⚠️ Cannot Proceed - Entities Still Active\n\nThe following **{active_count}** entities are currently **receiving updates**, which means the YAML package is still running:\n\n{entity_list}\n\n---\n\n## Required Actions:\n\n1. **Remove or comment out** the YAML package from `configuration.yaml`\n2. **Restart Home Assistant** completely\n3. Come back to this screen and click **Retry**\n\n---\n\n⚠️ **Why is this required?**\n\nIf you proceed without removing the YAML package:\n- You will get **duplicate entities** (both YAML and integration entities)\n- Both sets will be active and receiving updates simultaneously\n- This will cause confusion and require manual cleanup\n\nThe migration can only proceed once the YAML entities become **unavailable** (after removing the package and restarting).",
@@ -68,13 +75,15 @@
       },
       "reconfigure": {
         "title": "Reconfigure NeoPool",
-        "description": "Update your NeoPool device connection settings.",
+        "description": "Update your NeoPool device connection settings.\n\n**Note:** Changing the device name will update the integration title. Check **Regenerate entity IDs** if you also want entity IDs to reflect the new name.",
         "data": {
           "device_name": "Device Name",
+          "regenerate_entity_ids": "Regenerate entity IDs",
           "discovery_prefix": "MQTT Topic"
         },
         "data_description": {
           "device_name": "A friendly name for your pool controller",
+          "regenerate_entity_ids": "Update entity IDs to match the new device name (e.g., sensor.neopool_ph → sensor.mypool_ph)",
           "discovery_prefix": "The MQTT topic used by your Tasmota device"
         }
       }
@@ -99,19 +108,15 @@
   "options": {
     "step": {
       "init": {
-        "title": "NeoPool Runtime Options",
-        "description": "Configure device and runtime options.\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n\n- `device_name` : Device name\n- `mqtt_topic` : MQTT topic\n- `nodeid` : Device NodeID\n- `failures_count` : Number of consecutive failures",
+        "title": "NeoPool Options",
+        "description": "Configure runtime options for offline detection and recovery.\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n\n- `device_name` : Device name\n- `mqtt_topic` : MQTT topic\n- `nodeid` : Device NodeID\n- `failures_count` : Number of consecutive failures",
         "data": {
-          "device_name": "Device Name",
-          "regenerate_entity_ids": "Regenerate entity IDs",
-          "recovery_script": "Recovery script (optional, runs when device stops responding)",
+          "recovery_script": "Recovery script (optional)",
           "enable_repair_notification": "Enable repair notifications",
           "failures_threshold": "Failures before notification (1-10)",
           "offline_timeout": "Offline timeout (seconds)"
         },
         "data_description": {
-          "device_name": "Custom name for the device (used in entity names)",
-          "regenerate_entity_ids": "Update entity IDs to match the new device name (only when device name changes)",
           "recovery_script": "Script to run when device is offline for too long",
           "enable_repair_notification": "Create a repair issue when device goes offline",
           "failures_threshold": "Number of consecutive LWT offline messages before triggering notifications",

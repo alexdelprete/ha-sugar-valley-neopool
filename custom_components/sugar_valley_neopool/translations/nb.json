@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Rekonfigurer NeoPool",
-        "description": "Oppdater tilkoblingsinnstillingene for NeoPool-enheten din.",
+        "description": "Oppdater tilkoblingsinnstillingene for NeoPool-enheten din.\n\n**Merk:** Endring av enhetsnavnet vil oppdatere integrasjonstittel. Kryss av **Regenerer entitets-ID-er** hvis du også vil at entitets-ID-er skal reflektere det nye navnet.",
         "data": {
           "device_name": "Enhetsnavn",
+          "regenerate_entity_ids": "Regenerer entitets-ID-er",
           "discovery_prefix": "MQTT-emne"
         },
         "data_description": {
           "device_name": "Et vennlig navn for bassengkontrolleren din",
+          "regenerate_entity_ids": "Oppdater entitets-ID-er for å matche det nye enhetsnavnet (f.eks. sensor.neopool_ph → sensor.mittbasseng_ph)",
           "discovery_prefix": "MQTT-emnet brukt av Tasmota-enheten din"
         }
       }
@@ -102,16 +104,12 @@
         "title": "NeoPool kjøretidsalternativer",
         "description": "Konfigurer enhets- og kjøretidsalternativer.\n\n**Gjenopprettingsskriptvariabler:**\nNår konfigurert, mottar gjenopprettingsskriptet disse variablene:\n\n- `device_name` : Enhetsnavn\n- `mqtt_topic` : MQTT-emne\n- `nodeid` : Enhetens NodeID\n- `failures_count` : Antall påfølgende feil",
         "data": {
-          "device_name": "Enhetsnavn",
-          "regenerate_entity_ids": "Regenerer entitets-ID-er",
           "recovery_script": "Gjenopprettingsskript (valgfritt, kjøres når enheten slutter å svare)",
           "enable_repair_notification": "Aktiver reparasjonsvarsler",
           "failures_threshold": "Feil før varsling (1-10)",
           "offline_timeout": "Frakoblet tidsavbrudd (sekunder)"
         },
         "data_description": {
-          "device_name": "Egendefinert navn for enheten (brukes i entitetsnavn)",
-          "regenerate_entity_ids": "Oppdater entitets-ID-er for å matche det nye enhetsnavnet (kun når navnet endres)",
           "recovery_script": "Skript som skal kjøres når enheten er frakoblet for lenge",
           "enable_repair_notification": "Opprett et reparasjonsproblem når enheten går frakoblet",
           "failures_threshold": "Antall påfølgende LWT frakoblede meldinger før varsling utløses",

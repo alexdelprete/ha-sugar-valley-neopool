@@ -59,6 +59,36 @@ from .helpers import get_nested_value, validate_nodeid
 
 _LOGGER = logging.getLogger(__name__)
 
+# Signatures for auto-detecting NeoPool entities with confidence scoring
+# Each signature has a weight based on how unique it is to NeoPool
+NEOPOOL_SIGNATURES: dict[str, int] = {
+    # Very unique - high weight (25 points)
+    "hydrolysis_runtime_total": 25,
+    "hydrolysis_runtime_pol1": 25,
+    "hydrolysis_runtime_pol2": 25,
+    # Quite unique - medium-high weight (20 points)
+    "powerunit_nodeid": 20,
+    "powerunit_4ma": 20,
+    "hydrolysis_polarity_changes": 20,
+    # NeoPool-specific naming - medium weight (15 points)
+    "relay_filtration_state": 15,
+    "relay_light_state": 15,
+    "hydrolysis_state": 15,
+    "hydrolysis_data": 15,
+    "hydrolysis_percent": 15,
+    # Somewhat unique - lower weight (10 points)
+    "filtration": 10,
+    "modules_ph": 10,
+    "modules_redox": 10,
+    "modules_hydrolysis": 10,
+    "ph_data": 10,
+    "redox_data": 10,
+    # Supportive but less unique (5 points)
+    "water_temperature": 5,
+    "ph_state": 5,
+    "ph_pump": 5,
+}
+
 
 @callback
 def get_topics_from_config(hass: HomeAssistant) -> set[str | None]:
@@ -99,6 +129,10 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         self._unique_id_prefix: str = DEFAULT_UNIQUE_ID_PREFIX
         self._migrating_entities: list[RegistryEntry] = []
         self._migration_result: dict[str, Any] | None = None
+        # Auto-detection state
+        self._detected_prefix: str | None = None
+        self._detection_confidence: int = 0
+        self._matched_signatures: list[str] = []
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - ask about YAML migration first."""
@@ -213,14 +247,14 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
     async def _check_migratable_entities(self) -> ConfigFlowResult:
         """Check for migratable entities with default prefix, or ask user for custom prefix."""
-        # Try default prefix first
+        # Step 1: Try default prefix first
         entities = self._find_migratable_entities(DEFAULT_UNIQUE_ID_PREFIX)
 
         if entities:
             self._unique_id_prefix = DEFAULT_UNIQUE_ID_PREFIX
             self._migrating_entities = entities
             _LOGGER.info(
-                "Found %d migratable entities with prefix '%s'",
+                "Found %d migratable entities with default prefix '%s'",
                 len(entities),
                 DEFAULT_UNIQUE_ID_PREFIX,
             )
@@ -236,10 +270,31 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
             return await self.async_step_yaml_confirm()
 
-        # No entities found with default prefix, ask user for custom prefix
+        # Step 2: Smart search with confidence scoring
         _LOGGER.debug(
-            "No migratable entities found with default prefix '%s', asking user",
+            "No entities found with default prefix '%s', trying smart detection",
             DEFAULT_UNIQUE_ID_PREFIX,
+        )
+        detection = self._auto_detect_neopool_prefix()
+
+        if detection["prefix"] and detection["confidence"] >= 30:
+            # Found something with reasonable confidence - ask user to confirm
+            self._detected_prefix = detection["prefix"]
+            self._detection_confidence = detection["confidence"]
+            self._matched_signatures = detection["matched_signatures"]
+            _LOGGER.info(
+                "Smart detection found prefix '%s' with %d%% confidence (%d signatures)",
+                detection["prefix"],
+                detection["confidence"],
+                len(detection["matched_signatures"]),
+            )
+            return await self.async_step_yaml_detect_confirm()
+
+        # Step 3: Nothing found - ask user manually
+        _LOGGER.debug(
+            "Smart detection failed (prefix=%s, confidence=%d), asking user for prefix",
+            detection.get("prefix"),
+            detection.get("confidence", 0),
         )
         return await self.async_step_yaml_prefix()
 
@@ -274,6 +329,44 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             if state is not None and state.state not in ("unavailable", "unknown"):
                 active_entities.append(entity)
         return active_entities
+
+    def _auto_detect_neopool_prefix(self) -> dict[str, Any]:
+        """Auto-detect NeoPool entities using signature matching.
+
+        Scans MQTT platform entities for unique_ids ending with NeoPool signatures.
+        Returns dict with prefix, confidence score, and matched signatures.
+        """
+        entity_registry = er.async_get(self.hass)
+        mqtt_entities = [e for e in entity_registry.entities.values() if e.platform == "mqtt"]
+
+        detected_prefix: str | None = None
+        matched_signatures: list[str] = []
+        total_score = 0
+
+        for entity in mqtt_entities:
+            for signature, weight in NEOPOOL_SIGNATURES.items():
+                if entity.unique_id.endswith(signature):
+                    # Extract prefix (everything before the signature)
+                    prefix = entity.unique_id[: -len(signature)]
+
+                    if detected_prefix is None:
+                        detected_prefix = prefix
+                    elif prefix != detected_prefix:
+                        continue  # Different prefix, skip
+
+                    matched_signatures.append(signature)
+                    total_score += weight
+                    break  # One match per entity
+
+        # Cap confidence at 100%
+        confidence = min(total_score, 100)
+
+        return {
+            "prefix": detected_prefix,
+            "confidence": confidence,
+            "matched_signatures": matched_signatures,
+            "entity_count": len(matched_signatures),
+        }
 
     def _format_entity_list(self, entities: list[RegistryEntry]) -> str:
         """Format entity list for display (first 5 + count)."""
@@ -326,6 +419,53 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_yaml_detect_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Show detected prefix and ask user to confirm."""
+        if user_input is not None:
+            if user_input.get("confirm_detection"):
+                # User confirmed - use detected prefix
+                self._unique_id_prefix = self._detected_prefix or DEFAULT_UNIQUE_ID_PREFIX
+                entities = self._find_migratable_entities(self._unique_id_prefix)
+                if entities:
+                    self._migrating_entities = entities
+                    _LOGGER.info(
+                        "User confirmed detected prefix '%s', found %d entities",
+                        self._unique_id_prefix,
+                        len(entities),
+                    )
+
+                    # Check if any entities are still active
+                    active_entities = self._find_active_entities(entities)
+                    if active_entities:
+                        return await self.async_step_yaml_active_warning()
+
+                    return await self.async_step_yaml_confirm()
+
+            # User rejected - ask for manual input
+            return await self.async_step_yaml_prefix()
+
+        # Format matched signatures for display
+        sig_list = "\n".join(f"  ✓ {sig}" for sig in self._matched_signatures[:5])
+        if len(self._matched_signatures) > 5:
+            sig_list += f"\n  ... and {len(self._matched_signatures) - 5} more"
+
+        return self.async_show_form(
+            step_id="yaml_detect_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("confirm_detection", default=True): cv.boolean,
+                }
+            ),
+            description_placeholders={
+                "prefix": self._detected_prefix or "",
+                "confidence": str(self._detection_confidence),
+                "entity_count": str(len(self._matched_signatures)),
+                "matched_signatures": sig_list,
+            },
         )
 
     async def async_step_yaml_active_warning(
@@ -808,11 +948,13 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             device_name = user_input[CONF_DEVICE_NAME]
             discovery_prefix = user_input[CONF_DISCOVERY_PREFIX]
+            regenerate = user_input.get(CONF_REGENERATE_ENTITY_IDS, False)
 
             _LOGGER.debug(
-                "Reconfigure requested: name=%s, topic=%s",
+                "Reconfigure requested: name=%s, topic=%s, regenerate=%s",
                 device_name,
                 discovery_prefix,
+                regenerate,
             )
 
             # Validate MQTT topic format
@@ -843,9 +985,24 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                         await self.async_set_unique_id(f"{DOMAIN}_{nodeid}")
                         self._abort_if_unique_id_mismatch()
 
+                        # Regenerate entity IDs if requested and device name changed
+                        old_device_name = reconfigure_entry.data.get(CONF_DEVICE_NAME)
+                        regenerated_count = 0
+                        if regenerate and device_name != old_device_name:
+                            regenerated_count = await self._regenerate_entity_ids(
+                                reconfigure_entry, device_name
+                            )
+                            _LOGGER.info(
+                                "Regenerated %d entity IDs for new device name: %s",
+                                regenerated_count,
+                                device_name,
+                            )
+
                         _LOGGER.debug(
-                            "Connection test passed, applying reconfigure: nodeid=%s",
+                            "Connection test passed, applying reconfigure: nodeid=%s, "
+                            "regenerated=%d",
                             nodeid,
+                            regenerated_count,
                         )
                         return self.async_update_reload_and_abort(
                             reconfigure_entry,
@@ -865,6 +1022,10 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_DEVICE_NAME,
                         default=reconfigure_entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME),
                     ): cv.string,
+                    vol.Optional(
+                        CONF_REGENERATE_ENTITY_IDS,
+                        default=False,
+                    ): cv.boolean,
                     vol.Required(
                         CONF_DISCOVERY_PREFIX,
                         default=reconfigure_entry.data.get(
@@ -876,125 +1037,13 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-
-class NeoPoolOptionsFlow(OptionsFlowWithReload):
-    """Config flow options handler with auto-reload."""
-
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Manage the options."""
-        if user_input is not None:
-            # Pop regenerate flag - it's a one-time action, not persisted
-            regenerate = user_input.pop(CONF_REGENERATE_ENTITY_IDS, False)
-
-            # Extract device name from user input
-            new_device_name = user_input.pop(CONF_DEVICE_NAME, None)
-            old_device_name = self.config_entry.data.get(CONF_DEVICE_NAME)
-
-            # Regenerate entity IDs if requested and device name changed
-            regenerated_count = 0
-            if regenerate and new_device_name and new_device_name != old_device_name:
-                regenerated_count = await self._regenerate_entity_ids(new_device_name)
-                _LOGGER.info(
-                    "Regenerated %d entity IDs for new device name: %s",
-                    regenerated_count,
-                    new_device_name,
-                )
-
-            # Update config entry data if device name changed
-            if new_device_name and new_device_name != old_device_name:
-                new_data = {**self.config_entry.data, CONF_DEVICE_NAME: new_device_name}
-                self.hass.config_entries.async_update_entry(
-                    self.config_entry,
-                    title=new_device_name,
-                    data=new_data,
-                )
-
-            _LOGGER.debug(
-                "Options updated: device_name=%s, enable_repair=%s, failures_threshold=%s, "
-                "offline_timeout=%s, recovery_script=%s, regenerated=%d",
-                new_device_name,
-                user_input.get(CONF_ENABLE_REPAIR_NOTIFICATION),
-                user_input.get(CONF_FAILURES_THRESHOLD),
-                user_input.get(CONF_OFFLINE_TIMEOUT),
-                user_input.get(CONF_RECOVERY_SCRIPT),
-                regenerated_count,
-            )
-            return self.async_create_entry(data=user_input)
-
-        # Get current data and options with defaults
-        current_data = self.config_entry.data
-        current_options = self.config_entry.options
-
-        device_name = current_data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
-        enable_repair = current_options.get(
-            CONF_ENABLE_REPAIR_NOTIFICATION, DEFAULT_ENABLE_REPAIR_NOTIFICATION
-        )
-        failures_threshold = current_options.get(
-            CONF_FAILURES_THRESHOLD, DEFAULT_FAILURES_THRESHOLD
-        )
-        recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
-        offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(
-                {
-                    # 1. Device name (from config entry data)
-                    vol.Required(
-                        CONF_DEVICE_NAME,
-                        default=device_name,
-                    ): cv.string,
-                    # 2. Regenerate entity IDs checkbox (one-time action)
-                    vol.Optional(
-                        CONF_REGENERATE_ENTITY_IDS,
-                        default=False,
-                    ): cv.boolean,
-                    # 3. Recovery script (runs when device goes offline after threshold)
-                    vol.Optional(
-                        CONF_RECOVERY_SCRIPT,
-                        default=recovery_script,
-                    ): EntitySelector(
-                        EntitySelectorConfig(domain="script"),
-                    ),
-                    # 4. Enable repair notifications checkbox
-                    vol.Required(
-                        CONF_ENABLE_REPAIR_NOTIFICATION,
-                        default=enable_repair,
-                    ): cv.boolean,
-                    # 5. Failures threshold as input box (not slider)
-                    vol.Required(
-                        CONF_FAILURES_THRESHOLD,
-                        default=failures_threshold,
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_FAILURES_THRESHOLD,
-                            max=MAX_FAILURES_THRESHOLD,
-                            mode=NumberSelectorMode.BOX,
-                        )
-                    ),
-                    # 6. Offline timeout (how long device must be offline before notification)
-                    vol.Required(
-                        CONF_OFFLINE_TIMEOUT,
-                        default=offline_timeout,
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=MIN_OFFLINE_TIMEOUT,
-                            max=MAX_OFFLINE_TIMEOUT,
-                            mode=NumberSelectorMode.BOX,
-                            unit_of_measurement="seconds",
-                        )
-                    ),
-                },
-            ),
-        )
-
-    async def _regenerate_entity_ids(self, new_device_name: str) -> int:
+    async def _regenerate_entity_ids(self, config_entry: ConfigEntry, new_device_name: str) -> int:
         """Regenerate entity IDs based on new device name.
 
         Returns the number of entities that were updated.
         """
         registry = er.async_get(self.hass)
-        entities = er.async_entries_for_config_entry(registry, self.config_entry.entry_id)
+        entities = er.async_entries_for_config_entry(registry, config_entry.entry_id)
 
         regenerated_count = 0
         for entity_entry in entities:
@@ -1027,3 +1076,75 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                         )
 
         return regenerated_count
+
+
+class NeoPoolOptionsFlow(OptionsFlowWithReload):
+    """Config flow options handler with auto-reload."""
+
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            _LOGGER.debug(
+                "Options updated: enable_repair=%s, failures_threshold=%s, "
+                "offline_timeout=%s, recovery_script=%s",
+                user_input.get(CONF_ENABLE_REPAIR_NOTIFICATION),
+                user_input.get(CONF_FAILURES_THRESHOLD),
+                user_input.get(CONF_OFFLINE_TIMEOUT),
+                user_input.get(CONF_RECOVERY_SCRIPT),
+            )
+            return self.async_create_entry(data=user_input)
+
+        # Get current options with defaults
+        current_options = self.config_entry.options
+
+        enable_repair = current_options.get(
+            CONF_ENABLE_REPAIR_NOTIFICATION, DEFAULT_ENABLE_REPAIR_NOTIFICATION
+        )
+        failures_threshold = current_options.get(
+            CONF_FAILURES_THRESHOLD, DEFAULT_FAILURES_THRESHOLD
+        )
+        recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
+        offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    # 1. Recovery script (runs when device goes offline after threshold)
+                    vol.Optional(
+                        CONF_RECOVERY_SCRIPT,
+                        default=recovery_script,
+                    ): EntitySelector(
+                        EntitySelectorConfig(domain="script"),
+                    ),
+                    # 2. Enable repair notifications checkbox
+                    vol.Required(
+                        CONF_ENABLE_REPAIR_NOTIFICATION,
+                        default=enable_repair,
+                    ): cv.boolean,
+                    # 3. Failures threshold as input box (not slider)
+                    vol.Required(
+                        CONF_FAILURES_THRESHOLD,
+                        default=failures_threshold,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_FAILURES_THRESHOLD,
+                            max=MAX_FAILURES_THRESHOLD,
+                            mode=NumberSelectorMode.BOX,
+                        )
+                    ),
+                    # 4. Offline timeout (how long device must be offline before notification)
+                    vol.Required(
+                        CONF_OFFLINE_TIMEOUT,
+                        default=offline_timeout,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_OFFLINE_TIMEOUT,
+                            max=MAX_OFFLINE_TIMEOUT,
+                            mode=NumberSelectorMode.BOX,
+                            unit_of_measurement="seconds",
+                        )
+                    ),
+                },
+            ),
+        )

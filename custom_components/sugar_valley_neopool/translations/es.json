@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Reconfigurar NeoPool",
-        "description": "Actualice la configuración de conexión de su dispositivo NeoPool.",
+        "description": "Actualice la configuración de conexión de su dispositivo NeoPool.\n\n**Nota:** Cambiar el nombre del dispositivo actualizará el título de la integración. Marque **Regenerar IDs de entidades** si también desea que los IDs de entidades reflejen el nuevo nombre.",
         "data": {
           "device_name": "Nombre del dispositivo",
+          "regenerate_entity_ids": "Regenerar IDs de entidades",
           "discovery_prefix": "Topic MQTT"
         },
         "data_description": {
           "device_name": "Un nombre descriptivo para su controlador de piscina",
+          "regenerate_entity_ids": "Actualizar IDs de entidades para coincidir con el nuevo nombre del dispositivo (ej. sensor.neopool_ph → sensor.mipiscina_ph)",
           "discovery_prefix": "El topic MQTT usado por su dispositivo Tasmota"
         }
       }
@@ -102,16 +104,12 @@
         "title": "Opciones de tiempo de ejecución de NeoPool",
         "description": "Configure las opciones del dispositivo y de tiempo de ejecución.\n\n**Variables del script de recuperación:**\nCuando está configurado, el script de recuperación recibe estas variables:\n\n- `device_name` : Nombre del dispositivo\n- `mqtt_topic` : Topic MQTT\n- `nodeid` : NodeID del dispositivo\n- `failures_count` : Número de fallos consecutivos",
         "data": {
-          "device_name": "Nombre del dispositivo",
-          "regenerate_entity_ids": "Regenerar IDs de entidades",
           "recovery_script": "Script de recuperación (opcional, se ejecuta cuando el dispositivo deja de responder)",
           "enable_repair_notification": "Habilitar notificaciones de reparación",
           "failures_threshold": "Fallos antes de notificación (1-10)",
           "offline_timeout": "Tiempo de espera sin conexión (segundos)"
         },
         "data_description": {
-          "device_name": "Nombre personalizado para el dispositivo (usado en nombres de entidades)",
-          "regenerate_entity_ids": "Actualizar IDs de entidades para coincidir con el nuevo nombre del dispositivo (solo cuando cambia el nombre)",
           "recovery_script": "Script a ejecutar cuando el dispositivo está fuera de línea demasiado tiempo",
           "enable_repair_notification": "Crear un problema de reparación cuando el dispositivo se desconecta",
           "failures_threshold": "Número de mensajes LWT fuera de línea consecutivos antes de activar las notificaciones",

@@ -68,13 +68,15 @@
       },
       "reconfigure": {
         "title": "Seadista NeoPool uuesti",
-        "description": "Uuendage oma NeoPool seadme ühenduse seadeid.",
+        "description": "Uuendage oma NeoPool seadme ühenduse seadeid.\n\n**Märkus:** Seadme nime muutmine uuendab integratsiooni pealkirja. Märkige **Taasgenereeri olemi ID-d**, kui soovite, et olemi ID-d kajastaksid uut nime.",
         "data": {
           "device_name": "Seadme nimi",
+          "regenerate_entity_ids": "Taasgenereeri olemi ID-d",
           "discovery_prefix": "MQTT teema"
         },
         "data_description": {
           "device_name": "Sõbralik nimi teie basseini kontrollerile",
+          "regenerate_entity_ids": "Uuenda olemi ID-d vastama uuele seadme nimele (nt sensor.neopool_ph → sensor.minubassein_ph)",
           "discovery_prefix": "MQTT teema, mida kasutab teie Tasmota seade"
         }
       }
@@ -102,16 +104,12 @@
         "title": "NeoPool käitusaja valikud",
         "description": "Seadistage seadme ja käitusaja valikud.\n\n**Taastamise skripti muutujad:**\nKui on seadistatud, saab taastamise skript need muutujad:\n\n- `device_name` : Seadme nimi\n- `mqtt_topic` : MQTT teema\n- `nodeid` : Seadme NodeID\n- `failures_count` : Järjestikuste tõrgete arv",
         "data": {
-          "device_name": "Seadme nimi",
-          "regenerate_entity_ids": "Taasgenereeri olemi ID-d",
           "recovery_script": "Taastamise skript (valikuline, käivitub kui seade lõpetab vastamise)",
           "enable_repair_notification": "Luba paranduse teavitused",
           "failures_threshold": "Tõrked enne teavitust (1-10)",
           "offline_timeout": "Võrguühenduseta aegumine (sekundites)"
         },
         "data_description": {
-          "device_name": "Kohandatud nimi seadmele (kasutatakse olemi nimedes)",
-          "regenerate_entity_ids": "Uuenda olemi ID-d vastama uuele seadme nimele (ainult nime muutmisel)",
           "recovery_script": "Skript, mida käivitada kui seade on liiga kaua võrguühenduseta",
           "enable_repair_notification": "Loo paranduse probleem kui seade läheb võrguühenduseta",
           "failures_threshold": "Järjestikuste LWT võrguühenduseta sõnumite arv enne teavituste käivitamist",

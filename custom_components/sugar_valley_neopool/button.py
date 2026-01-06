@@ -65,7 +65,7 @@ class NeoPoolButton(NeoPoolMQTTEntity, ButtonEntity):
         description: NeoPoolButtonEntityDescription,
     ) -> None:
         """Initialize the button."""
-        super().__init__(config_entry, description.key)
+        super().__init__(config_entry, description.key, "button")
         self.entity_description = description
         # Buttons are always available (no state to track)
         self._attr_available = True
