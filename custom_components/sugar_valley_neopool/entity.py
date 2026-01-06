@@ -25,7 +25,6 @@ class NeoPoolEntity(Entity):
         self,
         config_entry: NeoPoolConfigEntry,
         entity_key: str,
-        platform_domain: str = "",  # e.g., "sensor", "switch"
     ) -> None:
         """Initialize the entity."""
         self._config_entry = config_entry
@@ -35,13 +34,8 @@ class NeoPoolEntity(Entity):
         self._attr_unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
         self._attr_device_info = get_device_info(config_entry)
         self._attr_available = False
-
-        # Check if migrating - use old entity_id to preserve history
-        entity_id_mapping = getattr(config_entry.runtime_data, "entity_id_mapping", {})
-        if platform_domain and entity_key in entity_id_mapping:
-            # Directly set entity_id to match the old one
-            old_object_id = entity_id_mapping[entity_key]
-            self.entity_id = f"{platform_domain}.{old_object_id}"
+        # Note: entity_id_mapping is applied in __init__.py after entity creation
+        # via _apply_entity_id_mapping() to preserve original YAML entity IDs
 
     @property
     def mqtt_topic(self) -> str:
@@ -58,10 +52,9 @@ class NeoPoolMQTTEntity(NeoPoolEntity):
         self,
         config_entry: NeoPoolConfigEntry,
         entity_key: str,
-        platform_domain: str = "",
     ) -> None:
         """Initialize the MQTT entity."""
-        super().__init__(config_entry, entity_key, platform_domain)
+        super().__init__(config_entry, entity_key)
         self._unsubscribe_callbacks = []
 
     async def async_added_to_hass(self) -> None:

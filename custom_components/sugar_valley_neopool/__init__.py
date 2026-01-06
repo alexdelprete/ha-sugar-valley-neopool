@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components import mqtt, persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import (
     CONF_DEVICE_NAME,
@@ -87,6 +87,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Apply entity_id_mapping to preserve original YAML entity IDs
+    if entity_id_mapping:
+        await _apply_entity_id_mapping(hass, entry, entity_id_mapping)
+
     # Verify migration and show results if applicable
     if entry.runtime_data.entity_id_mapping:
         verification = await async_verify_migration(hass, entry.runtime_data.entity_id_mapping)
@@ -161,6 +165,78 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         _LOGGER.info("Migration to version 2 complete")
 
     return True
+
+
+async def _apply_entity_id_mapping(
+    hass: HomeAssistant,
+    entry: NeoPoolConfigEntry,
+    entity_id_mapping: dict[str, str],
+) -> None:
+    """Apply entity_id_mapping to preserve original YAML entity IDs.
+
+    After entities are created with has_entity_name=True, their entity_ids
+    are auto-generated based on device_name + translation_key. This function
+    updates the entity registry to use the original YAML entity_ids instead,
+    preserving dashboards, automations, and history references.
+
+    Args:
+        hass: Home Assistant instance
+        entry: Config entry
+        entity_id_mapping: Dict mapping entity_key -> original object_id
+    """
+    entity_registry = er.async_get(hass)
+    nodeid = entry.runtime_data.nodeid
+    updated_count = 0
+
+    for entity_key, target_object_id in entity_id_mapping.items():
+        # Find the entity by its unique_id (NodeID-based pattern)
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_entry = entity_registry.async_get_entity_id_by_unique_id(DOMAIN, unique_id)
+
+        if entity_entry is None:
+            _LOGGER.debug("Entity with unique_id %s not found in registry, skipping", unique_id)
+            continue
+
+        # Get current entity_id and determine domain
+        current_entity = entity_registry.async_get(entity_entry)
+        if current_entity is None:
+            continue
+
+        current_entity_id = current_entity.entity_id
+        domain = current_entity_id.split(".", 1)[0]
+        target_entity_id = f"{domain}.{target_object_id}"
+
+        # Skip if already correct
+        if current_entity_id == target_entity_id:
+            _LOGGER.debug("Entity %s already has correct entity_id", current_entity_id)
+            continue
+
+        # Check if target entity_id is available
+        if entity_registry.async_get(target_entity_id) is not None:
+            _LOGGER.warning(
+                "Cannot rename %s to %s - target already exists",
+                current_entity_id,
+                target_entity_id,
+            )
+            continue
+
+        # Update entity_id in registry
+        entity_registry.async_update_entity(
+            current_entity_id,
+            new_entity_id=target_entity_id,
+        )
+        updated_count += 1
+        _LOGGER.info(
+            "Renamed entity %s -> %s to preserve YAML entity_id",
+            current_entity_id,
+            target_entity_id,
+        )
+
+    if updated_count > 0:
+        _LOGGER.info(
+            "Applied entity_id_mapping: %d entities renamed to preserve YAML IDs",
+            updated_count,
+        )
 
 
 async def async_verify_migration(

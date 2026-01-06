@@ -619,7 +619,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         """Show migration results and complete setup."""
         if user_input is not None:
             # User acknowledged results, create entry
-            device_name = f"NeoPool {self._yaml_topic}"
+            # Use "NeoPool MQTT" to match YAML package entity naming pattern
+            # This preserves entity IDs like sensor.neopool_mqtt_ph_data
+            device_name = "NeoPool MQTT"
 
             # Set unique ID based on NodeID
             await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
