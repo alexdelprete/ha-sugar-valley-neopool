@@ -4,6 +4,7 @@
   "codeowners": ["@alexdelprete"],
   "config_flow": true,
   "dependencies": ["mqtt"],
+  "after_dependencies": ["recorder"],
   "documentation": "https://github.com/alexdelprete/ha-sugar-valley-neopool",
   "integration_type": "hub",
   "iot_class": "local_push",
