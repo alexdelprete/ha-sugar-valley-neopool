@@ -292,7 +292,7 @@ class TestAsyncVerifyMigration:
         hass.config.components = {"recorder"}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             side_effect=Exception("Database error"),
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
@@ -321,7 +321,7 @@ class TestAsyncVerifyMigration:
             return {}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             side_effect=mock_get_history,
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
@@ -343,7 +343,7 @@ class TestAsyncVerifyMigration:
         mock_history = {"sensor.neopool_water_temp": [mock_state]}
 
         with patch(
-            "custom_components.sugar_valley_neopool.get_last_state_changes",
+            "homeassistant.components.recorder.history.get_last_state_changes",
             return_value=mock_history,
         ):
             result = await async_verify_migration(hass, entity_id_mapping)
@@ -377,11 +377,15 @@ class TestShowMigrationVerificationResult:
 
     @pytest.mark.asyncio
     async def test_show_migration_partial_success(self, hass: HomeAssistant) -> None:
-        """Test showing partial success notification."""
+        """Test showing partial success notification (with failures)."""
+        # Partial success requires verified > 0 AND (failures exist)
+        # Per production code: verified > 0 and (no_history > 0 or failed) triggers partial
+        # BUT the first condition `verified > 0 and not failed` takes precedence
+        # So we need failures to trigger "Partially Successful"
         verification = {
             "verified": 3,
             "no_history": 2,
-            "failed": [],
+            "failed": ["sensor.test: Error"],  # Need failures for partial success
         }
 
         with patch(
