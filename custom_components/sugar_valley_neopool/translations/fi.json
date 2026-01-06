@@ -22,9 +22,9 @@
       },
       "yaml_migration": {
         "title": "YAML-paketin siirto",
-        "description": "Siirrytkö YAML-pakettikokoonpanosta?\n\nValitse tämä ruutu, jos käytät tällä hetkellä `ha_neopool_mqtt_package.yaml`-tiedostoa.",
+        "description": "Siirrytkö YAML-pakettikokoonpanosta?\n\n⚠️ **Tärkeää**: Ennen siirron jatkamista sinun täytyy:\n1. **Poistaa** YAML-paketti tiedostosta `configuration.yaml`\n2. **Käynnistää** Home Assistant uudelleen\n\nTämä varmistaa, että vanhat entiteetit poistetaan ja historiatiedot säilyvät.\n\nValitse tämä ruutu, jos olet suorittanut nämä vaiheet ja haluat siirtää.",
         "data": {
-          "migrate_yaml": "Siirry YAML-paketista"
+          "migrate_yaml": "Olen poistanut YAML-paketin ja käynnistänyt Home Assistantin uudelleen"
         }
       },
       "yaml_topic": {
@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Siirto valmis",
-        "description": "{description}",
+        "description": "## Siirron tulokset\n\n**Entiteettejä käsitelty**: {entities_found}\n**Siirretty onnistuneesti**: {entities_migrated}\n**Epäonnistuneet**: {entities_failed}\n\n### Siirretyt entiteetit:\n{migrated_list}\n\n---\n\n{error_section}\n\nNapsauta **Lähetä** viimeistelläksesi asennuksen.",
         "data": {}
       },
       "discover_device": {

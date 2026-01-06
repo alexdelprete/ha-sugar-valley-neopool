@@ -22,9 +22,9 @@
       },
       "yaml_migration": {
         "title": "YAML-pakkemigrering",
-        "description": "Migrerer du fra YAML-pakkekonfigurasjonen?\n\nKryss av denne boksen hvis du for øyeblikket bruker `ha_neopool_mqtt_package.yaml`-filen.",
+        "description": "Migrerer du fra YAML-pakkekonfigurasjonen?\n\n⚠️ **Viktig**: Før du fortsetter med migreringen, må du:\n1. **Fjerne** YAML-pakken fra `configuration.yaml`\n2. **Starte** Home Assistant på nytt\n\nDette sikrer at gamle enheter slettes og historiske data bevares.\n\nKryss av denne boksen hvis du har fullført disse trinnene og ønsker å migrere.",
         "data": {
-          "migrate_yaml": "Migrerer fra YAML-pakke"
+          "migrate_yaml": "Jeg har fjernet YAML-pakken og startet Home Assistant på nytt"
         }
       },
       "yaml_topic": {
@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migrering fullført",
-        "description": "{description}",
+        "description": "## Migreringsresultater\n\n**Entiteter behandlet**: {entities_found}\n**Vellykket migrert**: {entities_migrated}\n**Mislykket**: {entities_failed}\n\n### Migrerte entiteter:\n{migrated_list}\n\n---\n\n{error_section}\n\nKlikk **Send inn** for å fullføre oppsettet.",
         "data": {}
       },
       "discover_device": {

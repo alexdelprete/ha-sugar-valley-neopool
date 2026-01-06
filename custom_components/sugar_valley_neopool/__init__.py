@@ -10,24 +10,21 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components import mqtt, persistent_notification
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import device_registry as dr
 
 from .const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
-    CONF_MIGRATE_YAML,
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
-    CONF_UNIQUE_ID_PREFIX,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
     DEFAULT_FAILURES_THRESHOLD,
     DEFAULT_OFFLINE_TIMEOUT,
     DEFAULT_RECOVERY_SCRIPT,
-    DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
     MANUFACTURER,
     PLATFORMS,
@@ -73,15 +70,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     mqtt_topic = entry.data.get(CONF_DISCOVERY_PREFIX, "")
     nodeid = entry.data.get(CONF_NODEID, "")
 
+    # Get entity_id_mapping from config entry data (set by config_flow migration)
+    entity_id_mapping = entry.data.get("entity_id_mapping", {})
+
     # Initialize runtime data
     entry.runtime_data = NeoPoolData(
         device_name=device_name,
         mqtt_topic=mqtt_topic,
         nodeid=nodeid,
+        entity_id_mapping=entity_id_mapping,
     )
-
-    # Migrate YAML entities if this is first setup
-    await async_migrate_yaml_entities(hass, entry, nodeid)
 
     # Register device in device registry and store device_id for triggers
     await async_register_device(hass, entry)
@@ -89,7 +87,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Verify migration if applicable
+    # Verify migration and show results if applicable
     if entry.runtime_data.entity_id_mapping:
         verification = await async_verify_migration(hass, entry.runtime_data.entity_id_mapping)
         _LOGGER.info(
@@ -98,6 +96,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
             verification["no_history"],
             len(verification["failed"]),
         )
+        # Show persistent notification with final migration assessment
+        await _show_migration_verification_result(hass, verification, device_name)
 
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
@@ -161,119 +161,6 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
         _LOGGER.info("Migration to version 2 complete")
 
     return True
-
-
-async def async_migrate_yaml_entities(
-    hass: HomeAssistant,
-    entry: NeoPoolConfigEntry,
-    nodeid: str,
-) -> dict[str, Any]:
-    """Migrate YAML entities by deleting old MQTT entities.
-
-    The integration creates new entities with matching entity_ids
-    (from registry), preserving historical data.
-
-    Key insight: We find entities by unique_id prefix, but get the actual
-    entity_id from the registry (handles user customization).
-
-    Returns a summary dict with migration results.
-    """
-    summary: dict[str, Any] = {
-        "steps": [],
-        "entities_found": 0,
-        "entities_migrated": 0,
-        "errors": [],
-    }
-
-    # Skip if not a YAML migration
-    if not entry.data.get(CONF_MIGRATE_YAML, False):
-        _LOGGER.debug("Not a YAML migration, skipping")
-        return summary
-
-    prefix = entry.data.get(CONF_UNIQUE_ID_PREFIX, DEFAULT_UNIQUE_ID_PREFIX)
-    entity_registry = er.async_get(hass)
-
-    # Find MQTT platform entities by unique_id prefix
-    mqtt_entities = [
-        entity
-        for entity in entity_registry.entities.values()
-        if entity.unique_id.startswith(prefix) and entity.platform == "mqtt"
-    ]
-
-    summary["entities_found"] = len(mqtt_entities)
-    summary["steps"].append(
-        {
-            "name": "Find MQTT entities",
-            "status": "success" if mqtt_entities else "skipped",
-            "detail": f"Found {len(mqtt_entities)} MQTT entities with prefix '{prefix}'",
-        }
-    )
-
-    if not mqtt_entities:
-        _LOGGER.debug("No MQTT entities found to migrate")
-        return summary
-
-    _LOGGER.info("Found %d MQTT entities to migrate", len(mqtt_entities))
-
-    # Build mapping and delete old entities
-    entity_id_mapping: dict[str, str] = {}
-
-    for entity in mqtt_entities:
-        try:
-            # Extract entity_key (part after prefix in unique_id)
-            entity_key = entity.unique_id.replace(prefix, "", 1)
-
-            # Get ACTUAL entity_id from registry (handles user customization!)
-            # e.g., "sensor.my_pool_water_temperature" -> "my_pool_water_temperature"
-            actual_entity_id = entity.entity_id
-            object_id = actual_entity_id.split(".", 1)[1]
-
-            # Check for collision: is this object_id used by another entity?
-            collision_found = False
-            for other in entity_registry.entities.values():
-                if other.entity_id != actual_entity_id:
-                    if other.entity_id.endswith(f".{object_id}"):
-                        summary["errors"].append(
-                            f"{actual_entity_id}: object_id collision with {other.entity_id}"
-                        )
-                        collision_found = True
-                        break
-
-            if collision_found:
-                continue
-
-            # Map: entity_key -> actual object_id
-            entity_id_mapping[entity_key] = object_id
-
-            # DELETE the old MQTT entity
-            entity_registry.async_remove(entity.entity_id)
-            summary["entities_migrated"] += 1
-
-            _LOGGER.info(
-                "Deleted MQTT entity %s (key: %s, will recreate with same entity_id)",
-                actual_entity_id,
-                entity_key,
-            )
-        except Exception as e:  # noqa: BLE001
-            summary["errors"].append(f"{entity.entity_id}: {e}")
-            _LOGGER.error("Failed to delete entity %s: %s", entity.entity_id, e)
-
-    # Store mapping in runtime_data for entity creation (if runtime_data exists)
-    if hasattr(entry, "runtime_data") and entry.runtime_data is not None:
-        entry.runtime_data.entity_id_mapping = entity_id_mapping
-
-    summary["steps"].append(
-        {
-            "name": "Delete and map entities",
-            "status": "success" if not summary["errors"] else "partial",
-            "detail": f"Deleted {summary['entities_migrated']}/{summary['entities_found']}",
-        }
-    )
-
-    # Show notification
-    await _show_migration_summary(hass, summary)
-
-    return summary
 
 
 async def async_verify_migration(
@@ -351,38 +238,73 @@ async def async_verify_migration(
     return results
 
 
-async def _show_migration_summary(hass: HomeAssistant, summary: dict[str, Any]) -> None:
-    """Show migration summary as persistent notification."""
-    lines = ["## NeoPool YAML Migration Complete\n"]
+async def _show_migration_verification_result(
+    hass: HomeAssistant,
+    verification: dict[str, Any],
+    device_name: str,
+) -> None:
+    """Show migration verification result as persistent notification."""
+    verified = verification["verified"]
+    no_history = verification["no_history"]
+    failed = verification["failed"]
+    total = verified + no_history
 
-    # Steps summary
-    lines.append("### Steps:")
-    for step in summary["steps"]:
-        if step["status"] == "success":
-            icon = "✓"
-        elif step["status"] == "partial":
-            icon = "⚠️"
-        else:
-            icon = "○"
-        lines.append(f"- {icon} **{step['name']}**: {step['detail']}")
+    # Determine overall status
+    if verified > 0 and not failed:
+        status_icon = "✅"
+        status_text = "Migration Successful"
+    elif verified > 0 and (no_history > 0 or failed):
+        status_icon = "⚠️"
+        status_text = "Migration Partially Successful"
+    elif no_history > 0 and not failed:
+        status_icon = "ℹ️"
+        status_text = "Migration Complete (No History to Verify)"
+    else:
+        status_icon = "❌"
+        status_text = "Migration Verification Failed"
 
-    # Entity counts
-    lines.append("\n### Results:")
-    lines.append(f"- Entities found: **{summary['entities_found']}**")
-    lines.append(f"- Entities migrated: **{summary['entities_migrated']}**")
+    lines = [
+        f"## {status_icon} {status_text}",
+        "",
+        f"**Device**: {device_name}",
+        "",
+        "### Verification Results:",
+        f"- **History preserved**: {verified} entities",
+        f"- **No previous history**: {no_history} entities",
+        f"- **Verification errors**: {len(failed)}",
+        "",
+    ]
 
-    # Errors if any
-    if summary["errors"]:
-        lines.append(f"\n### Errors ({len(summary['errors'])}):")
-        lines.extend(f"- {error}" for error in summary["errors"][:5])
-        if len(summary["errors"]) > 5:
-            lines.append(f"- ...and {len(summary['errors']) - 5} more")
+    if verified > 0:
+        lines.append(
+            "✓ Historical data from your YAML entities has been preserved. "
+            "Your graphs and statistics should show continuous data."
+        )
+        lines.append("")
+
+    if no_history > 0:
+        lines.append(
+            f"ℹ️ {no_history} entities had no historical data older than 1 hour to verify. "
+            "This is normal for newly created entities or entities that rarely change state."
+        )
+        lines.append("")
+
+    if failed:
+        lines.append("### Errors:")
+        lines.extend(f"- {error}" for error in failed[:5])
+        if len(failed) > 5:
+            lines.append(f"- ...and {len(failed) - 5} more")
+        lines.append("")
+
+    if total > 0:
+        success_rate = (verified / total) * 100 if total > 0 else 0
+        lines.append(f"**Overall**: {verified}/{total} entities verified ({success_rate:.0f}%)")
 
     persistent_notification.async_create(
         hass,
         message="\n".join(lines),
-        title="NeoPool Migration",
-        notification_id="neopool_migration_summary",
+        title="NeoPool YAML Migration Verification",
+        notification_id=f"neopool_migration_verification_{device_name}",
     )
 
 

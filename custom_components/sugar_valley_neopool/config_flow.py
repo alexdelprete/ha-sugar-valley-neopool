@@ -546,33 +546,58 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
     async def _perform_migration(self) -> dict[str, Any]:
-        """Execute entity migration and return results."""
+        """Execute entity migration by DELETING old MQTT entities.
+
+        This preserves historical data because:
+        1. We delete old entities from registry (platform="mqtt")
+        2. We build a mapping of entity_key -> object_id (from old entity_id)
+        3. New entities will be created with same entity_id, preserving history
+        """
         summary: dict[str, Any] = {
             "entities_found": len(self._migrating_entities),
             "entities_migrated": 0,
             "entities_failed": [],
             "migrated_list": [],
+            "entity_id_mapping": {},
         }
 
         entity_registry = er.async_get(self.hass)
 
         for entity in self._migrating_entities:
-            old_unique_id = entity.unique_id
-            entity_key = old_unique_id.replace(self._unique_id_prefix, "", 1)
-            new_unique_id = f"neopool_mqtt_{self._nodeid}_{entity_key}"
-
             try:
-                entity_registry.async_update_entity(
-                    entity.entity_id,
-                    new_unique_id=new_unique_id,
-                )
+                # Extract entity_key (part after prefix in unique_id)
+                entity_key = entity.unique_id.replace(self._unique_id_prefix, "", 1)
+
+                # Get ACTUAL entity_id from registry (handles user customization)
+                actual_entity_id = entity.entity_id
+                object_id = actual_entity_id.split(".", 1)[1]
+
+                # Check for collision: is this object_id used by another entity?
+                collision_found = False
+                for other in entity_registry.entities.values():
+                    if other.entity_id != actual_entity_id:
+                        if other.entity_id.endswith(f".{object_id}"):
+                            summary["entities_failed"].append(
+                                f"{actual_entity_id}: collision with {other.entity_id}"
+                            )
+                            collision_found = True
+                            break
+
+                if collision_found:
+                    continue
+
+                # Map: entity_key -> actual object_id (for entity creation)
+                summary["entity_id_mapping"][entity_key] = object_id
+
+                # DELETE the old MQTT entity from registry
+                entity_registry.async_remove(actual_entity_id)
+
                 summary["entities_migrated"] += 1
-                summary["migrated_list"].append(entity.entity_id)
+                summary["migrated_list"].append(actual_entity_id)
                 _LOGGER.info(
-                    "Migrated entity %s: %s -> %s",
-                    entity.entity_id,
-                    old_unique_id,
-                    new_unique_id,
+                    "Deleted MQTT entity %s (key: %s, will recreate with same entity_id)",
+                    actual_entity_id,
+                    entity_key,
                 )
             except Exception as e:  # noqa: BLE001
                 error_msg = f"{entity.entity_id}: {e}"
@@ -600,6 +625,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
             self._abort_if_unique_id_configured()
 
+            # Store entity_id_mapping in entry data for async_setup_entry
+            result = self._migration_result or {}
+
             return self.async_create_entry(
                 title=device_name,
                 data={
@@ -608,7 +636,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     CONF_NODEID: self._nodeid,
                     CONF_UNIQUE_ID_PREFIX: self._unique_id_prefix,
                     CONF_MIGRATE_YAML: True,
-                    "migration_completed": True,
+                    "entity_id_mapping": result.get("entity_id_mapping", {}),
                 },
             )
 
@@ -620,35 +648,15 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         if len(failed_entries) > 5:
             failed_list += f"\n• ...and {len(failed_entries) - 5} more"
 
-        # Determine status
-        if not failed_entries:
-            status = "✓ Success"
-        elif result.get("entities_migrated", 0) > 0:
-            status = "⚠️ Partial Success"
-        else:
-            status = "✗ Failed"
-
-        # Build detailed description since empty forms don't show description_placeholders
-        description = (
-            f"## Migration Results\n\n"
-            f"**Status:** {status}\n\n"
-            f"### Summary:\n"
-            f"- Entities found: **{result.get('entities_found', 0)}**\n"
-            f"- Entities migrated: **{result.get('entities_migrated', 0)}**\n"
-            f"- Errors: **{len(failed_entries)}**\n\n"
-            f"### Migrated Entities:\n{migrated_list}\n\n"
-        )
-
-        if failed_entries:
-            description += f"### Errors:\n{failed_list}\n\n"
-
-        description += "---\n\nClick **Submit** to complete the setup."
-
         return self.async_show_form(
             step_id="yaml_migration_result",
             data_schema=vol.Schema({}),
             description_placeholders={
-                "description": description,
+                "entities_found": str(result.get("entities_found", 0)),
+                "entities_migrated": str(result.get("entities_migrated", 0)),
+                "errors_count": str(len(failed_entries)),
+                "migrated_list": migrated_list or "None",
+                "failed_list": failed_list or "None",
             },
         )
 

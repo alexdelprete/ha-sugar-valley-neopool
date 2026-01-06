@@ -22,9 +22,9 @@
       },
       "yaml_migration": {
         "title": "YAML paketi migratsioon",
-        "description": "Kas migreerite YAML paketi konfiguratsioonist?\n\nMärkige see ruut, kui kasutate praegu `ha_neopool_mqtt_package.yaml` faili.",
+        "description": "Kas migreerite YAML paketi konfiguratsioonist?\n\n⚠️ **Tähtis**: Enne migratsiooni jätkamist peate:\n1. **Eemaldama** YAML paketi failist `configuration.yaml`\n2. **Taaskäivitama** Home Assistanti\n\nSee tagab, et vanad olemid kustutatakse ja ajaloolised andmed säilivad.\n\nMärkige see ruut, kui olete need sammud lõpetanud ja soovite migreerida.",
         "data": {
-          "migrate_yaml": "Migreerin YAML paketist"
+          "migrate_yaml": "Olen YAML paketi eemaldanud ja Home Assistanti taaskäivitanud"
         }
       },
       "yaml_topic": {
@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migratsioon lõpetatud",
-        "description": "{description}",
+        "description": "## Migratsiooni tulemused\n\n**Olemeid töödeldud**: {entities_found}\n**Edukalt migreeritud**: {entities_migrated}\n**Ebaõnnestunud**: {entities_failed}\n\n### Migreeritud olemid:\n{migrated_list}\n\n---\n\n{error_section}\n\nKlõpsake **Esita**, et seadistamine lõpetada.",
         "data": {}
       },
       "discover_device": {

@@ -22,9 +22,9 @@
       },
       "yaml_migration": {
         "title": "Migração de Pacote YAML",
-        "description": "Está a migrar da configuração de pacote YAML?\n\nMarque esta caixa se estiver atualmente a usar o ficheiro `ha_neopool_mqtt_package.yaml`.",
+        "description": "Está a migrar da configuração de pacote YAML?\n\n⚠️ **Importante**: Antes de prosseguir com a migração, deve:\n1. **Remover** o pacote YAML de `configuration.yaml`\n2. **Reiniciar** o Home Assistant\n\nIsto garante que as entidades antigas são eliminadas e os dados históricos são preservados.\n\nMarque esta caixa se completou estes passos e deseja migrar.",
         "data": {
-          "migrate_yaml": "Migrar do pacote YAML"
+          "migrate_yaml": "Removi o pacote YAML e reiniciei o Home Assistant"
         }
       },
       "yaml_topic": {
@@ -55,7 +55,7 @@
       },
       "yaml_migration_result": {
         "title": "Migração Concluída",
-        "description": "{description}",
+        "description": "## Resultados da Migração\n\n**Entidades processadas**: {entities_found}\n**Migradas com sucesso**: {entities_migrated}\n**Falhadas**: {entities_failed}\n\n### Entidades migradas:\n{migrated_list}\n\n---\n\n{error_section}\n\nClique em **Submeter** para concluir a configuração.",
         "data": {}
       },
       "discover_device": {
