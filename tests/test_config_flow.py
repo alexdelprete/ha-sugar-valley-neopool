@@ -1371,3 +1371,285 @@ class TestGetTopicsFromConfig:
 
         assert "Pool1" in topics
         assert "Pool2" in topics
+
+
+class TestFindActiveEntities:
+    """Tests for _find_active_entities method."""
+
+    def test_find_active_entities_all_active(self, mock_hass: MagicMock) -> None:
+        """Test finding active entities when all have valid states."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+
+        # Create mock entities
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        entity2 = MagicMock()
+        entity2.entity_id = "sensor.neopool_ph"
+
+        # Mock states - both have valid states
+        mock_state1 = MagicMock()
+        mock_state1.state = "28.5"
+
+        mock_state2 = MagicMock()
+        mock_state2.state = "7.2"
+
+        mock_hass.states.get.side_effect = lambda entity_id: {
+            "sensor.neopool_water_temp": mock_state1,
+            "sensor.neopool_ph": mock_state2,
+        }.get(entity_id)
+
+        result = flow._find_active_entities([entity1, entity2])
+
+        assert len(result) == 2
+        assert entity1 in result
+        assert entity2 in result
+
+    def test_find_active_entities_none_active(self, mock_hass: MagicMock) -> None:
+        """Test finding active entities when all are unavailable."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        entity2 = MagicMock()
+        entity2.entity_id = "sensor.neopool_ph"
+
+        # Mock states - all unavailable
+        mock_state1 = MagicMock()
+        mock_state1.state = "unavailable"
+
+        mock_state2 = MagicMock()
+        mock_state2.state = "unknown"
+
+        mock_hass.states.get.side_effect = lambda entity_id: {
+            "sensor.neopool_water_temp": mock_state1,
+            "sensor.neopool_ph": mock_state2,
+        }.get(entity_id)
+
+        result = flow._find_active_entities([entity1, entity2])
+
+        assert len(result) == 0
+
+    def test_find_active_entities_mixed(self, mock_hass: MagicMock) -> None:
+        """Test finding active entities with mixed states."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        entity2 = MagicMock()
+        entity2.entity_id = "sensor.neopool_ph"
+
+        entity3 = MagicMock()
+        entity3.entity_id = "sensor.neopool_redox"
+
+        # Mock states - one active, one unavailable, one unknown
+        mock_state1 = MagicMock()
+        mock_state1.state = "28.5"  # active
+
+        mock_state2 = MagicMock()
+        mock_state2.state = "unavailable"
+
+        mock_state3 = MagicMock()
+        mock_state3.state = "unknown"
+
+        mock_hass.states.get.side_effect = lambda entity_id: {
+            "sensor.neopool_water_temp": mock_state1,
+            "sensor.neopool_ph": mock_state2,
+            "sensor.neopool_redox": mock_state3,
+        }.get(entity_id)
+
+        result = flow._find_active_entities([entity1, entity2, entity3])
+
+        assert len(result) == 1
+        assert entity1 in result
+
+    def test_find_active_entities_no_state(self, mock_hass: MagicMock) -> None:
+        """Test finding active entities when state doesn't exist."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        # Mock states - returns None (entity doesn't exist in state machine)
+        mock_hass.states.get.return_value = None
+
+        result = flow._find_active_entities([entity1])
+
+        assert len(result) == 0
+
+
+class TestYamlActiveWarningStep:
+    """Tests for async_step_yaml_active_warning."""
+
+    async def test_yaml_active_warning_shows_form(self, mock_hass: MagicMock) -> None:
+        """Test yaml_active_warning step shows form with active entities."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+
+        # Create mock entities
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        flow._migrating_entities = [entity1]
+
+        # Mock active entity detection
+        mock_state = MagicMock()
+        mock_state.state = "28.5"
+        mock_hass.states.get.return_value = mock_state
+
+        result = await flow.async_step_yaml_active_warning(None)
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"
+        assert result["description_placeholders"]["active_count"] == "1"
+
+    async def test_yaml_active_warning_retry_still_active(self, mock_hass: MagicMock) -> None:
+        """Test yaml_active_warning retry when entities still active."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        flow._migrating_entities = [entity1]
+
+        # Mock - entity still active
+        mock_state = MagicMock()
+        mock_state.state = "28.5"
+        mock_hass.states.get.return_value = mock_state
+
+        result = await flow.async_step_yaml_active_warning({})
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"
+        assert result["errors"]["base"] == "yaml_still_active"
+
+    async def test_yaml_active_warning_retry_now_inactive(self, mock_hass: MagicMock) -> None:
+        """Test yaml_active_warning proceeds when entities become inactive."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+        flow._yaml_topic = "SmartPool"
+        flow._nodeid = "ABC123"
+        flow._unique_id_prefix = "neopool_mqtt_"
+
+        entity1 = MagicMock()
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        flow._migrating_entities = [entity1]
+
+        # Mock - entity now unavailable (YAML removed)
+        mock_state = MagicMock()
+        mock_state.state = "unavailable"
+        mock_hass.states.get.return_value = mock_state
+
+        result = await flow.async_step_yaml_active_warning({})
+
+        # Should proceed to yaml_confirm step
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_confirm"
+
+    async def test_check_migratable_entities_redirects_when_active(
+        self, mock_hass: MagicMock
+    ) -> None:
+        """Test _check_migratable_entities redirects to warning when entities are active."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+
+        # Create mock entity
+        entity1 = MagicMock()
+        entity1.unique_id = "neopool_mqtt_water_temp"
+        entity1.config_entry_id = None
+        entity1.platform = "mqtt"
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        mock_registry = MagicMock()
+        mock_registry.entities.values.return_value = [entity1]
+
+        # Mock active state
+        mock_state = MagicMock()
+        mock_state.state = "28.5"
+        mock_hass.states.get.return_value = mock_state
+
+        with patch(
+            "homeassistant.helpers.entity_registry.async_get",
+            return_value=mock_registry,
+        ):
+            result = await flow._check_migratable_entities()
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"
+
+    async def test_check_migratable_entities_proceeds_when_inactive(
+        self, mock_hass: MagicMock
+    ) -> None:
+        """Test _check_migratable_entities proceeds when entities are inactive."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+        flow._yaml_topic = "SmartPool"
+        flow._nodeid = "ABC123"
+
+        # Create mock entity
+        entity1 = MagicMock()
+        entity1.unique_id = "neopool_mqtt_water_temp"
+        entity1.config_entry_id = None
+        entity1.platform = "mqtt"
+        entity1.entity_id = "sensor.neopool_water_temp"
+
+        mock_registry = MagicMock()
+        mock_registry.entities.values.return_value = [entity1]
+
+        # Mock unavailable state (YAML already removed)
+        mock_state = MagicMock()
+        mock_state.state = "unavailable"
+        mock_hass.states.get.return_value = mock_state
+
+        with patch(
+            "homeassistant.helpers.entity_registry.async_get",
+            return_value=mock_registry,
+        ):
+            result = await flow._check_migratable_entities()
+
+        # Should proceed to yaml_confirm step
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_confirm"
+
+    async def test_yaml_prefix_redirects_when_active(self, mock_hass: MagicMock) -> None:
+        """Test yaml_prefix redirects to warning when entities are active."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow.context = {"source": config_entries.SOURCE_USER}
+
+        # Create mock entity with custom prefix
+        entity1 = MagicMock()
+        entity1.unique_id = "custom_prefix_water_temp"
+        entity1.config_entry_id = None
+        entity1.platform = "mqtt"
+        entity1.entity_id = "sensor.custom_water_temp"
+
+        mock_registry = MagicMock()
+        mock_registry.entities.values.return_value = [entity1]
+
+        # Mock active state
+        mock_state = MagicMock()
+        mock_state.state = "28.5"
+        mock_hass.states.get.return_value = mock_state
+
+        with patch(
+            "homeassistant.helpers.entity_registry.async_get",
+            return_value=mock_registry,
+        ):
+            result = await flow.async_step_yaml_prefix({"unique_id_prefix": "custom_prefix_"})
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"

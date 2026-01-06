@@ -41,6 +41,11 @@
           "unique_id_prefix": "Prefixo de ID Único"
         }
       },
+      "yaml_active_warning": {
+        "title": "Pacote YAML ainda ativo",
+        "description": "## ⚠️ Não é possível continuar - Entidades ainda ativas\n\nAs seguintes **{active_count}** entidades estão **a receber atualizações**, o que significa que o pacote YAML ainda está em execução:\n\n{entity_list}\n\n---\n\n## Ações necessárias:\n\n1. **Remova ou comente** o pacote YAML do `configuration.yaml`\n2. **Reinicie o Home Assistant** completamente\n3. Volte a este ecrã e clique em **Tentar novamente**\n\n---\n\n⚠️ **Porque é que isto é necessário?**\n\nSe continuar sem remover o pacote YAML:\n- Terá **entidades duplicadas** (tanto YAML como integração)\n- Ambos os conjuntos estarão ativos e a receber atualizações simultaneamente\n- Isto causará confusão e exigirá limpeza manual\n\nA migração só pode continuar quando as entidades YAML ficarem **indisponíveis** (após remover o pacote e reiniciar).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Confirmar Migração",
         "description": "## Resumo da Migração\n\nOs seguintes itens foram validados:\n\n✓ **Tópico MQTT**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Entidades migráveis encontradas**: {entity_count}\n\n### Entidades a migrar:\n{entity_list}\n\n---\n\n## O que vai acontecer:\n\n1. O `unique_id` de cada entidade será atualizado para incluir o NodeID\n2. As entidades serão associadas a esta integração\n3. **Todos os dados históricos serão preservados** (gráficos, estatísticas)\n4. Os IDs das entidades permanecerão inalterados\n\n---\n\n⚠️ **Pré-requisitos** (confirme antes de continuar):\n- Removi/comentei o pacote YAML do `configuration.yaml`\n- Reiniciei o Home Assistant após remover o pacote YAML\n- Compreendo que este processo irá modificar o meu registo de entidades\n\n**Esta ação não pode ser desfeita automaticamente.** Ao marcar a caixa abaixo, confirma que completou os pré-requisitos e aceita a responsabilidade por esta migração.",

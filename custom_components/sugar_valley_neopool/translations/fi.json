@@ -41,6 +41,11 @@
           "unique_id_prefix": "Yksilöllisen tunnuksen etuliite"
         }
       },
+      "yaml_active_warning": {
+        "title": "YAML-paketti on vielä aktiivinen",
+        "description": "## ⚠️ Ei voi jatkaa - Entiteetit ovat vielä aktiivisia\n\nSeuraavat **{active_count}** entiteettiä **vastaanottavat päivityksiä**, mikä tarkoittaa, että YAML-paketti on vielä käynnissä:\n\n{entity_list}\n\n---\n\n## Vaaditut toimenpiteet:\n\n1. **Poista tai kommentoi pois** YAML-paketti tiedostosta `configuration.yaml`\n2. **Käynnistä Home Assistant** kokonaan uudelleen\n3. Palaa tälle näytölle ja napsauta **Yritä uudelleen**\n\n---\n\n⚠️ **Miksi tämä vaaditaan?**\n\nJos jatkat poistamatta YAML-pakettia:\n- Saat **kaksoisentiteettejä** (sekä YAML- että integraatioentiteetit)\n- Molemmat sarjat ovat aktiivisia ja vastaanottavat päivityksiä samanaikaisesti\n- Tämä aiheuttaa sekaannusta ja vaatii manuaalista siivousta\n\nSiirto voi jatkua vasta kun YAML-entiteetit muuttuvat **ei saatavilla** -tilaan (paketin poistamisen ja uudelleenkäynnistyksen jälkeen).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Vahvista siirto",
         "description": "## Siirron yhteenveto\n\nSeuraavat on vahvistettu:\n\n✓ **MQTT-aihe**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Siirrettäviä entiteettejä löytyi**: {entity_count}\n\n### Siirrettävät entiteetit:\n{entity_list}\n\n---\n\n## Mitä tapahtuu:\n\n1. Jokaisen entiteetin `unique_id` päivitetään sisältämään NodeID\n2. Entiteetit liitetään tähän integraatioon\n3. **Kaikki historialliset tiedot säilytetään** (kaaviot, tilastot)\n4. Entiteetti-ID:t pysyvät muuttumattomina\n\n---\n\n⚠️ **Edellytykset** (vahvista ennen jatkamista):\n- Olen poistanut/kommentoinut YAML-paketin `configuration.yaml`-tiedostosta\n- Olen käynnistänyt Home Assistantin uudelleen YAML-paketin poistamisen jälkeen\n- Ymmärrän, että tämä prosessi muuttaa entiteettirekisteriäni\n\n**Tätä toimintoa ei voi kumota automaattisesti.** Valitsemalla alla olevan ruudun vahvistat, että olet täyttänyt edellytykset ja hyväksyt vastuun tästä siirrosta.",
@@ -80,6 +85,7 @@
       "cannot_connect": "Viestejä ei voitu vastaanottaa tästä MQTT-aiheesta. Tarkista aiheen nimi ja että laitteesi on verkossa.",
       "no_entities_found": "Tällä etuliitteellä ei löytynyt siirrettäviä entiteettejä. Tarkista, että:\n1. Etuliite vastaa YAML-kokoonpanoasi\n2. Entiteetit ovat olemassa Home Assistantissa\n3. Entiteetit eivät jo kuulu tähän integraatioon",
       "confirmation_required": "Sinun on valittava vahvistusruutu jatkaaksesi siirtoa.",
+      "yaml_still_active": "Entiteetit ovat vielä aktiivisia. Poista ensin YAML-paketti ja käynnistä Home Assistant uudelleen.",
       "nodeid_configuration_failed": "NodeID:n määritys laitteella epäonnistui."
     },
     "abort": {

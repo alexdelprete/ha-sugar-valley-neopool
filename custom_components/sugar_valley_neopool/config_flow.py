@@ -222,6 +222,16 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 len(entities),
                 DEFAULT_UNIQUE_ID_PREFIX,
             )
+
+            # Check if any entities are still active (YAML package still running)
+            active_entities = self._find_active_entities(entities)
+            if active_entities:
+                _LOGGER.warning(
+                    "Found %d active entities - YAML package may still be running",
+                    len(active_entities),
+                )
+                return await self.async_step_yaml_active_warning()
+
             return await self.async_step_yaml_confirm()
 
         # No entities found with default prefix, ask user for custom prefix
@@ -245,6 +255,23 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             if entity.unique_id.startswith(prefix)
             and (entity.config_entry_id is None or entity.platform != DOMAIN)
         ]
+
+    def _find_active_entities(self, entities: list[RegistryEntry]) -> list[RegistryEntry]:
+        """Find entities that are currently active (have a valid state).
+
+        An entity is considered "active" if it has a state that is not:
+        - None (entity doesn't exist in state machine)
+        - "unavailable" (entity exists but source is unavailable)
+        - "unknown" (entity exists but state is unknown)
+
+        If active entities are found, it means the YAML package is still running.
+        """
+        active_entities = []
+        for entity in entities:
+            state = self.hass.states.get(entity.entity_id)
+            if state is not None and state.state not in ("unavailable", "unknown"):
+                active_entities.append(entity)
+        return active_entities
 
     def _format_entity_list(self, entities: list[RegistryEntry]) -> str:
         """Format entity list for display (first 5 + count)."""
@@ -273,6 +300,16 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                         len(entities),
                         prefix,
                     )
+
+                    # Check if any entities are still active (YAML package still running)
+                    active_entities = self._find_active_entities(entities)
+                    if active_entities:
+                        _LOGGER.warning(
+                            "Found %d active entities - YAML package may still be running",
+                            len(active_entities),
+                        )
+                        return await self.async_step_yaml_active_warning()
+
                     return await self.async_step_yaml_confirm()
 
                 errors["base"] = "no_entities_found"
@@ -287,6 +324,47 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+        )
+
+    async def async_step_yaml_active_warning(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Warn user that YAML entities are still active and must be removed first."""
+        if user_input is not None:
+            # User clicked "Retry" - check again if entities are still active
+            active_entities = self._find_active_entities(self._migrating_entities)
+            if active_entities:
+                # Still active, show warning again
+                _LOGGER.warning(
+                    "Retry check: still found %d active entities",
+                    len(active_entities),
+                )
+                entity_list = self._format_entity_list(active_entities)
+                return self.async_show_form(
+                    step_id="yaml_active_warning",
+                    data_schema=vol.Schema({}),
+                    description_placeholders={
+                        "active_count": str(len(active_entities)),
+                        "entity_list": entity_list,
+                    },
+                    errors={"base": "yaml_still_active"},
+                )
+
+            # Entities are no longer active, proceed to confirmation
+            _LOGGER.info("Retry check: entities are no longer active, proceeding")
+            return await self.async_step_yaml_confirm()
+
+        # First time showing the warning
+        active_entities = self._find_active_entities(self._migrating_entities)
+        entity_list = self._format_entity_list(active_entities)
+
+        return self.async_show_form(
+            step_id="yaml_active_warning",
+            data_schema=vol.Schema({}),
+            description_placeholders={
+                "active_count": str(len(active_entities)),
+                "entity_list": entity_list,
+            },
         )
 
     async def async_step_yaml_confirm(

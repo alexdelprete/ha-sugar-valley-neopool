@@ -41,6 +41,11 @@
           "unique_id_prefix": "Unique ID Präfix"
         }
       },
+      "yaml_active_warning": {
+        "title": "YAML-Paket noch aktiv",
+        "description": "## ⚠️ Fortfahren nicht möglich - Entities noch aktiv\n\nDie folgenden **{active_count}** Entities empfangen derzeit **Updates**, was bedeutet, dass das YAML-Paket noch läuft:\n\n{entity_list}\n\n---\n\n## Erforderliche Aktionen:\n\n1. **Entfernen oder auskommentieren** Sie das YAML-Paket aus `configuration.yaml`\n2. **Starten Sie Home Assistant vollständig neu**\n3. Kehren Sie zu diesem Bildschirm zurück und klicken Sie auf **Wiederholen**\n\n---\n\n⚠️ **Warum ist das erforderlich?**\n\nWenn Sie fortfahren, ohne das YAML-Paket zu entfernen:\n- Sie erhalten **doppelte Entities** (sowohl YAML- als auch Integrations-Entities)\n- Beide Sätze werden aktiv sein und gleichzeitig Updates empfangen\n- Dies führt zu Verwirrung und erfordert manuelle Bereinigung\n\nDie Migration kann erst fortgesetzt werden, wenn die YAML-Entities **nicht verfügbar** werden (nach dem Entfernen des Pakets und Neustart).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Migration bestätigen",
         "description": "## Migrations-Zusammenfassung\n\nFolgendes wurde validiert:\n\n✓ **MQTT-Topic**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Gefundene migrierbare Entities**: {entity_count}\n\n### Zu migrierende Entities:\n{entity_list}\n\n---\n\n## Was passieren wird:\n\n1. Die `unique_id` jeder Entity wird aktualisiert, um die NodeID einzuschließen\n2. Entities werden mit dieser Integration verknüpft\n3. **Alle historischen Daten bleiben erhalten** (Diagramme, Statistiken)\n4. Entity-IDs bleiben unverändert\n\n---\n\n⚠️ **Voraussetzungen** (vor dem Fortfahren bestätigen):\n- Ich habe das YAML-Paket aus `configuration.yaml` entfernt/auskommentiert\n- Ich habe Home Assistant nach dem Entfernen des YAML-Pakets neu gestartet\n- Ich verstehe, dass dieser Prozess mein Entity-Registry modifizieren wird\n\n**Diese Aktion kann nicht automatisch rückgängig gemacht werden.** Durch Aktivieren des Kontrollkästchens bestätigen Sie, dass Sie die Voraussetzungen erfüllt haben und die Verantwortung für diese Migration übernehmen.",
@@ -80,6 +85,7 @@
       "cannot_connect": "Konnte keine Nachrichten von diesem MQTT-Topic empfangen. Überprüfen Sie den Topic-Namen und ob Ihr Gerät online ist.",
       "no_entities_found": "Keine migrierbaren Entities mit diesem Präfix gefunden. Überprüfen Sie:\n1. Das Präfix stimmt mit Ihrer YAML-Konfiguration überein\n2. Die Entities existieren in Home Assistant\n3. Die Entities gehören nicht bereits zu dieser Integration",
       "confirmation_required": "Sie müssen das Bestätigungsfeld aktivieren, um mit der Migration fortzufahren.",
+      "yaml_still_active": "Entities sind noch aktiv. Bitte entfernen Sie zuerst das YAML-Paket und starten Sie Home Assistant neu.",
       "nodeid_configuration_failed": "NodeID konnte auf dem Gerät nicht konfiguriert werden."
     },
     "abort": {

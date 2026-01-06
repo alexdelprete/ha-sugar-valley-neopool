@@ -41,6 +41,11 @@
           "unique_id_prefix": "Prefijo de Unique ID"
         }
       },
+      "yaml_active_warning": {
+        "title": "Paquete YAML todavía activo",
+        "description": "## ⚠️ No se puede continuar - Entidades todavía activas\n\nLas siguientes **{active_count}** entidades están **recibiendo actualizaciones**, lo que significa que el paquete YAML todavía está ejecutándose:\n\n{entity_list}\n\n---\n\n## Acciones requeridas:\n\n1. **Elimine o comente** el paquete YAML de `configuration.yaml`\n2. **Reinicie Home Assistant** completamente\n3. Vuelva a esta pantalla y haga clic en **Reintentar**\n\n---\n\n⚠️ **¿Por qué es necesario?**\n\nSi continúa sin eliminar el paquete YAML:\n- Obtendrá **entidades duplicadas** (tanto YAML como de integración)\n- Ambos conjuntos estarán activos y recibiendo actualizaciones simultáneamente\n- Esto causará confusión y requerirá limpieza manual\n\nLa migración solo puede continuar cuando las entidades YAML se vuelvan **no disponibles** (después de eliminar el paquete y reiniciar).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Confirmar migración",
         "description": "## Resumen de migración\n\nSe ha validado lo siguiente:\n\n✓ **Topic MQTT**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Entidades migrables encontradas**: {entity_count}\n\n### Entidades a migrar:\n{entity_list}\n\n---\n\n## Qué sucederá:\n\n1. El `unique_id` de cada entidad se actualizará para incluir el NodeID\n2. Las entidades se asociarán con esta integración\n3. **Todos los datos históricos se preservarán** (gráficos, estadísticas)\n4. Los IDs de entidad permanecerán sin cambios\n\n---\n\n⚠️ **Requisitos previos** (confirme antes de continuar):\n- He eliminado/comentado el paquete YAML de `configuration.yaml`\n- He reiniciado Home Assistant después de eliminar el paquete YAML\n- Entiendo que este proceso modificará mi registro de entidades\n\n**Esta acción no se puede deshacer automáticamente.** Al marcar la casilla a continuación, confirma que ha completado los requisitos previos y acepta la responsabilidad de esta migración.",
@@ -80,6 +85,7 @@
       "cannot_connect": "No se pudieron recibir mensajes de este topic MQTT. Verifique el nombre del topic y que su dispositivo esté en línea.",
       "no_entities_found": "No se encontraron entidades migrables con este prefijo. Verifique que:\n1. El prefijo coincide con su configuración YAML\n2. Las entidades existen en Home Assistant\n3. Las entidades no pertenecen ya a esta integración",
       "confirmation_required": "Debe marcar la casilla de confirmación para proceder con la migración.",
+      "yaml_still_active": "Las entidades todavía están activas. Primero elimine el paquete YAML y reinicie Home Assistant.",
       "nodeid_configuration_failed": "No se pudo configurar el NodeID en el dispositivo."
     },
     "abort": {

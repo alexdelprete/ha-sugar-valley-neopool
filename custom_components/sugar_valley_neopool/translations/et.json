@@ -41,6 +41,11 @@
           "unique_id_prefix": "Unikaalse ID prefiks"
         }
       },
+      "yaml_active_warning": {
+        "title": "YAML pakett on veel aktiivne",
+        "description": "## ⚠️ Ei saa jätkata - Olemid on veel aktiivsed\n\nJärgmised **{active_count}** olemit **saavad värskendusi**, mis tähendab, et YAML pakett töötab veel:\n\n{entity_list}\n\n---\n\n## Nõutavad toimingud:\n\n1. **Eemaldage või kommenteerige välja** YAML pakett failist `configuration.yaml`\n2. **Taaskäivitage Home Assistant** täielikult\n3. Tulge tagasi sellele ekraanile ja klõpsake **Proovi uuesti**\n\n---\n\n⚠️ **Miks on see vajalik?**\n\nKui jätkate YAML paketti eemaldamata:\n- Saate **duplikaat olemid** (nii YAML kui ka integratsiooni olemid)\n- Mõlemad komplektid on aktiivsed ja saavad samaaegselt värskendusi\n- See põhjustab segadust ja nõuab käsitsi puhastamist\n\nMigratsioon saab jätkuda ainult siis, kui YAML olemid muutuvad **kättesaamatuks** (pärast paketi eemaldamist ja taaskäivitamist).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Kinnita migratsioon",
         "description": "## Migratsiooni kokkuvõte\n\nJärgmised elemendid on valideeritud:\n\n✓ **MQTT teema**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Migreeritavaid olemeid leitud**: {entity_count}\n\n### Migreeritavad olemid:\n{entity_list}\n\n---\n\n## Mis juhtub:\n\n1. Iga olemi `unique_id` uuendatakse, et sisaldada NodeID-d\n2. Olemid seotakse selle integratsiooniga\n3. **Kõik ajaloolised andmed säilitatakse** (graafikud, statistika)\n4. Olemi ID-d jäävad muutumatuks\n\n---\n\n⚠️ **Eeltingimused** (kinnitage enne jätkamist):\n- Olen eemaldanud/kommenteerinud YAML paketi `configuration.yaml`-ist\n- Olen taaskäivitanud Home Assistanti pärast YAML paketi eemaldamist\n- Mõistan, et see protsess muudab minu olemi registrit\n\n**Seda toimingut ei saa automaatselt tagasi võtta.** Alloleva ruudu märkimisega kinnitate, et olete eeltingimused täitnud ja võtate vastutuse selle migratsiooni eest.",
@@ -80,6 +85,7 @@
       "cannot_connect": "Sellelt MQTT teemalt ei õnnestunud sõnumeid vastu võtta. Kontrollige teema nime ja kas teie seade on võrgus.",
       "no_entities_found": "Selle prefiksiga migreeritavaid olemeid ei leitud. Kontrollige, et:\n1. Prefiks vastab teie YAML konfiguratsioonile\n2. Olemid eksisteerivad Home Assistantis\n3. Olemid ei kuulu juba sellele integratsioonile",
       "confirmation_required": "Migratsiooni jätkamiseks peate märkima kinnituse ruudu.",
+      "yaml_still_active": "Olemid on veel aktiivsed. Palun eemaldage esmalt YAML pakett ja taaskäivitage Home Assistant.",
       "nodeid_configuration_failed": "NodeID seadistamine seadmel ebaõnnestus."
     },
     "abort": {

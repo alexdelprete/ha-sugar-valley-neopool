@@ -41,6 +41,11 @@
           "unique_id_prefix": "Unikt ID-prefix"
         }
       },
+      "yaml_active_warning": {
+        "title": "YAML-paket är fortfarande aktivt",
+        "description": "## ⚠️ Kan inte fortsätta - Entiteter är fortfarande aktiva\n\nFöljande **{active_count}** entiteter **tar emot uppdateringar**, vilket betyder att YAML-paketet fortfarande körs:\n\n{entity_list}\n\n---\n\n## Nödvändiga åtgärder:\n\n1. **Ta bort eller kommentera ut** YAML-paketet från `configuration.yaml`\n2. **Starta om Home Assistant** helt\n3. Kom tillbaka till denna skärm och klicka **Försök igen**\n\n---\n\n⚠️ **Varför krävs detta?**\n\nOm du fortsätter utan att ta bort YAML-paketet:\n- Du kommer att få **dubbletter av entiteter** (både YAML och integrationsentiteter)\n- Båda uppsättningarna kommer att vara aktiva och ta emot uppdateringar samtidigt\n- Detta kommer att orsaka förvirring och kräva manuell rensning\n\nMigreringen kan endast fortsätta när YAML-entiteterna blir **otillgängliga** (efter borttagning av paketet och omstart).",
+        "data": {}
+      },
       "yaml_confirm": {
         "title": "Bekräfta migrering",
         "description": "## Migreringssammanfattning\n\nFöljande har validerats:\n\n✓ **MQTT-ämne**: `{topic}`\n✓ **NodeID**: `{nodeid}`\n✓ **Migrerbara entiteter hittades**: {entity_count}\n\n### Entiteter att migrera:\n{entity_list}\n\n---\n\n## Vad som kommer att hända:\n\n1. Varje entitets `unique_id` kommer att uppdateras för att inkludera NodeID\n2. Entiteter kommer att associeras med denna integration\n3. **All historisk data kommer att bevaras** (grafer, statistik)\n4. Entitets-ID:n förblir oförändrade\n\n---\n\n⚠️ **Förutsättningar** (bekräfta innan du fortsätter):\n- Jag har tagit bort/kommenterat ut YAML-paketet från `configuration.yaml`\n- Jag har startat om Home Assistant efter att ha tagit bort YAML-paketet\n- Jag förstår att denna process kommer att ändra mitt entitetsregister\n\n**Denna åtgärd kan inte ångras automatiskt.** Genom att kryssa i rutan nedan bekräftar du att du har slutfört förutsättningarna och accepterar ansvaret för denna migrering.",
@@ -80,6 +85,7 @@
       "cannot_connect": "Kunde inte ta emot meddelanden från detta MQTT-ämne. Kontrollera ämnesnamnet och att din enhet är online.",
       "no_entities_found": "Inga migrerbara entiteter hittades med detta prefix. Kontrollera att:\n1. Prefixet matchar din YAML-konfiguration\n2. Entiteterna finns i Home Assistant\n3. Entiteterna inte redan ägs av denna integration",
       "confirmation_required": "Du måste kryssa i bekräftelserutan för att fortsätta med migreringen.",
+      "yaml_still_active": "Entiteter är fortfarande aktiva. Vänligen ta bort YAML-paketet och starta om Home Assistant först.",
       "nodeid_configuration_failed": "Misslyckades med att konfigurera NodeID på enheten."
     },
     "abort": {
