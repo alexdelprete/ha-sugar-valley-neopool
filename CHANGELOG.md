@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-01-06
+
+### Fixed
+
+- Fixed entity migration to preserve original YAML entity IDs during migration
+- Fixed device name extraction from migrated entities instead of hardcoding
+- Corrected translation placeholders in `yaml_migration_result` config flow step
+- Fixed entity registry API usage for entity_id lookup
+- Removed unused `platform_domain` argument from entity `__init__` calls
+- Fixed entity migration tests for new architecture
+- Corrected NodeID assertions in entity tests (TEST123 → ABC123)
+
+### Changed
+
+- Improved test suite reliability with correct mock data and assertions
+
 ## [0.2.3] - 2026-01-06
 
 ### Added
