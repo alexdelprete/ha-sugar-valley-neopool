@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-01-07
+
+### Fixed
+
+- Added missing YAML migration key mappings:
+  - `ph_ctrl_fl1` → `ph_fl1` for pH flow sensor
+  - `relay_aux1-4_state` → `aux1-4` for relay binary sensors to switch mappings
+- Fixes migration log errors where entities were not found during YAML migration
+
 ## [0.2.8] - 2026-01-07
 
 ### Added
