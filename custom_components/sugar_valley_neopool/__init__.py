@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
 import logging
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components import mqtt, persistent_notification
+from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -19,7 +18,6 @@ from .const import (
     CONF_FAILURES_THRESHOLD,
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
-    CONF_PENDING_MIGRATION_VERIFICATION,
     CONF_RECOVERY_SCRIPT,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
@@ -108,38 +106,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
             _LOGGER.debug("  ... and %d more", len(integration_entities) - 10)
 
         await _apply_entity_id_mapping(hass, entry, entity_id_mapping)
-
-    # Handle migration verification (deferred to next restart for reliable results)
-    if entry.runtime_data.entity_id_mapping:
-        if entry.options.get(CONF_PENDING_MIGRATION_VERIFICATION):
-            # This is a restart after migration - recorder is now fully initialized
-            # Run verification and show results
-            verification = await async_verify_migration(hass, entry.runtime_data.entity_id_mapping)
-            _LOGGER.info(
-                "Migration verification: %d verified, %d no history, %d failed",
-                verification["verified"],
-                verification["no_history"],
-                len(verification["failed"]),
-            )
-            # Show verification results
-            await _show_migration_verification_result(hass, verification, device_name)
-
-            # Clear the pending verification flag
-            new_options = dict(entry.options)
-            new_options.pop(CONF_PENDING_MIGRATION_VERIFICATION, None)
-            hass.config_entries.async_update_entry(entry, options=new_options)
-            _LOGGER.debug("Cleared pending migration verification flag")
-        else:
-            # First setup after migration - set flag for verification on next restart
-            # Verification won't work now because recorder metadata isn't synced yet
-            new_options = dict(entry.options)
-            new_options[CONF_PENDING_MIGRATION_VERIFICATION] = True
-            hass.config_entries.async_update_entry(entry, options=new_options)
-            _LOGGER.debug("Set pending migration verification flag for next restart")
-
-            # Show immediate notification that migration completed
-            entity_count = len(entry.runtime_data.entity_id_mapping)
-            await _show_migration_complete_notification(hass, entity_count, device_name)
 
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
@@ -325,178 +291,6 @@ async def _apply_entity_id_mapping(
             "Applied entity_id_mapping: %d entities renamed to preserve YAML IDs",
             updated_count,
         )
-
-
-async def async_verify_migration(
-    hass: HomeAssistant,
-    entity_id_mapping: dict[str, str],
-) -> dict[str, Any]:
-    """Verify migration preserved historical data.
-
-    Uses recorder history API to check if entities have state history
-    from before the migration (older than 1 hour).
-    Works for ALL entity types.
-    """
-    # Import here to avoid circular imports and optional dependency
-    try:
-        from homeassistant.components.recorder.history import (  # noqa: PLC0415
-            get_last_state_changes,
-        )
-    except ImportError:
-        _LOGGER.warning("Recorder not available, skipping migration verification")
-        return {"verified": 0, "no_history": 0, "failed": ["Recorder not available"]}
-
-    # Check if recorder component is loaded
-    if "recorder" not in hass.config.components:
-        _LOGGER.warning("Recorder component not loaded, skipping migration verification")
-        return {"verified": 0, "no_history": 0, "failed": ["Recorder not loaded"]}
-
-    results: dict[str, Any] = {
-        "verified": 0,
-        "no_history": 0,
-        "failed": [],
-    }
-
-    domains = ["sensor", "binary_sensor", "switch", "select", "number", "button"]
-    now = datetime.now(tz=UTC)
-
-    for object_id in entity_id_mapping.values():
-        found = False
-        for domain in domains:
-            entity_id = f"{domain}.{object_id}"
-
-            try:
-                # Get last state change for this entity_id (blocking call)
-                history = await hass.async_add_executor_job(
-                    get_last_state_changes,
-                    hass,
-                    1,  # number_of_states - just need 1 to confirm
-                    entity_id,
-                )
-
-                if history.get(entity_id):
-                    states = history[entity_id]
-                    if states:
-                        last_state = states[0]
-                        # If last_changed is older than 1 hour, history was preserved
-                        last_changed = last_state.last_changed
-                        if last_changed.tzinfo is None:
-                            last_changed = last_changed.replace(tzinfo=UTC)
-                        if last_changed < now - timedelta(hours=1):
-                            results["verified"] += 1
-                            _LOGGER.debug(
-                                "Migration verified for %s: history from %s",
-                                entity_id,
-                                last_state.last_changed,
-                            )
-                            found = True
-                            break  # Found in this domain, move to next entity
-
-            except Exception as e:  # noqa: BLE001
-                results["failed"].append(f"{entity_id}: {e}")
-                _LOGGER.warning("Failed to verify %s: %s", entity_id, e)
-
-        if not found:
-            results["no_history"] += 1
-
-    return results
-
-
-async def _show_migration_verification_result(
-    hass: HomeAssistant,
-    verification: dict[str, Any],
-    device_name: str,
-) -> None:
-    """Show migration verification result as persistent notification."""
-    verified = verification["verified"]
-    no_history = verification["no_history"]
-    failed = verification["failed"]
-    total = verified + no_history
-
-    # Determine overall status
-    if verified > 0 and not failed:
-        status_icon = "✅"
-        status_text = "Migration Successful"
-    elif verified > 0 and (no_history > 0 or failed):
-        status_icon = "⚠️"
-        status_text = "Migration Partially Successful"
-    elif no_history > 0 and not failed:
-        status_icon = "ℹ️"
-        status_text = "Migration Complete (No History to Verify)"
-    else:
-        status_icon = "❌"
-        status_text = "Migration Verification Failed"
-
-    lines = [
-        f"## {status_icon} {status_text}",
-        "",
-        f"**Device**: {device_name}",
-        "",
-        "### Verification Results:",
-        f"- **History preserved**: {verified} entities",
-        f"- **No previous history**: {no_history} entities",
-        f"- **Verification errors**: {len(failed)}",
-        "",
-    ]
-
-    if verified > 0:
-        lines.append(
-            "✓ Historical data from your YAML entities has been preserved. "
-            "Your graphs and statistics should show continuous data."
-        )
-        lines.append("")
-
-    if no_history > 0:
-        lines.append(
-            f"ℹ️ {no_history} entities had no historical data older than 1 hour to verify. "
-            "This is normal for newly created entities or entities that rarely change state."
-        )
-        lines.append("")
-
-    if failed:
-        lines.append("### Errors:")
-        lines.extend(f"- {error}" for error in failed[:5])
-        if len(failed) > 5:
-            lines.append(f"- ...and {len(failed) - 5} more")
-        lines.append("")
-
-    if total > 0:
-        success_rate = (verified / total) * 100 if total > 0 else 0
-        lines.append(f"**Overall**: {verified}/{total} entities verified ({success_rate:.0f}%)")
-
-    persistent_notification.async_create(
-        hass,
-        message="\n".join(lines),
-        title="NeoPool YAML Migration Verification",
-        notification_id=f"neopool_migration_verification_{device_name}",
-    )
-
-
-async def _show_migration_complete_notification(
-    hass: HomeAssistant,
-    entity_count: int,
-    device_name: str,
-) -> None:
-    """Show immediate migration complete notification.
-
-    This notification is shown right after migration, before verification.
-    Verification is deferred to the next HA restart when the recorder
-    metadata is fully synchronized.
-    """
-    message = (
-        f"**Device**: {device_name}\n\n"
-        f"Successfully migrated **{entity_count}** entities with original entity IDs preserved.\n\n"
-        "Your dashboards, automations, and scripts will continue to work.\n\n"
-        "**Note**: History verification will run automatically on the next "
-        "Home Assistant restart to confirm historical data was preserved."
-    )
-
-    persistent_notification.async_create(
-        hass,
-        message=message,
-        title="NeoPool YAML Migration Complete",
-        notification_id=f"neopool_migration_complete_{device_name}",
-    )
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:

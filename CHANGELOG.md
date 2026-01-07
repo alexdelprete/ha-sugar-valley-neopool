@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-01-07
+
+### Removed
+
+- Removed migration verification and persistent notifications: the verification was unreliable
+  due to recorder timing issues. Migration results are now summarized in the config flow only,
+  trusting that entity ID preservation works correctly.
+
 ## [0.2.7] - 2026-01-07
 
 ### Fixed

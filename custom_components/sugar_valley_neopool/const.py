@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 # Integration identity
 DOMAIN: Final = "sugar_valley_neopool"
 NAME: Final = "Sugar Valley NeoPool"
-VERSION: Final = "0.2.7"
+VERSION: Final = "0.2.8"
 MANUFACTURER: Final = "Sugar Valley"
 MODEL: Final = "NeoPool Controller"
 ATTRIBUTION: Final = "by @alexdelprete"
@@ -39,7 +39,6 @@ CONF_FAILURES_THRESHOLD: Final = "failures_threshold"
 CONF_RECOVERY_SCRIPT: Final = "recovery_script"
 CONF_OFFLINE_TIMEOUT: Final = "offline_timeout"
 CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
-CONF_PENDING_MIGRATION_VERIFICATION: Final = "pending_migration_verification"
 
 # Default values
 DEFAULT_DEVICE_NAME: Final = "NeoPool"

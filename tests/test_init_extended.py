@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -11,19 +10,15 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.sugar_valley_neopool import (
     CONFIG_ENTRY_VERSION,
     NeoPoolData,
-    _show_migration_complete_notification,
-    _show_migration_verification_result,
     async_migrate_entry,
     async_register_device,
     async_setup_entry,
     async_unload_entry,
-    async_verify_migration,
 )
 from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_NODEID,
-    CONF_PENDING_MIGRATION_VERIFICATION,
     DOMAIN,
 )
 from homeassistant.core import HomeAssistant
@@ -81,19 +76,17 @@ class TestAsyncSetupEntryExtended:
             await async_setup_entry(hass, entry)
 
     @pytest.mark.asyncio
-    async def test_setup_entry_with_entity_id_mapping_first_setup(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test first setup after migration sets pending flag and shows immediate notification."""
+    async def test_setup_entry_with_entity_id_mapping(self, hass: HomeAssistant) -> None:
+        """Test setup with entity_id_mapping applies mapping."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
                 CONF_DEVICE_NAME: "Test Pool",
                 CONF_DISCOVERY_PREFIX: "SmartPool",
                 CONF_NODEID: "ABC123",
-                "entity_id_mapping": {"water_temp": "neopool_water_temp"},
+                "entity_id_mapping": {"water_temp": "sensor.neopool_water_temp"},
             },
-            options={},  # No pending verification flag yet
+            options={},
         )
         entry.add_to_hass(hass)
 
@@ -104,61 +97,13 @@ class TestAsyncSetupEntryExtended:
             ),
             patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
             patch(
-                "custom_components.sugar_valley_neopool._show_migration_complete_notification"
-            ) as mock_show_complete,
-            patch("custom_components.sugar_valley_neopool.async_verify_migration") as mock_verify,
+                "custom_components.sugar_valley_neopool._apply_entity_id_mapping"
+            ) as mock_apply_mapping,
         ):
             await async_setup_entry(hass, entry)
 
-        # Verification should NOT run on first setup (deferred to next restart)
-        mock_verify.assert_not_called()
-        # Immediate notification should be shown
-        mock_show_complete.assert_called_once_with(hass, 1, "Test Pool")
-        # Pending flag should be set in options
-        assert entry.options.get(CONF_PENDING_MIGRATION_VERIFICATION) is True
-
-    @pytest.mark.asyncio
-    async def test_setup_entry_with_pending_verification_flag(self, hass: HomeAssistant) -> None:
-        """Test restart with pending flag runs verification and clears flag."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-                "entity_id_mapping": {"water_temp": "neopool_water_temp"},
-            },
-            options={CONF_PENDING_MIGRATION_VERIFICATION: True},  # Flag set from previous run
-        )
-        entry.add_to_hass(hass)
-
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_wait_for_mqtt_client",
-                return_value=True,
-            ),
-            patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
-            patch(
-                "custom_components.sugar_valley_neopool.async_verify_migration",
-                return_value={"verified": 1, "no_history": 0, "failed": []},
-            ) as mock_verify,
-            patch(
-                "custom_components.sugar_valley_neopool._show_migration_verification_result"
-            ) as mock_show_result,
-            patch(
-                "custom_components.sugar_valley_neopool._show_migration_complete_notification"
-            ) as mock_show_complete,
-        ):
-            await async_setup_entry(hass, entry)
-
-        # Verification should run on restart when flag is present
-        mock_verify.assert_called_once()
-        # Verification results should be shown
-        mock_show_result.assert_called_once()
-        # Immediate notification should NOT be shown (only on first setup)
-        mock_show_complete.assert_not_called()
-        # Pending flag should be cleared
-        assert entry.options.get(CONF_PENDING_MIGRATION_VERIFICATION) is None
+        # Entity ID mapping should be applied
+        mock_apply_mapping.assert_called_once()
 
 
 class TestAsyncUnloadEntryExtended:
@@ -230,345 +175,6 @@ class TestAsyncMigrateEntryExtended:
         assert entry.data[CONF_DEVICE_NAME] == "My Pool"
         assert entry.data[CONF_DISCOVERY_PREFIX] == "CustomTopic"
         assert entry.data[CONF_NODEID] == "CUSTOM123"
-
-
-class TestAsyncVerifyMigration:
-    """Tests for async_verify_migration function."""
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_recorder_not_available(self, hass: HomeAssistant) -> None:
-        """Test verification returns early when recorder import fails."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        # Simulate recorder module not being importable by removing it from sys.modules
-        # and ensuring the import inside async_verify_migration fails
-        with patch.dict("sys.modules", {"homeassistant.components.recorder.history": None}):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        # Should return early with warning - recorder not in components
-        assert result["verified"] == 0
-        assert result["no_history"] == 0
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_recorder_not_loaded(self, hass: HomeAssistant) -> None:
-        """Test verification returns early when recorder component not loaded."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        # Ensure recorder is not in components
-        hass.config.components = set()
-
-        result = await async_verify_migration(hass, entity_id_mapping)
-
-        assert result["verified"] == 0
-        assert result["no_history"] == 0
-        assert "Recorder not loaded" in result["failed"][0]
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_with_verified_history(self, hass: HomeAssistant) -> None:
-        """Test verification finds verified history."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        # Add recorder to components
-        hass.config.components = {"recorder"}
-
-        # Create mock state with old timestamp (more than 1 hour ago)
-        mock_state = MagicMock()
-        mock_state.last_changed = datetime.now(tz=UTC) - timedelta(hours=2)
-
-        mock_history = {"sensor.neopool_water_temp": [mock_state]}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            return_value=mock_history,
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        assert result["verified"] == 1
-        assert result["no_history"] == 0
-        assert len(result["failed"]) == 0
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_no_history(self, hass: HomeAssistant) -> None:
-        """Test verification with no history found."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        hass.config.components = {"recorder"}
-
-        # Return empty history
-        mock_history: dict = {}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            return_value=mock_history,
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        assert result["verified"] == 0
-        assert result["no_history"] == 1
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_recent_history(self, hass: HomeAssistant) -> None:
-        """Test verification with recent history (less than 1 hour)."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        hass.config.components = {"recorder"}
-
-        # Create mock state with recent timestamp (less than 1 hour ago)
-        mock_state = MagicMock()
-        mock_state.last_changed = datetime.now(tz=UTC) - timedelta(minutes=30)
-
-        mock_history = {"sensor.neopool_water_temp": [mock_state]}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            return_value=mock_history,
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        # Recent history doesn't count as "verified"
-        assert result["verified"] == 0
-        assert result["no_history"] == 1
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_exception(self, hass: HomeAssistant) -> None:
-        """Test verification handles exceptions gracefully."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        hass.config.components = {"recorder"}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            side_effect=Exception("Database error"),
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        assert result["verified"] == 0
-        assert len(result["failed"]) > 0
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_multiple_domains(self, hass: HomeAssistant) -> None:
-        """Test verification searches across multiple domains."""
-        entity_id_mapping = {
-            "water_temp": "neopool_water_temp",
-            "light_switch": "neopool_light",
-        }
-
-        hass.config.components = {"recorder"}
-
-        # Return history for binary_sensor domain
-        old_time = datetime.now(tz=UTC) - timedelta(hours=2)
-        mock_state = MagicMock()
-        mock_state.last_changed = old_time
-
-        def mock_get_history(hass, num, entity_id):
-            if entity_id == "binary_sensor.neopool_light":
-                return {entity_id: [mock_state]}
-            return {}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            side_effect=mock_get_history,
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        # One should be found in binary_sensor domain
-        assert result["verified"] >= 0
-
-    @pytest.mark.asyncio
-    async def test_verify_migration_naive_datetime(self, hass: HomeAssistant) -> None:
-        """Test verification handles naive datetime (no timezone)."""
-        entity_id_mapping = {"water_temp": "neopool_water_temp"}
-
-        hass.config.components = {"recorder"}
-
-        # Create mock state with naive datetime (no timezone)
-        mock_state = MagicMock()
-        mock_state.last_changed = datetime.now() - timedelta(hours=2)  # noqa: DTZ005
-
-        mock_history = {"sensor.neopool_water_temp": [mock_state]}
-
-        with patch(
-            "homeassistant.components.recorder.history.get_last_state_changes",
-            return_value=mock_history,
-        ):
-            result = await async_verify_migration(hass, entity_id_mapping)
-
-        # Should handle naive datetime and convert to UTC
-        assert result["verified"] == 1
-
-
-class TestShowMigrationVerificationResult:
-    """Tests for _show_migration_verification_result function."""
-
-    @pytest.mark.asyncio
-    async def test_show_migration_success(self, hass: HomeAssistant) -> None:
-        """Test showing successful migration notification."""
-        verification = {
-            "verified": 5,
-            "no_history": 0,
-            "failed": [],
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        assert "Migration Successful" in message
-        assert "✅" in message
-
-    @pytest.mark.asyncio
-    async def test_show_migration_partial_success(self, hass: HomeAssistant) -> None:
-        """Test showing partial success notification (with failures)."""
-        # Partial success requires verified > 0 AND (failures exist)
-        # Per production code: verified > 0 and (no_history > 0 or failed) triggers partial
-        # BUT the first condition `verified > 0 and not failed` takes precedence
-        # So we need failures to trigger "Partially Successful"
-        verification = {
-            "verified": 3,
-            "no_history": 2,
-            "failed": ["sensor.test: Error"],  # Need failures for partial success
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        assert "Partially Successful" in message
-        assert "⚠️" in message
-
-    @pytest.mark.asyncio
-    async def test_show_migration_no_history_to_verify(self, hass: HomeAssistant) -> None:
-        """Test showing notification when no history to verify."""
-        verification = {
-            "verified": 0,
-            "no_history": 5,
-            "failed": [],
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        assert "No History to Verify" in message
-        assert "ℹ️" in message
-
-    @pytest.mark.asyncio
-    async def test_show_migration_failed(self, hass: HomeAssistant) -> None:
-        """Test showing failed migration notification."""
-        verification = {
-            "verified": 0,
-            "no_history": 0,
-            "failed": ["Error 1", "Error 2"],
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        assert "Verification Failed" in message
-        assert "❌" in message
-
-    @pytest.mark.asyncio
-    async def test_show_migration_with_errors(self, hass: HomeAssistant) -> None:
-        """Test showing notification with error details."""
-        verification = {
-            "verified": 3,
-            "no_history": 0,
-            "failed": ["sensor.a: Error 1", "sensor.b: Error 2"],
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        assert "Errors:" in message
-        assert "Error 1" in message
-
-    @pytest.mark.asyncio
-    async def test_show_migration_many_errors_truncated(self, hass: HomeAssistant) -> None:
-        """Test showing notification truncates many errors."""
-        verification = {
-            "verified": 0,
-            "no_history": 0,
-            "failed": [f"sensor.entity_{i}: Error {i}" for i in range(10)],
-        }
-
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_verification_result(hass, verification, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        # Should show first 5 and indicate more
-        assert "5 more" in message
-
-
-class TestShowMigrationCompleteNotification:
-    """Tests for _show_migration_complete_notification function."""
-
-    @pytest.mark.asyncio
-    async def test_show_migration_complete_notification(self, hass: HomeAssistant) -> None:
-        """Test showing migration complete notification."""
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_complete_notification(hass, 58, "Test Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-        title = call_args.kwargs.get("title") or call_args[1].get("title")
-        notification_id = call_args.kwargs.get("notification_id") or call_args[1].get(
-            "notification_id"
-        )
-
-        # Check message content
-        assert "Test Pool" in message
-        assert "58" in message
-        assert "next Home Assistant restart" in message
-        # Check title
-        assert "Migration Complete" in title
-        # Check notification_id
-        assert notification_id == "neopool_migration_complete_Test Pool"
-
-    @pytest.mark.asyncio
-    async def test_show_migration_complete_notification_single_entity(
-        self, hass: HomeAssistant
-    ) -> None:
-        """Test showing migration complete notification with single entity."""
-        with patch(
-            "custom_components.sugar_valley_neopool.persistent_notification.async_create"
-        ) as mock_notify:
-            await _show_migration_complete_notification(hass, 1, "My Pool")
-
-        mock_notify.assert_called_once()
-        call_args = mock_notify.call_args
-        message = call_args.kwargs.get("message") or call_args[1].get("message")
-
-        assert "1" in message
-        assert "My Pool" in message
 
 
 class TestAsyncRegisterDeviceExtended:
