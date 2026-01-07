@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-01-07
+
+### Fixed
+
+- Fixed hydrolysis_data sensor mapping conflict: YAML's `hydrolysis_data` (%) now correctly
+  maps to integration's `hydrolysis_percent`, preventing rename ping-pong with `hydrolysis_data_gh`
+- Fixed filtration_mode/speed select entity mapping: entity_id_mapping now stores full entity_id
+  (with domain) instead of just object_id, allowing correct domain-aware entity lookup
+- Improved `_apply_entity_id_mapping()` to support both old format (object_id only) and new
+  format (full entity_id with domain) for backwards compatibility
+
 ## [0.2.6] - 2026-01-07
 
 ### Fixed
