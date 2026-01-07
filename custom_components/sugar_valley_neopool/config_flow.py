@@ -306,12 +306,27 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         - Owned by a different platform (e.g., "mqtt" from YAML package)
         """
         entity_registry = er.async_get(self.hass)
-        return [
+        entities = [
             entity
             for entity in entity_registry.entities.values()
             if entity.unique_id.startswith(prefix)
             and (entity.config_entry_id is None or entity.platform != DOMAIN)
         ]
+        # Debug logging to see what was found
+        _LOGGER.debug(
+            "Found %d migratable entities with prefix '%s'",
+            len(entities),
+            prefix,
+        )
+        for entity in entities:
+            _LOGGER.debug(
+                "  - %s (unique_id=%s, platform=%s, config_entry=%s)",
+                entity.entity_id,
+                entity.unique_id,
+                entity.platform,
+                entity.config_entry_id,
+            )
+        return entities
 
     def _find_active_entities(self, entities: list[RegistryEntry]) -> list[RegistryEntry]:
         """Find entities that are currently active (have a valid state).
@@ -588,6 +603,11 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
                 # Map: entity_key -> actual object_id (for entity creation)
                 summary["entity_id_mapping"][entity_key] = object_id
+                _LOGGER.debug(
+                    "Added to entity_id_mapping: %s -> %s",
+                    entity_key,
+                    object_id,
+                )
 
                 # DELETE the old MQTT entity from registry
                 entity_registry.async_remove(actual_entity_id)
