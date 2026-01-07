@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-01-07
+
+### Added
+
+- Added missing sensors: `hydrolysis_runtime_pol1`, `hydrolysis_runtime_pol2`, `connection_out_of_range`
+
+### Fixed
+
+- Fixed YAML migration entity ID preservation: added translation map (`YAML_TO_INTEGRATION_KEY_MAP`)
+  to bridge naming differences between YAML package and integration entity keys
+- Fixed migration verification timing: deferred verification to next HA restart when recorder
+  metadata is fully synchronized, preventing false "0 entities with history" reports
+
 ## [0.2.4] - 2026-01-06
 
 ### Fixed
