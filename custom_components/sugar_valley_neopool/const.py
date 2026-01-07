@@ -200,8 +200,9 @@ JSON_PATH_CONNECTION_NORESPONSE: Final = "NeoPool.Connection.MBNoResponse"
 JSON_PATH_CONNECTION_OUTOFRANGE: Final = "NeoPool.Connection.DataOutOfRange"
 
 # YAML to Integration entity key translation map
-# Maps YAML package entity keys to integration entity keys
+# Maps YAML package entity keys (from unique_id) to integration entity keys
 # Used during migration to find the correct integration entity
+# Keys are extracted from YAML unique_id by stripping "neopool_mqtt_" prefix
 YAML_TO_INTEGRATION_KEY_MAP: Final[dict[str, str]] = {
     # Switches - YAML uses "_switch" suffix
     "filtration_switch": "filtration",
@@ -213,16 +214,35 @@ YAML_TO_INTEGRATION_KEY_MAP: Final[dict[str, str]] = {
     # Button - YAML uses "_state" suffix
     "clear_error_state": "clear_error",
     # Sensors - hydrolysis naming differences
-    "hydrolysis_data_g_h": "hydrolysis_data",
-    "hydrolysis_runtime_polarity_changes": "hydrolysis_polarity_changes",
-    # Binary sensors - modules naming (YAML: *_module, Integration: modules_*)
+    "hydrolysis_data_gh": "hydrolysis_data",  # YAML: neopool_mqtt_hydrolysis_data_gh
+    "hydrolysis_data_g_h": "hydrolysis_data",  # Alternative naming
+    "hydrolysis_runtime_pol_changes": "hydrolysis_polarity_changes",  # YAML uses pol_changes
+    "hydrolysis_runtime_polarity_changes": "hydrolysis_polarity_changes",  # Alternative
+    # Binary sensors - hydrolysis water flow (YAML: hydrolysis_ctrl_fl1_water_flow)
+    "hydrolysis_ctrl_fl1_water_flow": "hydrolysis_water_flow",
+    "hydrolysis_ctrl_fl1": "hydrolysis_fl1",
+    # Binary sensors - modules naming (YAML: modules_*, Integration: modules_*)
+    "modules_ph": "modules_ph",
+    "modules_redox": "modules_redox",
+    "modules_hydrolysis": "modules_hydrolysis",
+    "modules_chlorine": "modules_chlorine",
+    "modules_conductivity": "modules_conductivity",
+    "modules_ionization": "modules_ionization",
+    # Alternative module naming (YAML: *_module)
     "ph_module": "modules_ph",
     "redox_module": "modules_redox",
     "hydrolysis_module": "modules_hydrolysis",
     "chlorine_module": "modules_chlorine",
     "conductivity_module": "modules_conductivity",
     "ionization_module": "modules_ionization",
-    # Sensors - connection naming (YAML has "_system_" in name)
+    # Selects - boost mode (YAML: hydrolysis_boost_mode, Integration: boost_mode)
+    "hydrolysis_boost_mode": "boost_mode",
+    # Sensors - connection naming (YAML: conndiag_*, Integration: connection_*)
+    "conndiag_system_requests": "connection_requests",
+    "conndiag_system_responses": "connection_responses",
+    "conndiag_missed_system_responses": "connection_no_response",
+    "conndiag_outofrange_system_responses": "connection_out_of_range",
+    # Alternative connection naming
     "connection_system_requests": "connection_requests",
     "connection_system_responses": "connection_responses",
     "connection_missed_system_responses": "connection_no_response",

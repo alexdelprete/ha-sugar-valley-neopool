@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed YAML migration translation map with correct YAML package entity keys:
+  - `hydrolysis_data_gh` (not `hydrolysis_data_g_h`)
+  - `hydrolysis_runtime_pol_changes` (not `hydrolysis_runtime_polarity_changes`)
+  - `hydrolysis_ctrl_fl1_water_flow` → `hydrolysis_water_flow`
+  - `hydrolysis_boost_mode` → `boost_mode`
+  - `conndiag_*` variants for connection sensors
+  - Added identity mappings for `modules_*` keys
+
 ## [0.2.5] - 2026-01-07
 
 ### Added
