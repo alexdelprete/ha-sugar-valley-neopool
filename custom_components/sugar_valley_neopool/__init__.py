@@ -88,9 +88,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _LOGGER.debug("Platform setup complete for %d platforms", len(PLATFORMS))
 
     # Apply entity_id_mapping to preserve original YAML entity IDs
     if entity_id_mapping:
+        # Log what entities exist for this integration before renaming
+        entity_registry = er.async_get(hass)
+        integration_entities = [
+            e for e in entity_registry.entities.values() if e.platform == DOMAIN
+        ]
+        _LOGGER.debug(
+            "Found %d entities for platform '%s' before applying mapping",
+            len(integration_entities),
+            DOMAIN,
+        )
+        for e in integration_entities[:10]:  # Log first 10
+            _LOGGER.debug("  - %s (unique_id=%s)", e.entity_id, e.unique_id)
+        if len(integration_entities) > 10:
+            _LOGGER.debug("  ... and %d more", len(integration_entities) - 10)
+
         await _apply_entity_id_mapping(hass, entry, entity_id_mapping)
 
     # Handle migration verification (deferred to next restart for reliable results)
