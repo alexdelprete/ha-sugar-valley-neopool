@@ -5,10 +5,11 @@ This file targets specific uncovered code paths identified through coverage anal
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
+import voluptuous as vol
 
 from custom_components.sugar_valley_neopool import (
     NeoPoolData,
@@ -17,6 +18,7 @@ from custom_components.sugar_valley_neopool import (
 )
 from custom_components.sugar_valley_neopool.config_flow import (
     NeoPoolConfigFlow,
+    NeoPoolOptionsFlow,
     get_topics_from_config,
 )
 from custom_components.sugar_valley_neopool.const import (
@@ -27,6 +29,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONF_REGENERATE_ENTITY_IDS,
     CONF_SETOPTION157,
     DOMAIN,
 )
@@ -711,3 +714,526 @@ class TestAutoConfigureNodeid:
 
         assert result["success"] is False
         assert "error" in result
+
+
+class TestOptionsFlowSetOption157Change:
+    """Tests for options flow SetOption157 change handling (lines 1204-1249)."""
+
+    async def test_setoption157_change_success(self, hass: HomeAssistant) -> None:
+        """Test successful SetOption157 change from False to True."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        # Pre-set status to False (so changing to True triggers the update path)
+        flow._setoption157_status = False
+
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch.object(flow, "_set_setoption157", new_callable=AsyncMock, return_value=True),
+            patch.object(flow, "_query_setoption157", new_callable=AsyncMock, return_value=True),
+        ):
+            result = await flow.async_step_init(
+                {
+                    CONF_SETOPTION157: True,  # Changing from False to True
+                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                    CONF_FAILURES_THRESHOLD: 3,
+                    CONF_OFFLINE_TIMEOUT: 60,
+                    CONF_RECOVERY_SCRIPT: "",
+                }
+            )
+
+        # Should successfully create entry after SetOption157 change
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+
+    async def test_setoption157_change_verification_failed(self, hass: HomeAssistant) -> None:
+        """Test SetOption157 change when verification fails."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        flow._setoption157_status = False
+
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch.object(flow, "_set_setoption157", new_callable=AsyncMock, return_value=True),
+            # Verification returns False (change not confirmed)
+            patch.object(flow, "_query_setoption157", new_callable=AsyncMock, return_value=False),
+            patch.object(
+                flow, "_show_options_form", new_callable=AsyncMock, return_value={"type": "form"}
+            ),
+        ):
+            result = await flow.async_step_init(
+                {
+                    CONF_SETOPTION157: True,
+                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                    CONF_FAILURES_THRESHOLD: 3,
+                    CONF_OFFLINE_TIMEOUT: 60,
+                    CONF_RECOVERY_SCRIPT: "",
+                }
+            )
+
+        # Should show form again with error
+        assert result["type"] == "form"
+
+    async def test_setoption157_set_command_failed(self, hass: HomeAssistant) -> None:
+        """Test SetOption157 change when set command fails."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        flow._setoption157_status = False
+
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            # _set_setoption157 returns False (command failed)
+            patch.object(flow, "_set_setoption157", new_callable=AsyncMock, return_value=False),
+            patch.object(
+                flow, "_show_options_form", new_callable=AsyncMock, return_value={"type": "form"}
+            ),
+        ):
+            result = await flow.async_step_init(
+                {
+                    CONF_SETOPTION157: True,
+                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                    CONF_FAILURES_THRESHOLD: 3,
+                    CONF_OFFLINE_TIMEOUT: 60,
+                    CONF_RECOVERY_SCRIPT: "",
+                }
+            )
+
+        # Should show form again with error
+        assert result["type"] == "form"
+
+    async def test_setoption157_no_change_needed(self, hass: HomeAssistant) -> None:
+        """Test options flow when SetOption157 value doesn't change."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        # Status is already True
+        flow._setoption157_status = True
+
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            result = await flow.async_step_init(
+                {
+                    CONF_SETOPTION157: True,  # Same as current status
+                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                    CONF_FAILURES_THRESHOLD: 3,
+                    CONF_OFFLINE_TIMEOUT: 60,
+                    CONF_RECOVERY_SCRIPT: "",
+                }
+            )
+
+        # Should create entry without trying to change SetOption157
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+
+
+class TestShowOptionsFormWarnings:
+    """Tests for _show_options_form warning messages (lines 1291-1297)."""
+
+    async def test_show_form_setoption157_disabled_warning(self, hass: HomeAssistant) -> None:
+        """Test warning when SetOption157 is disabled."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        # SetOption157 is disabled
+        flow._setoption157_status = False
+
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            result = await flow._show_options_form()
+
+        assert result["type"] == FlowResultType.FORM
+        # Should have warning placeholder
+        assert "setoption157_warning" in result["description_placeholders"]
+        assert "disabled" in result["description_placeholders"]["setoption157_warning"]
+
+    async def test_show_form_setoption157_none_warning(self, hass: HomeAssistant) -> None:
+        """Test warning when SetOption157 status is None (couldn't query)."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        # SetOption157 status is None (couldn't query device)
+        flow._setoption157_status = None
+
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            result = await flow._show_options_form()
+
+        assert result["type"] == FlowResultType.FORM
+        assert "setoption157_warning" in result["description_placeholders"]
+        assert "Could not query" in result["description_placeholders"]["setoption157_warning"]
+
+    async def test_show_form_setoption157_enabled_no_warning(self, hass: HomeAssistant) -> None:
+        """Test no warning when SetOption157 is enabled."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.options = {}
+        mock_entry.entry_id = "test_entry_id"
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+        # SetOption157 is enabled
+        flow._setoption157_status = True
+
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            result = await flow._show_options_form()
+
+        assert result["type"] == FlowResultType.FORM
+        # Should have empty warning placeholder
+        assert result["description_placeholders"]["setoption157_warning"] == ""
+
+
+class TestSetSetoption157Method:
+    """Tests for _set_setoption157 method."""
+
+    async def test_set_setoption157_success(self, hass: HomeAssistant) -> None:
+        """Test successful SetOption157 set command."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+        }
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+        ):
+            result = await flow._set_setoption157(True)
+
+        assert result is True
+
+    async def test_set_setoption157_no_topic(self, hass: HomeAssistant) -> None:
+        """Test SetOption157 set fails with no MQTT topic."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DISCOVERY_PREFIX: "",  # Empty topic
+        }
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            result = await flow._set_setoption157(True)
+
+        assert result is False
+
+    async def test_set_setoption157_publish_exception(self, hass: HomeAssistant) -> None:
+        """Test SetOption157 set handles publish exception."""
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+        }
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = hass
+
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+                side_effect=Exception("MQTT error"),
+            ),
+        ):
+            result = await flow._set_setoption157(True)
+
+        assert result is False
+
+
+class TestYamlPrefixWithFoundEntities:
+    """Tests for yaml_prefix step when entities are found (lines 659-686)."""
+
+    async def test_yaml_prefix_found_entities_inactive(self, hass: HomeAssistant) -> None:
+        """Test yaml_prefix with found entities that are inactive."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": SOURCE_USER}
+        flow._yaml_topic = "SmartPool"
+        flow._nodeid = "ABC123"
+
+        # Create mock entity
+        entity = MagicMock()
+        entity.entity_id = "sensor.custom_temp"
+        entity.unique_id = "custom_prefix_temp"
+
+        flow._find_migratable_entities = MagicMock(return_value=[entity])
+        flow._find_active_entities = MagicMock(return_value=[])  # No active entities
+
+        result = await flow.async_step_yaml_prefix({"unique_id_prefix": "custom_prefix_"})
+
+        # Should proceed to yaml_confirm since entities are inactive
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_confirm"
+        assert flow._unique_id_prefix == "custom_prefix_"
+        assert len(flow._migrating_entities) == 1
+
+    async def test_yaml_prefix_found_entities_active(self, hass: HomeAssistant) -> None:
+        """Test yaml_prefix with found entities that are still active."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": SOURCE_USER}
+        flow._yaml_topic = "SmartPool"
+        flow._nodeid = "ABC123"
+
+        # Create mock entity
+        entity = MagicMock()
+        entity.entity_id = "sensor.custom_temp"
+        entity.unique_id = "custom_prefix_temp"
+
+        flow._find_migratable_entities = MagicMock(return_value=[entity])
+        flow._find_active_entities = MagicMock(return_value=[entity])  # Entity is active
+
+        result = await flow.async_step_yaml_prefix({"unique_id_prefix": "custom_prefix_"})
+
+        # Should go to yaml_active_warning since entities are active
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"
+
+
+class TestYamlDetectConfirmWithActiveEntities:
+    """Tests for yaml_detect_confirm with active entities (line 724)."""
+
+    async def test_yaml_detect_confirm_accepted_with_active_entities(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test yaml_detect_confirm when confirmed but entities are active."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": SOURCE_USER}
+        flow._yaml_topic = "SmartPool"
+        flow._nodeid = "ABC123"
+        flow._detected_prefix = "detected_prefix_"
+
+        # Create mock entity
+        entity = MagicMock()
+        entity.entity_id = "sensor.detected_temp"
+        entity.unique_id = "detected_prefix_temp"
+
+        flow._find_migratable_entities = MagicMock(return_value=[entity])
+        flow._find_active_entities = MagicMock(return_value=[entity])  # Entity is active
+
+        result = await flow.async_step_yaml_detect_confirm({"confirm_detection": True})
+
+        # Should go to yaml_active_warning since entities are active
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_active_warning"
+
+    async def test_yaml_detect_confirm_accepted_no_entities_found(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test yaml_detect_confirm when confirmed but no entities found."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": SOURCE_USER}
+        flow._detected_prefix = "detected_prefix_"
+
+        # No entities found with detected prefix
+        flow._find_migratable_entities = MagicMock(return_value=[])
+
+        result = await flow.async_step_yaml_detect_confirm({"confirm_detection": True})
+
+        # Should go to yaml_prefix to ask for manual input
+        assert result["type"] == FlowResultType.FORM
+        assert result["step_id"] == "yaml_prefix"
+
+
+class TestDiscoverDeviceInvalidTopic:
+    """Tests for discover_device invalid topic format (lines 982-985)."""
+
+    async def test_discover_device_invalid_topic_format(self, hass: HomeAssistant) -> None:
+        """Test discover_device with invalid MQTT topic format."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": SOURCE_USER}
+
+        # Mock valid_subscribe_topic to raise vol.Invalid
+        with patch(
+            "custom_components.sugar_valley_neopool.config_flow.valid_subscribe_topic",
+            side_effect=vol.Invalid("Invalid topic"),
+        ):
+            result = await flow.async_step_discover_device(
+                {
+                    CONF_DEVICE_NAME: "My Pool",
+                    CONF_DISCOVERY_PREFIX: "invalid#topic#format",
+                }
+            )
+
+        assert result["type"] == FlowResultType.FORM
+        assert result["errors"]["base"] == "invalid_topic"
+
+
+class TestReconfigureRegenerateEntityIds:
+    """Tests for reconfigure flow regenerate with same name (line 1160)."""
+
+    async def test_reconfigure_regenerate_same_name_skipped(self, hass: HomeAssistant) -> None:
+        """Test reconfigure with regenerate flag but same device name."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": "reconfigure"}
+
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Test Pool",  # Same name
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.unique_id = "sugar_valley_neopool_ABC123"
+        flow._get_reconfigure_entry = MagicMock(return_value=mock_entry)
+
+        flow._validate_yaml_topic = AsyncMock(
+            return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
+        )
+
+        async def mock_set_unique_id(uid):
+            flow._unique_id = uid
+
+        flow.async_set_unique_id = mock_set_unique_id
+        flow._abort_if_unique_id_mismatch = MagicMock()
+        flow._regenerate_entity_ids = AsyncMock(return_value=0)
+        flow.async_update_reload_and_abort = MagicMock(
+            return_value={"type": FlowResultType.ABORT, "reason": "reconfigure_successful"}
+        )
+
+        await flow.async_step_reconfigure(
+            {
+                CONF_DEVICE_NAME: "Test Pool",  # Same name as before
+                CONF_DISCOVERY_PREFIX: "SmartPool",
+                CONF_REGENERATE_ENTITY_IDS: True,  # Regenerate requested
+            }
+        )
+
+        # Should NOT call regenerate because name didn't change
+        flow._regenerate_entity_ids.assert_not_called()
+
+    async def test_reconfigure_regenerate_different_name(self, hass: HomeAssistant) -> None:
+        """Test reconfigure with regenerate flag and different device name."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"source": "reconfigure"}
+
+        mock_entry = MagicMock()
+        mock_entry.data = {
+            CONF_DEVICE_NAME: "Old Name",
+            CONF_DISCOVERY_PREFIX: "SmartPool",
+            CONF_NODEID: "ABC123",
+        }
+        mock_entry.unique_id = "sugar_valley_neopool_ABC123"
+        flow._get_reconfigure_entry = MagicMock(return_value=mock_entry)
+
+        flow._validate_yaml_topic = AsyncMock(
+            return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
+        )
+
+        async def mock_set_unique_id(uid):
+            flow._unique_id = uid
+
+        flow.async_set_unique_id = mock_set_unique_id
+        flow._abort_if_unique_id_mismatch = MagicMock()
+        flow._regenerate_entity_ids = AsyncMock(return_value=5)
+        flow.async_update_reload_and_abort = MagicMock(
+            return_value={"type": FlowResultType.ABORT, "reason": "reconfigure_successful"}
+        )
+
+        await flow.async_step_reconfigure(
+            {
+                CONF_DEVICE_NAME: "New Name",  # Different name
+                CONF_DISCOVERY_PREFIX: "SmartPool",
+                CONF_REGENERATE_ENTITY_IDS: True,
+            }
+        )
+
+        # Should call regenerate because name changed
+        flow._regenerate_entity_ids.assert_called_once()
+
+
+class TestAutoConfigureNodeidSetOptionVerificationFailed:
+    """Tests for _auto_configure_nodeid when SetOption157 verification fails."""
+
+    async def test_auto_configure_setoption_verification_failed(self, hass: HomeAssistant) -> None:
+        """Test auto-configure fails when SetOption157 verification fails."""
+        flow = NeoPoolConfigFlow()
+        flow.hass = hass
+
+        with (
+            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=False,  # Verification returns False
+            ),
+        ):
+            result = await flow._auto_configure_nodeid("SmartPool")
+
+        assert result["success"] is False
+        assert "error" in result
+        assert "SetOption157" in result["error"]
