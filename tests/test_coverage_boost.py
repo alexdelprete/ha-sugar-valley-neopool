@@ -27,6 +27,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONF_SETOPTION157,
     DOMAIN,
 )
 from custom_components.sugar_valley_neopool.select import create_value_fn
@@ -116,8 +117,14 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Use hass.config_entries.options.async_init to properly initialize the flow
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        # Mock the MQTT query for SetOption157 status
+        with patch(
+            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            # Use hass.config_entries.options.async_init to properly initialize the flow
+            result = await hass.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "init"
@@ -135,20 +142,27 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Initialize options flow properly
-        result = await hass.config_entries.options.async_init(entry.entry_id)
-        assert result["type"] == FlowResultType.FORM
+        # Mock the MQTT query for SetOption157 status
+        with patch(
+            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            # Initialize options flow properly
+            result = await hass.config_entries.options.async_init(entry.entry_id)
+            assert result["type"] == FlowResultType.FORM
 
-        # Submit the form
-        result = await hass.config_entries.options.async_configure(
-            result["flow_id"],
-            {
-                CONF_RECOVERY_SCRIPT: "script.test_recovery",
-                CONF_ENABLE_REPAIR_NOTIFICATION: True,
-                CONF_FAILURES_THRESHOLD: 5,
-                CONF_OFFLINE_TIMEOUT: 120,
-            },
-        )
+            # Submit the form - include CONF_SETOPTION157 to match queried status
+            result = await hass.config_entries.options.async_configure(
+                result["flow_id"],
+                {
+                    CONF_RECOVERY_SCRIPT: "script.test_recovery",
+                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                    CONF_FAILURES_THRESHOLD: 5,
+                    CONF_OFFLINE_TIMEOUT: 120,
+                    CONF_SETOPTION157: True,  # Match the mocked status to avoid MQTT ops
+                },
+            )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["data"][CONF_RECOVERY_SCRIPT] == "script.test_recovery"
@@ -174,8 +188,14 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Initialize options flow properly
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+        # Mock the MQTT query for SetOption157 status
+        with patch(
+            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+            new_callable=AsyncMock,
+            return_value=True,
+        ):
+            # Initialize options flow properly
+            result = await hass.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] == FlowResultType.FORM
         # Form should be shown with existing values as defaults
@@ -657,6 +677,11 @@ class TestAutoConfigureNodeid:
         with (
             patch("homeassistant.components.mqtt.async_publish") as mock_publish,
             patch.object(flow, "_wait_for_nodeid", return_value="NEW123"),
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
@@ -674,6 +699,11 @@ class TestAutoConfigureNodeid:
         with (
             patch("homeassistant.components.mqtt.async_publish"),
             patch.object(flow, "_wait_for_nodeid", return_value=None),
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
