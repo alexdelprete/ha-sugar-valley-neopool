@@ -1082,8 +1082,12 @@ class TestOptionsFlowExtended:
         }
 
         flow = NeoPoolOptionsFlow()
-        with patch.object(
-            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        flow.hass = MagicMock()
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch.object(flow, "_query_setoption157", new_callable=AsyncMock, return_value=True),
         ):
             result = await flow.async_step_init(None)
 

@@ -197,7 +197,13 @@ async def test_options_flow_init(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    # Mock the MQTT query for SetOption157 status
+    with patch(
+        "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+        new_callable=AsyncMock,
+        return_value=True,
+    ):
+        result = await hass.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
@@ -474,8 +480,12 @@ class TestOptionsFlowDirect:
         mock_entry = self._create_mock_config_entry()
 
         flow = NeoPoolOptionsFlow()
-        with patch.object(
-            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        flow.hass = MagicMock()
+        with (
+            patch.object(
+                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+            ),
+            patch.object(flow, "_query_setoption157", new_callable=AsyncMock, return_value=True),
         ):
             result = await flow.async_step_init(None)
 
@@ -487,6 +497,9 @@ class TestOptionsFlowDirect:
         mock_entry = self._create_mock_config_entry()
 
         flow = NeoPoolOptionsFlow()
+        flow.hass = MagicMock()
+        # Pre-set the setoption157_status so the save path doesn't try to query
+        flow._setoption157_status = True
         with patch.object(
             type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
         ):
@@ -754,18 +767,25 @@ class TestAutoConfigureNodeid:
         # Mock _wait_for_nodeid to return valid NodeID
         flow._wait_for_nodeid = AsyncMock(return_value="ABC123")
 
-        with patch(
-            "homeassistant.components.mqtt.async_publish",
-            new_callable=AsyncMock,
-        ) as mock_publish:
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+            ) as mock_publish,
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
+        ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
         assert result["success"] is True
         assert result["nodeid"] == "ABC123"
-        mock_publish.assert_called_once_with(
+        mock_publish.assert_called_with(
             mock_hass,
-            "cmnd/SmartPool/SetOption157",
-            "1",
+            "cmnd/SmartPool/TelePeriod",
+            "",
             qos=1,
             retain=False,
         )
@@ -778,9 +798,16 @@ class TestAutoConfigureNodeid:
         # Mock _wait_for_nodeid to return None (failure)
         flow._wait_for_nodeid = AsyncMock(return_value=None)
 
-        with patch(
-            "homeassistant.components.mqtt.async_publish",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
@@ -795,9 +822,16 @@ class TestAutoConfigureNodeid:
         # Mock _wait_for_nodeid to return "hidden"
         flow._wait_for_nodeid = AsyncMock(return_value="hidden")
 
-        with patch(
-            "homeassistant.components.mqtt.async_publish",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
+                new_callable=AsyncMock,
+                return_value=True,
+            ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
