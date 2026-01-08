@@ -22,6 +22,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONF_SETOPTION157,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
     DEFAULT_FAILURES_THRESHOLD,
     DEFAULT_OFFLINE_TIMEOUT,
@@ -503,16 +504,19 @@ class TestOptionsFlowDirect:
         with patch.object(
             type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
         ):
+            # Include CONF_SETOPTION157: True to match pre-set status (no change triggers MQTT)
             result = await flow.async_step_init(
                 {
                     CONF_ENABLE_REPAIR_NOTIFICATION: True,
                     CONF_FAILURES_THRESHOLD: 10,
                     CONF_OFFLINE_TIMEOUT: 300,
                     CONF_RECOVERY_SCRIPT: "script.pool_recovery",
+                    CONF_SETOPTION157: True,  # Match pre-set status to avoid MQTT operations
                 }
             )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
+        # CONF_SETOPTION157 is not saved in options (it's sent to device, not stored)
         assert result["data"] == {
             CONF_ENABLE_REPAIR_NOTIFICATION: True,
             CONF_FAILURES_THRESHOLD: 10,
