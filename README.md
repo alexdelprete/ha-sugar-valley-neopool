@@ -528,6 +528,122 @@ logger:
     custom_components.sugar_valley_neopool: debug
 ```
 
+After adding this configuration, restart Home Assistant for the changes to
+take effect.
+
+### Getting FULL Debug Logs
+
+When reporting issues, it's essential to provide **complete** debug logs.
+Follow these steps to capture a full debug log:
+
+#### Step 1: Enable Debug Logging (if not already done)
+
+Add the logger configuration shown above to your `configuration.yaml` and
+restart Home Assistant.
+
+#### Step 2: Clear Existing Logs
+
+Before reproducing the issue, clear your log file to make it easier to find
+relevant entries:
+
+1. Go to **Settings** > **System** > **Logs**
+1. Click **Clear** (top-right) to clear the current logs
+
+#### Step 3: Reproduce the Issue
+
+Perform the exact steps that cause the problem. For example:
+
+- If entities go unavailable, wait for it to happen
+- If a command fails, execute the command
+- If setup fails, try adding/reconfiguring the integration
+
+#### Step 4: Download the Full Log File
+
+**Option A: From the Home Assistant UI**
+
+1. Go to **Settings** > **System** > **Logs**
+1. Click **Download full log** (top-right, download icon)
+1. Save the `home-assistant.log` file
+
+**Option B: From the File System**
+
+The log file is located at:
+
+- **Home Assistant OS/Supervised**: `/config/home-assistant.log`
+- **Docker**: Inside your config volume, e.g., `/path/to/config/home-assistant.log`
+- **Core**: In your config directory, typically `~/.homeassistant/home-assistant.log`
+
+#### Step 5: Filter for Relevant Entries (Optional)
+
+To extract only NeoPool-related entries, use these commands:
+
+```bash
+# Linux/macOS
+grep "sugar_valley_neopool" home-assistant.log > neopool-debug.log
+
+# Windows PowerShell
+Select-String -Path home-assistant.log `
+  -Pattern "sugar_valley_neopool" | Out-File neopool-debug.log
+```
+
+#### What the Debug Log Contains
+
+With debug logging enabled, you'll see:
+
+- **MQTT subscriptions**: Topics being subscribed to
+- **MQTT messages**: Received sensor data and LWT status
+- **Entity updates**: State changes and value transformations
+- **Commands**: Outgoing MQTT commands
+- **Migration**: Entity migration process details
+- **Errors**: Detailed error messages with stack traces
+
+**Example debug log entries:**
+
+```text
+DEBUG [custom_components.sugar_valley_neopool.sensor]
+  Sensor water_temperature subscribed to tele/SmartPool/SENSOR
+
+DEBUG [custom_components.sugar_valley_neopool.entity]
+  Received MQTT message on tele/SmartPool/SENSOR
+
+DEBUG [custom_components.sugar_valley_neopool.sensor]
+  Sensor water_temperature updated: 28.5
+```
+
+### Temporary Debug Logging (Without Restart)
+
+You can enable debug logging temporarily without restarting Home Assistant:
+
+1. Go to **Developer Tools** > **Services**
+1. Select service `logger.set_level`
+1. Enter this YAML:
+
+   ```yaml
+   custom_components.sugar_valley_neopool: debug
+   ```
+
+1. Click **Call Service**
+
+> **Note**: This method only enables debug logging until the next Home
+> Assistant restart. For persistent debug logging, use the `configuration.yaml`
+> method.
+
+### Include MQTT Debug Logs (Advanced)
+
+For MQTT-related issues, you may also need MQTT debug logs:
+
+```yaml
+logger:
+  default: warning
+  logs:
+    custom_components.sugar_valley_neopool: debug
+    homeassistant.components.mqtt: debug
+```
+
+> **Warning**: MQTT debug logging can be very verbose. Only enable it when
+> specifically troubleshooting MQTT connectivity issues, and disable it
+> afterward.
+
 ### View and Download Diagnostics
 
 1. Go to **Settings** > **Devices & Services** > **Sugar Valley NeoPool**
@@ -559,8 +675,9 @@ When [opening an issue][issues], please include:
 1. **Home Assistant version** (Settings > About)
 1. **Integration version** (Settings > Devices & Services > Sugar Valley
    NeoPool)
-1. **Debug logs** with timestamps showing the error
-1. **Steps to reproduce** the issue
+1. **Full debug logs**: Follow the [Getting FULL Debug Logs](#getting-full-debug-logs)
+   section above
+1. **Steps to reproduce** the issue with exact actions taken
 
 ## Development
 
