@@ -685,9 +685,11 @@ class TestAutoConfigureNodeid:
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
-        mock_publish.assert_called_once()
-        call_args = mock_publish.call_args
-        assert "cmnd/SmartPool/SetOption157" in str(call_args)
+        # _auto_configure_nodeid publishes 2 commands: SetOption157 and TelePeriod
+        assert mock_publish.call_count == 2
+        # Verify SetOption157 command was published
+        all_calls = str(mock_publish.call_args_list)
+        assert "cmnd/SmartPool/SetOption157" in all_calls
         assert result["success"] is True
         assert result["nodeid"] == "NEW123"
 
