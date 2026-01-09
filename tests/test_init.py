@@ -63,6 +63,10 @@ class TestAsyncSetupEntry:
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 return_value=None,
             ),
+            patch(
+                "custom_components.sugar_valley_neopool.async_migrate_masked_unique_ids",
+                return_value=True,
+            ),
         ):
             result = await async_setup_entry(hass, entry)
 
@@ -115,6 +119,10 @@ class TestAsyncSetupEntry:
             patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.async_migrate_masked_unique_ids",
+                return_value=True,
             ),
         ):
             await async_setup_entry(hass, entry)
