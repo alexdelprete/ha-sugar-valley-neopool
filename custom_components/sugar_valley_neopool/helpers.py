@@ -258,6 +258,12 @@ async def async_query_setoption157(hass: HomeAssistant, mqtt_topic: str) -> bool
 
     Shared helper function used by ConfigFlow, OptionsFlow, and migration.
 
+    Note: Tasmota can respond on different topics depending on SetOption4:
+    - SetOption4 OFF (default): Response on stat/{topic}/RESULT
+    - SetOption4 ON: Response on stat/{topic}/SETOPTION157
+
+    We subscribe to both topics to handle either configuration.
+
     Args:
         hass: Home Assistant instance
         mqtt_topic: The MQTT topic prefix for the device
@@ -298,15 +304,27 @@ async def async_query_setoption157(hass: HomeAssistant, mqtt_topic: str) -> bool
         except (json.JSONDecodeError, AttributeError, UnicodeDecodeError) as err:
             _LOGGER.debug("Failed to parse SetOption157 response: %s", err)
 
-    # Subscribe to result topic
+    # Subscribe to both possible response topics:
+    # 1. stat/{topic}/RESULT - default Tasmota behavior (SetOption4 OFF)
+    # 2. stat/{topic}/SETOPTION157 - when SetOption4 ON (differentiated topics)
     result_topic = f"stat/{mqtt_topic}/RESULT"
-    _LOGGER.debug("Subscribing to %s for SetOption157 response", result_topic)
-    unsubscribe = await mqtt.async_subscribe(hass, result_topic, message_received, qos=1)
+    setoption_topic = f"stat/{mqtt_topic}/SETOPTION157"
+
+    _LOGGER.debug(
+        "Subscribing to %s and %s for SetOption157 response",
+        result_topic,
+        setoption_topic,
+    )
+
+    unsubscribe_result = await mqtt.async_subscribe(hass, result_topic, message_received, qos=1)
+    unsubscribe_setoption = await mqtt.async_subscribe(
+        hass, setoption_topic, message_received, qos=1
+    )
 
     try:
-        # Small delay to ensure subscription is established before publishing
+        # Small delay to ensure subscriptions are established before publishing
         # This addresses a race condition where the response arrives before
-        # the subscription is fully ready
+        # the subscriptions are fully ready
         await asyncio.sleep(0.2)
 
         # Send query command (empty payload queries current value)
@@ -320,7 +338,8 @@ async def async_query_setoption157(hass: HomeAssistant, mqtt_topic: str) -> bool
         except TimeoutError:
             _LOGGER.warning("Timeout waiting for SetOption157 response from %s", mqtt_topic)
     finally:
-        unsubscribe()
+        unsubscribe_result()
+        unsubscribe_setoption()
 
     return result
 
