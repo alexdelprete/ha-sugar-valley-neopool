@@ -170,6 +170,23 @@ def normalize_nodeid(nodeid: str | None) -> str:
     return nodeid.replace(" ", "").upper()
 
 
+def is_nodeid_masked(nodeid: str | None) -> bool:
+    """Check if a NodeID from SENSOR data is masked (SetOption157 disabled).
+
+    When SetOption157 is OFF, NodeID appears as 'XXXX XXXX XXXX XXXX XXXX 3435'.
+    When SetOption157 is ON, NodeID appears as '4C7525BFB344' (clean hex).
+
+    Args:
+        nodeid: The NodeID value from NeoPool.Powerunit.NodeID.
+
+    Returns:
+        True if masked (contains XXXX or spaces), False if clean hex.
+    """
+    if not nodeid:
+        return True  # No NodeID = treat as masked
+    return "xxxx" in nodeid.lower() or " " in nodeid
+
+
 def is_masked_unique_id(unique_id: str) -> bool:
     """Check if a unique_id contains a masked NodeID pattern.
 
@@ -253,97 +270,6 @@ def extract_entity_key_from_masked_unique_id(unique_id: str) -> str | None:
     return None
 
 
-async def async_query_setoption157(hass: HomeAssistant, mqtt_topic: str) -> bool | None:
-    """Query SetOption157 status from Tasmota via MQTT.
-
-    Shared helper function used by ConfigFlow, OptionsFlow, and migration.
-
-    Note: Tasmota can respond on different topics depending on SetOption4:
-    - SetOption4 OFF (default): Response on stat/{topic}/RESULT
-    - SetOption4 ON: Response on stat/{topic}/SETOPTION157
-
-    We subscribe to both topics to handle either configuration.
-
-    Args:
-        hass: Home Assistant instance
-        mqtt_topic: The MQTT topic prefix for the device
-
-    Returns:
-        True if enabled, False if disabled, None if query failed.
-    """
-    # Import mqtt here to avoid circular imports
-    from homeassistant.components import mqtt  # noqa: PLC0415
-    from homeassistant.core import callback  # noqa: PLC0415
-
-    if not mqtt_topic:
-        _LOGGER.warning("No MQTT topic provided, cannot query SetOption157")
-        return None
-
-    result: bool | None = None
-    event = asyncio.Event()
-
-    @callback
-    def message_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SetOption157 response."""
-        nonlocal result
-        try:
-            # Handle bytes/bytearray payload
-            if isinstance(msg.payload, (bytes, bytearray)):
-                payload_str = msg.payload.decode("utf-8")
-            else:
-                payload_str = msg.payload
-
-            payload = json.loads(payload_str)
-            _LOGGER.debug("Received MQTT message on %s: %s", msg.topic, payload)
-            # Response format: {"SetOption157":"ON"} or {"SetOption157":"OFF"}
-            so157_value = payload.get("SetOption157")
-            if so157_value is not None:
-                result = str(so157_value).upper() == "ON"
-                _LOGGER.debug("SetOption157 status for %s: %s", mqtt_topic, result)
-                event.set()
-        except (json.JSONDecodeError, AttributeError, UnicodeDecodeError) as err:
-            _LOGGER.debug("Failed to parse SetOption157 response: %s", err)
-
-    # Subscribe to both possible response topics:
-    # 1. stat/{topic}/RESULT - default Tasmota behavior (SetOption4 OFF)
-    # 2. stat/{topic}/SETOPTION157 - when SetOption4 ON (differentiated topics)
-    result_topic = f"stat/{mqtt_topic}/RESULT"
-    setoption_topic = f"stat/{mqtt_topic}/SETOPTION157"
-
-    _LOGGER.debug(
-        "Subscribing to %s and %s for SetOption157 response",
-        result_topic,
-        setoption_topic,
-    )
-
-    unsubscribe_result = await mqtt.async_subscribe(hass, result_topic, message_received, qos=1)
-    unsubscribe_setoption = await mqtt.async_subscribe(
-        hass, setoption_topic, message_received, qos=1
-    )
-
-    try:
-        # Small delay to ensure subscriptions are established before publishing
-        # This addresses a race condition where the response arrives before
-        # the subscriptions are fully ready
-        await asyncio.sleep(0.2)
-
-        # Send query command (empty payload queries current value)
-        command_topic = f"cmnd/{mqtt_topic}/SetOption157"
-        _LOGGER.debug("Publishing SetOption157 query to %s", command_topic)
-        await mqtt.async_publish(hass, command_topic, "", qos=1, retain=False)
-
-        # Wait for response with timeout
-        try:
-            await asyncio.wait_for(event.wait(), timeout=5.0)
-        except TimeoutError:
-            _LOGGER.warning("Timeout waiting for SetOption157 response from %s", mqtt_topic)
-    finally:
-        unsubscribe_result()
-        unsubscribe_setoption()
-
-    return result
-
-
 async def async_set_setoption157(hass: HomeAssistant, mqtt_topic: str, enable: bool) -> bool:
     """Set SetOption157 on Tasmota device via MQTT.
 
@@ -373,3 +299,76 @@ async def async_set_setoption157(hass: HomeAssistant, mqtt_topic: str, enable: b
     else:
         _LOGGER.debug("Sent SetOption157 %s to %s", payload, mqtt_topic)
         return True
+
+
+async def async_get_setoption157_from_sensor(
+    hass: HomeAssistant, mqtt_topic: str, wait_timeout: float = 10.0
+) -> bool | None:
+    """Determine SetOption157 status by checking NodeID in SENSOR data.
+
+    This is more reliable than querying SetOption157 directly because:
+    1. SENSOR data is always published (TelePeriod triggers it)
+    2. We verify the actual effect, not just the setting value
+    3. Works regardless of Tasmota's SetOption4 configuration
+
+    Args:
+        hass: Home Assistant instance
+        mqtt_topic: The MQTT topic prefix for the device
+        wait_timeout: Maximum time to wait for SENSOR data (seconds)
+
+    Returns:
+        True if SO157 is ON (NodeID unmasked), False if OFF (masked), None if no data.
+    """
+    # Import mqtt here to avoid circular imports
+    from homeassistant.components import mqtt  # noqa: PLC0415
+    from homeassistant.core import callback  # noqa: PLC0415
+
+    if not mqtt_topic:
+        _LOGGER.warning("No MQTT topic provided, cannot check SetOption157")
+        return None
+
+    nodeid_value: str | None = None
+    event = asyncio.Event()
+
+    @callback
+    def message_received(msg: mqtt.ReceiveMessage) -> None:
+        """Handle SENSOR message and extract NodeID."""
+        nonlocal nodeid_value
+        try:
+            if isinstance(msg.payload, (bytes, bytearray)):
+                payload_str = msg.payload.decode("utf-8")
+            else:
+                payload_str = msg.payload
+
+            payload = json.loads(payload_str)
+            nodeid = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
+            if nodeid is not None:
+                nodeid_value = str(nodeid)
+                _LOGGER.debug("Got NodeID from SENSOR: %s", nodeid_value)
+                event.set()
+        except (json.JSONDecodeError, UnicodeDecodeError) as err:
+            _LOGGER.debug("Failed to parse SENSOR payload: %s", err)
+
+    # Subscribe to SENSOR topic
+    sensor_topic = f"tele/{mqtt_topic}/SENSOR"
+    unsubscribe = await mqtt.async_subscribe(hass, sensor_topic, message_received, qos=1)
+
+    try:
+        # Trigger immediate telemetry
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
+
+        # Wait for SENSOR data
+        try:
+            await asyncio.wait_for(event.wait(), timeout=wait_timeout)
+        except TimeoutError:
+            _LOGGER.debug("Timeout waiting for SENSOR data from %s", mqtt_topic)
+            return None
+    finally:
+        unsubscribe()
+
+    if nodeid_value is None:
+        return None
+
+    # SO157 ON = NodeID unmasked (no XXXX, no spaces)
+    # SO157 OFF = NodeID masked (contains XXXX or spaces)
+    return not is_nodeid_masked(nodeid_value)

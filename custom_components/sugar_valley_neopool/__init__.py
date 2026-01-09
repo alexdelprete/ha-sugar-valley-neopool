@@ -36,7 +36,6 @@ from .const import (
     YAML_TO_INTEGRATION_KEY_MAP,
 )
 from .helpers import (
-    async_query_setoption157,
     async_set_setoption157,
     extract_entity_key_from_masked_unique_id,
     get_nested_value,
@@ -494,38 +493,12 @@ async def async_migrate_masked_unique_ids(
         len(masked_entities),
     )
 
-    # Step 2: Check SetOption157 status
-    _LOGGER.debug("Querying SetOption157 status from %s", mqtt_topic)
-    setoption157_status = await async_query_setoption157(hass, mqtt_topic)
-    _LOGGER.debug("SetOption157 status: %s", setoption157_status)
+    # Step 2: Ensure SetOption157 is enabled (always send, don't query)
+    # This is simpler and more reliable than querying - we verify via SENSOR data
+    _LOGGER.info("Sending SetOption157 1 to %s to enable NodeID visibility", mqtt_topic)
+    await async_set_setoption157(hass, mqtt_topic, enable=True)
 
-    if setoption157_status is None:
-        _LOGGER.error(
-            "Could not query SetOption157 status from %s, migration aborted",
-            mqtt_topic,
-        )
-        return False
-
-    # Step 3: Enable SetOption157 if disabled
-    if not setoption157_status:
-        _LOGGER.info("SetOption157 is disabled, enabling it to get real NodeID")
-
-        if not await async_set_setoption157(hass, mqtt_topic, enable=True):
-            _LOGGER.error("Failed to enable SetOption157, migration aborted")
-            return False
-
-        # Wait for Tasmota to process the command
-        await asyncio.sleep(1)
-
-        # Verify SetOption157 is now enabled
-        verified_status = await async_query_setoption157(hass, mqtt_topic)
-        if not verified_status:
-            _LOGGER.error("SetOption157 verification failed after enabling, migration aborted")
-            return False
-
-        _LOGGER.info("SetOption157 successfully enabled")
-
-    # Step 4: Trigger telemetry and wait for real NodeID
+    # Step 3: Trigger telemetry and wait for real NodeID
     _LOGGER.debug("Waiting for real NodeID from telemetry on %s", mqtt_topic)
     raw_nodeid = await _wait_for_real_nodeid(hass, mqtt_topic)
     _LOGGER.debug("Raw NodeID from telemetry: %s", raw_nodeid)
@@ -543,7 +516,7 @@ async def async_migrate_masked_unique_ids(
     )
     _LOGGER.info("Got real NodeID: %s", real_nodeid)
 
-    # Step 5: Update entity unique_ids
+    # Step 4: Update entity unique_ids
     _LOGGER.debug("Starting entity unique_id migration for %d entities", len(masked_entities))
     migrated_count = 0
     for entity in masked_entities:
@@ -598,7 +571,7 @@ async def async_migrate_masked_unique_ids(
                 err,
             )
 
-    # Step 6: Update config entry data with real NodeID
+    # Step 5: Update config entry data with real NodeID
     if current_nodeid != real_nodeid:
         new_data = {**entry.data, CONF_NODEID: real_nodeid}
         hass.config_entries.async_update_entry(entry, data=new_data)
@@ -610,7 +583,7 @@ async def async_migrate_masked_unique_ids(
             real_nodeid,
         )
 
-    # Step 7: Update device registry identifier
+    # Step 6: Update device registry identifier
     device_registry = dr.async_get(hass)
     old_device = device_registry.async_get_device(identifiers={(DOMAIN, current_nodeid)})
     if old_device and current_nodeid != real_nodeid:

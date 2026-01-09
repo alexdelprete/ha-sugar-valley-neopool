@@ -56,7 +56,12 @@ from .const import (
     MIN_FAILURES_THRESHOLD,
     MIN_OFFLINE_TIMEOUT,
 )
-from .helpers import async_query_setoption157, get_nested_value, normalize_nodeid, validate_nodeid
+from .helpers import (
+    async_get_setoption157_from_sensor,
+    get_nested_value,
+    normalize_nodeid,
+    validate_nodeid,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -973,23 +978,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             retain=False,
         )
 
-        # Step 2: Wait for Tasmota to process
-        await asyncio.sleep(1)
+        _LOGGER.info("SetOption157 command sent, triggering telemetry for NodeID...")
 
-        # Step 3: Verify SetOption157 was actually set
-        verified_status = await async_query_setoption157(self.hass, device_topic)
-        if verified_status is not True:
-            _LOGGER.error(
-                "SetOption157 verification failed. Expected True, got %s", verified_status
-            )
-            return {
-                "success": False,
-                "error": "Failed to enable SetOption157. Please manually set SetOption157 1 in Tasmota console",
-            }
-
-        _LOGGER.info("SetOption157 successfully enabled, triggering telemetry for NodeID...")
-
-        # Step 4: Trigger immediate telemetry response by sending TelePeriod command
+        # Step 2: Trigger immediate telemetry response by sending TelePeriod command
         # This forces Tasmota to send a SENSOR message immediately
         await mqtt.async_publish(
             self.hass,
@@ -999,7 +990,8 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             retain=False,
         )
 
-        # Wait for NodeID in the telemetry message
+        # Step 3: Wait for NodeID in the telemetry message
+        # The _wait_for_nodeid validates the NodeID (rejects masked ones)
         nodeid = await self._wait_for_nodeid(device_topic)
 
         if not validate_nodeid(nodeid):
@@ -1191,10 +1183,14 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
 
     _setoption157_status: bool | None = None
 
-    async def _query_setoption157(self) -> bool | None:
-        """Query SetOption157 status from Tasmota via MQTT."""
+    async def _get_setoption157_status(self) -> bool | None:
+        """Get SetOption157 status by checking NodeID in SENSOR data.
+
+        Returns True if SO157 is ON (NodeID unmasked), False if OFF (masked),
+        None if device is offline or no data received.
+        """
         mqtt_topic = self.config_entry.data.get(CONF_DISCOVERY_PREFIX, "")
-        return await async_query_setoption157(self.hass, mqtt_topic)
+        return await async_get_setoption157_from_sensor(self.hass, mqtt_topic)
 
     async def _set_setoption157(self, enabled: bool) -> bool:
         """Set SetOption157 on Tasmota via MQTT.
@@ -1229,10 +1225,8 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                 if new_setoption157 != self._setoption157_status:
                     # Send the command to change SetOption157
                     if await self._set_setoption157(new_setoption157):
-                        # Wait a moment for Tasmota to process
-                        await asyncio.sleep(1)
-                        # Verify the change was successful
-                        verified_status = await self._query_setoption157()
+                        # Verify by checking NodeID in SENSOR data
+                        verified_status = await self._get_setoption157_status()
                         if verified_status != new_setoption157:
                             _LOGGER.warning(
                                 "SetOption157 change not confirmed. Expected %s, got %s",
@@ -1266,8 +1260,8 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
             )
             return self.async_create_entry(data=options_to_save)
 
-        # Query current SetOption157 status from device
-        self._setoption157_status = await self._query_setoption157()
+        # Get current SetOption157 status by checking NodeID in SENSOR data
+        self._setoption157_status = await self._get_setoption157_status()
 
         return await self._show_options_form()
 
