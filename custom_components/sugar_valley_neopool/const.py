@@ -68,6 +68,7 @@ TOPIC_SENSOR: Final = "tele/{device}/SENSOR"
 TOPIC_LWT: Final = "tele/{device}/LWT"
 TOPIC_COMMAND: Final = "cmnd/{device}/{command}"
 TOPIC_RESULT: Final = "stat/{device}/RESULT"
+TOPIC_SO: Final = "stat/{device}/SO"  # Response topic for SetOption queries
 
 # Availability payloads
 PAYLOAD_ONLINE: Final = "Online"
@@ -153,6 +154,10 @@ CMD_PH_MAX: Final = "NPpHMax"
 CMD_REDOX: Final = "NPRedox"
 CMD_HYDROLYSIS: Final = "NPHydrolysis"
 CMD_ESCAPE: Final = "NPEscape"
+
+# Tasmota SetOption157 commands (for NodeID visibility)
+CMD_SETOPTION157: Final = "SetOption157"  # Set command (payload: 1 or 0)
+CMD_SO157: Final = "SO157"  # Query command (no payload)
 
 # JSON paths for sensor data extraction
 JSON_PATH_TYPE: Final = "NeoPool.Type"

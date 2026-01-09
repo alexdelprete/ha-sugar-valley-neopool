@@ -41,7 +41,6 @@ from .const import (
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
     CONF_REGENERATE_ENTITY_IDS,
-    CONF_SETOPTION157,
     CONF_UNIQUE_ID_PREFIX,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
@@ -57,8 +56,10 @@ from .const import (
     MIN_OFFLINE_TIMEOUT,
 )
 from .helpers import (
-    async_get_setoption157_from_sensor,
+    async_ensure_setoption157_enabled,
+    async_query_setoption157,
     get_nested_value,
+    is_nodeid_masked,
     normalize_nodeid,
     validate_nodeid,
 )
@@ -963,25 +964,25 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _auto_configure_nodeid(self, device_topic: str) -> dict[str, Any]:
         """Auto-configure Tasmota SetOption157 to enable NodeID.
 
+        Ensures SO157 is ON (send + verify via stat/{topic}/SO), then retrieves
+        the unmasked NodeID from SENSOR data.
+
         Returns dict with 'success' boolean and optionally 'nodeid' or 'error'.
         """
-        _LOGGER.warning(
-            "NodeID is hidden/masked. Attempting to configure Tasmota with SetOption157 1"
+        _LOGGER.info(
+            "NodeID is hidden/masked. Ensuring SetOption157 is enabled for %s", device_topic
         )
 
-        # Step 1: Send command to enable SetOption157
-        await mqtt.async_publish(
-            self.hass,
-            f"cmnd/{device_topic}/SetOption157",
-            "1",
-            qos=1,
-            retain=False,
-        )
+        # Step 1: Ensure SetOption157 is enabled (send + verify)
+        so157_enabled = await async_ensure_setoption157_enabled(self.hass, device_topic)
+        if not so157_enabled:
+            return {
+                "success": False,
+                "error": "Failed to enable SetOption157. Device may be offline or not responding.",
+            }
 
-        _LOGGER.info("SetOption157 command sent, triggering telemetry for NodeID...")
-
-        # Step 2: Trigger immediate telemetry response by sending TelePeriod command
-        # This forces Tasmota to send a SENSOR message immediately
+        # Step 2: Trigger telemetry to get the now-unmasked NodeID
+        _LOGGER.info("SetOption157 enabled, triggering telemetry for NodeID...")
         await mqtt.async_publish(
             self.hass,
             f"cmnd/{device_topic}/TelePeriod",
@@ -991,16 +992,22 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         # Step 3: Wait for NodeID in the telemetry message
-        # The _wait_for_nodeid validates the NodeID (rejects masked ones)
         nodeid = await self._wait_for_nodeid(device_topic)
 
         if not validate_nodeid(nodeid):
             return {
                 "success": False,
-                "error": "SetOption157 enabled but NodeID not received. Please try again or check Tasmota console",
+                "error": "SetOption157 enabled but NodeID still masked or not received.",
             }
 
-        _LOGGER.info("Successfully configured Tasmota SetOption157 1. NodeID: %s", nodeid)
+        # Step 4: Verify NodeID is actually unmasked
+        if is_nodeid_masked(nodeid):
+            return {
+                "success": False,
+                "error": f"NodeID '{nodeid}' is still masked. SetOption157 may not have taken effect.",
+            }
+
+        _LOGGER.info("Successfully configured SetOption157. NodeID: %s", nodeid)
         return {"success": True, "nodeid": nodeid}
 
     async def _wait_for_nodeid(self, device_topic: str, timeout_seconds: int = 10) -> str | None:
@@ -1184,83 +1191,27 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
     _setoption157_status: bool | None = None
 
     async def _get_setoption157_status(self) -> bool | None:
-        """Get SetOption157 status by checking NodeID in SENSOR data.
+        """Get SetOption157 status via direct MQTT query.
 
-        Returns True if SO157 is ON (NodeID unmasked), False if OFF (masked),
-        None if device is offline or no data received.
+        Returns True if SO157 is ON, False if OFF, None if device is offline.
         """
         mqtt_topic = self.config_entry.data.get(CONF_DISCOVERY_PREFIX, "")
-        return await async_get_setoption157_from_sensor(self.hass, mqtt_topic)
-
-    async def _set_setoption157(self, enabled: bool) -> bool:
-        """Set SetOption157 on Tasmota via MQTT.
-
-        Returns True if command was sent successfully.
-        """
-        mqtt_topic = self.config_entry.data.get(CONF_DISCOVERY_PREFIX, "")
-        if not mqtt_topic:
-            _LOGGER.warning("No MQTT topic configured, cannot set SetOption157")
-            return False
-
-        command_topic = f"cmnd/{mqtt_topic}/SetOption157"
-        payload = "1" if enabled else "0"
-
-        try:
-            await mqtt.async_publish(self.hass, command_topic, payload, qos=1, retain=False)
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.error("Failed to set SetOption157: %s", err)
-            return False
-        else:
-            _LOGGER.info("SetOption157 set to %s", payload)
-            return True
+        return await async_query_setoption157(self.hass, mqtt_topic)
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
-        errors: dict[str, str] = {}
-
         if user_input is not None:
-            # Handle SetOption157 change
-            new_setoption157 = user_input.get(CONF_SETOPTION157, False)
-            if self._setoption157_status is not None:
-                if new_setoption157 != self._setoption157_status:
-                    # Send the command to change SetOption157
-                    if await self._set_setoption157(new_setoption157):
-                        # Verify by checking NodeID in SENSOR data
-                        verified_status = await self._get_setoption157_status()
-                        if verified_status != new_setoption157:
-                            _LOGGER.warning(
-                                "SetOption157 change not confirmed. Expected %s, got %s",
-                                new_setoption157,
-                                verified_status,
-                            )
-                            errors["base"] = "setoption157_change_failed"
-                        else:
-                            _LOGGER.info(
-                                "SetOption157 successfully changed to %s", new_setoption157
-                            )
-                            self._setoption157_status = verified_status
-                    else:
-                        errors["base"] = "setoption157_change_failed"
-
-            # If there are errors, show the form again
-            if errors:
-                return await self._show_options_form(errors)
-
-            # Remove setoption157 from options (it's not stored, just sent to device)
-            options_to_save = {k: v for k, v in user_input.items() if k != CONF_SETOPTION157}
-
             _LOGGER.debug(
                 "Options updated: enable_repair=%s, failures_threshold=%s, "
-                "offline_timeout=%s, recovery_script=%s, setoption157=%s",
+                "offline_timeout=%s, recovery_script=%s",
                 user_input.get(CONF_ENABLE_REPAIR_NOTIFICATION),
                 user_input.get(CONF_FAILURES_THRESHOLD),
                 user_input.get(CONF_OFFLINE_TIMEOUT),
                 user_input.get(CONF_RECOVERY_SCRIPT),
-                new_setoption157,
             )
-            return self.async_create_entry(data=options_to_save)
+            return self.async_create_entry(data=user_input)
 
-        # Get current SetOption157 status by checking NodeID in SENSOR data
+        # Get current SetOption157 status for informational display only
         self._setoption157_status = await self._get_setoption157_status()
 
         return await self._show_options_form()
@@ -1279,46 +1230,38 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
         recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
         offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
 
-        # Build description placeholders for warning
+        # Build description placeholders for SO157 status info
+        # SO157 is now enforced automatically, this is just informational
         description_placeholders: dict[str, str] = {}
-        if self._setoption157_status is False:
-            description_placeholders["setoption157_warning"] = (
-                "\n\n⚠️ **Warning**: SetOption157 is currently **disabled** on your "
-                "Tasmota device. This integration requires it to be enabled for proper "
-                "NodeID detection. Enable the checkbox below to fix this."
-            )
-        elif self._setoption157_status is None:
-            description_placeholders["setoption157_warning"] = (
-                "\n\n⚠️ **Warning**: Could not query SetOption157 status from the device. "
-                "The device may be offline."
+        if self._setoption157_status is True:
+            description_placeholders["setoption157_status"] = "✅ SetOption157 is enabled"
+        elif self._setoption157_status is False:
+            description_placeholders["setoption157_status"] = (
+                "⚠️ SetOption157 is disabled. It will be automatically enabled "
+                "when SENSOR data is received."
             )
         else:
-            description_placeholders["setoption157_warning"] = ""
+            description_placeholders["setoption157_status"] = (
+                "⚠️ Could not query SetOption157 status. Device may be offline."
+            )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
                 {
-                    # 1. SetOption157 (Tasmota setting for NodeID visibility)
-                    vol.Required(
-                        CONF_SETOPTION157,
-                        default=self._setoption157_status
-                        if self._setoption157_status is not None
-                        else False,
-                    ): cv.boolean,
-                    # 2. Recovery script (runs when device goes offline after threshold)
+                    # 1. Recovery script (runs when device goes offline after threshold)
                     vol.Optional(
                         CONF_RECOVERY_SCRIPT,
                         default=recovery_script,
                     ): EntitySelector(
                         EntitySelectorConfig(domain="script"),
                     ),
-                    # 3. Enable repair notifications checkbox
+                    # 2. Enable repair notifications checkbox
                     vol.Required(
                         CONF_ENABLE_REPAIR_NOTIFICATION,
                         default=enable_repair,
                     ): cv.boolean,
-                    # 4. Failures threshold as input box (not slider)
+                    # 3. Failures threshold as input box (not slider)
                     vol.Required(
                         CONF_FAILURES_THRESHOLD,
                         default=failures_threshold,
@@ -1329,7 +1272,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                             mode=NumberSelectorMode.BOX,
                         )
                     ),
-                    # 5. Offline timeout (how long device must be offline before notification)
+                    # 4. Offline timeout (how long device must be offline before notification)
                     vol.Required(
                         CONF_OFFLINE_TIMEOUT,
                         default=offline_timeout,

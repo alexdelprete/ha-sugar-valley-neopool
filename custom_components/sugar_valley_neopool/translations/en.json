@@ -109,25 +109,20 @@
     "step": {
       "init": {
         "title": "NeoPool Options",
-        "description": "Configure Tasmota device settings and runtime options.{setoption157_warning}\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n\n- `device_name` : Device name\n- `mqtt_topic` : MQTT topic\n- `nodeid` : Device NodeID\n- `failures_count` : Number of consecutive failures",
+        "description": "Configure runtime options for your NeoPool device.\n\n{setoption157_status}\n\n**Recovery Script Variables:**\nWhen configured, the recovery script receives these variables:\n\n- `device_name` : Device name\n- `mqtt_topic` : MQTT topic\n- `nodeid` : Device NodeID\n- `failures_count` : Number of consecutive failures",
         "data": {
-          "setoption157": "Show NeoPool sensitive data (SetOption157)",
           "recovery_script": "Recovery script (optional)",
           "enable_repair_notification": "Enable repair notifications",
           "failures_threshold": "Failures before notification (1-10)",
           "offline_timeout": "Offline timeout (seconds)"
         },
         "data_description": {
-          "setoption157": "Enable Tasmota SetOption157 to show the full NodeID. Required for this integration to work properly.",
           "recovery_script": "Script to run when device is offline for too long",
           "enable_repair_notification": "Create a repair issue when device goes offline",
           "failures_threshold": "Number of consecutive LWT offline messages before triggering notifications",
           "offline_timeout": "How long the device must be offline before triggering notifications"
         }
       }
-    },
-    "error": {
-      "setoption157_change_failed": "Failed to change SetOption157. The device may be offline or not responding."
     }
   },
   "issues": {
