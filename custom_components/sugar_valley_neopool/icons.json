@@ -34,6 +34,12 @@
       "hydrolysis_runtime_part": {
         "default": "mdi:timer-outline"
       },
+      "hydrolysis_runtime_pol1": {
+        "default": "mdi:timer-outline"
+      },
+      "hydrolysis_runtime_pol2": {
+        "default": "mdi:timer-outline"
+      },
       "hydrolysis_polarity_changes": {
         "default": "mdi:swap-horizontal"
       },
@@ -67,8 +73,14 @@
       "connection_no_response": {
         "default": "mdi:source-branch-check"
       },
+      "connection_out_of_range": {
+        "default": "mdi:alert-octagon-outline"
+      },
       "powerunit_nodeid": {
         "default": "mdi:information-outline"
+      },
+      "boost_mode": {
+        "default": "mdi:rocket-launch"
       }
     },
     "binary_sensor": {
@@ -85,7 +97,7 @@
         "default": "mdi:water-outline"
       },
       "modules_conductivity": {
-        "default": "mdi:flash-triangle"
+        "default": "mdi:water-sync"
       },
       "modules_ionization": {
         "default": "mdi:atom"
