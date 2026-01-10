@@ -184,7 +184,7 @@ def is_nodeid_masked(nodeid: str | None) -> bool:
     """
     if not nodeid:
         return True  # No NodeID = treat as masked
-    return "xxxx" in nodeid.lower() or " " in nodeid
+    return "xxxx xxxx" in nodeid.lower()
 
 
 def is_masked_unique_id(unique_id: str) -> bool:
