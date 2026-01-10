@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-01-10
+
+### Fixed
+
+- **SetOption157 MQTT communication reliability**: Complete overhaul of SO157
+  query/set logic to fix timeout issues:
+  - Fixed response topic: now correctly subscribes to `stat/{topic}/SO` instead
+    of `stat/{topic}/RESULT` or `stat/{topic}/SETOPTION157`
+  - Fixed command topic: uses short form `cmnd/{topic}/SO157` for queries
+  - Added proper `bytes`/`bytearray` payload handling in MQTT message callbacks
+  - Added 0.2s delay after subscription to prevent race conditions
+  - Added `UnicodeDecodeError` handling for malformed payloads
+
+### Added
+
+- **Runtime SetOption157 enforcement**: Integration now monitors SENSOR data and
+  automatically re-enables SO157 if NodeID becomes masked (e.g., if someone
+  disables it via Tasmota console). This ensures NodeID visibility is maintained.
+- **New helper functions**:
+  - `is_nodeid_masked()`: Detects masked NodeID patterns (contains "XXXX" or spaces)
+  - `async_query_setoption157()`: Queries current SO157 status via MQTT
+  - `async_ensure_setoption157_enabled()`: Send+verify pattern with retries
+
+### Changed
+
+- **Removed SO157 toggle from Options flow**: SetOption157 is now automatically
+  enforced by the integration - no manual control needed. The options flow now
+  only displays the current SO157 status as informational text.
+- Simplified options flow description text across all 10 language files
+
+### Removed
+
+- `setoption157` checkbox from options flow (auto-enforced now)
+- `setoption157_change_failed` error message (no longer applicable)
+
 ## [0.2.11] - 2026-01-09
 
 ### Added
