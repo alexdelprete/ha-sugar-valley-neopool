@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-01-10
+
+### Fixed
+
+- **NodeID validation false positive**: Fixed `is_nodeid_masked()` incorrectly
+  identifying valid unmasked NodeIDs as masked. Valid NodeIDs from Tasmota contain
+  spaces between hex groups (e.g., `0026 0051 5443 5016 2036 3435`) which was
+  triggering the mask detection. Changed detection from `"xxxx" in nodeid or " " in nodeid`
+  to `"xxxx xxxx" in nodeid` pattern matching.
+
+### Changed
+
+- **Consolidated NodeID validation**: Refactored `validate_nodeid()` to use
+  `is_nodeid_masked()` internally, creating a single source of truth for
+  NodeID validation logic.
+
+### Added
+
+- **Missing entity icons**: Added icons for `boost_mode`, `connection_out_of_range`,
+  `hydrolysis_runtime_pol1`, and `hydrolysis_runtime_pol2` sensors in `icons.json`.
+- Changed `modules_conductivity` icon from `mdi:flash-triangle` to `mdi:water-sync`.
+
 ## [0.2.12] - 2026-01-10
 
 ### Fixed
