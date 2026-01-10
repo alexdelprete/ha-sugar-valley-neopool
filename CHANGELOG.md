@@ -15,6 +15,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   These entities cannot be migrated cross-domain but are no longer needed since
   the integration's switch entities provide both state and control.
 
+### Documentation
+
+- **Startup validation and runtime monitoring**: Added comprehensive README
+  documentation explaining the validation/reconciliation process that runs on
+  every Home Assistant startup and the runtime monitoring (SetOption157
+  enforcement and device availability).
+
 ## [0.2.13] - 2026-01-10
 
 ### Fixed

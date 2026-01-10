@@ -315,6 +315,67 @@ Migrated entity sensor.neopool_ph_data: neopool_mqtt_XXXX...3435_ph_data -> neop
 Migration complete: 45/45 entities migrated
 ```
 
+### Startup Validation and Runtime Monitoring
+
+The integration performs automatic validation and monitoring to ensure
+reliable operation.
+
+#### Startup Validation (Every Restart)
+
+On every Home Assistant startup, the integration runs a validation/reconciliation
+process to ensure everything is properly configured:
+
+| Check | Description | Action if Failed |
+|-------|-------------|------------------|
+| **Masked NodeID Detection** | Scans entities for masked IDs ("XXXX") | Enables SO157, migrates entities |
+| **Config Entry NodeID** | Verifies stored NodeID is unmasked | Updates config entry |
+| **Entity ID Mapping** | Checks YAML-migrated entity_ids | Renames to preserve original IDs |
+| **Orphaned Entity Cleanup** | Finds replaced YAML entities | Deletes orphaned binary sensors |
+| **Device Registry** | Verifies device uses real NodeID | Updates device identifier |
+
+**Why run on every startup?**
+
+- Users might restore backups with old entity configurations
+- Tasmota configuration might change (SO157 disabled externally)
+- Safer to always verify than assume persisted state is correct
+- Operations are idempotent (running multiple times produces same result)
+
+After the first successful validation, subsequent startups quickly verify
+everything is aligned and log debug messages like "already correct" or
+"migration not needed".
+
+#### Runtime Monitoring (While Running)
+
+While Home Assistant is running, the integration actively monitors:
+
+| Monitor | Description | Action |
+|---------|-------------|--------|
+| **SetOption157 Enforcement** | Monitors SENSOR for masked NodeID | Re-enables SO157 automatically |
+| **Device Availability** | Subscribes to LWT topic | Marks entities unavailable |
+
+**SetOption157 Runtime Enforcement:**
+
+The integration subscribes to `tele/{topic}/SENSOR` and checks every message
+for a masked NodeID. If someone disables SO157 via Tasmota console, the
+integration detects the masked NodeID pattern and automatically sends
+`SetOption157 1` to re-enable it.
+
+```text
+# Example log when enforcement triggers:
+WARNING Detected masked NodeID 'XXXX XXXX XXXX XXXX 3435' in SENSOR data,
+        enforcing SetOption157
+INFO Successfully enforced SetOption157 for SmartPool
+```
+
+**What is NOT monitored at runtime:**
+
+- Entity unique_id alignment (requires restart)
+- Entity_id mapping correctness (requires restart)
+- Orphaned entities (requires restart)
+
+These checks only run at startup because entity registry changes require
+a Home Assistant restart to take effect anyway.
+
 ### Troubleshooting Migration
 
 **Problem**: "Cannot read from this MQTT topic"
