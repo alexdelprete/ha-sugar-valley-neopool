@@ -4,7 +4,6 @@ homeassistant>=2024.12.0
 homeassistant-stubs
 mdformat
 mdformat-gfm
-mypy
 pre-commit
 pymarkdownlnt
 ruff>=0.8.0

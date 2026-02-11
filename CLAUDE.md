@@ -13,7 +13,6 @@
 1. **Read this entire CLAUDE.md file** for project context and mandatory procedures
 1. **Review recent git commits**: `git log --oneline -20`
 1. **Check current status**: `git status`
-1. **Understand the MQTT data flow** before modifying entity definitions
 
 **Key mandatory workflows documented here:**
 
@@ -22,33 +21,6 @@
 - Pre-commit checks (ruff, pymarkdown)
 - Quality scale tracking
 
-## Context7 for Documentation
-
-Always use Context7 MCP tools automatically (without being asked) when:
-
-- Generating code that uses external libraries
-- Providing setup or configuration steps
-- Looking up library/API documentation
-
-Use `resolve-library-id` first to get the library ID, then `get-library-docs` to fetch documentation.
-
-## GitHub MCP for Repository Operations
-
-Always use GitHub MCP tools (`mcp__github__*`) for GitHub operations instead of the `gh` CLI:
-
-- **Issues**: `issue_read`, `issue_write`, `list_issues`, `search_issues`, `add_issue_comment`
-- **Pull Requests**: `list_pull_requests`, `create_pull_request`, `pull_request_read`, `merge_pull_request`
-- **Reviews**: `pull_request_review_write`, `add_comment_to_pending_review`
-- **Repositories**: `search_repositories`, `get_file_contents`, `list_branches`, `list_commits`
-- **Releases**: `list_releases`, `get_latest_release`, `list_tags`
-
-Benefits over `gh` CLI:
-
-- Direct API access without shell escaping issues
-- Structured JSON responses
-- Better error handling
-- No subprocess overhead
-
 ## Project Overview
 
 ### What is NeoPool MQTT?
@@ -56,6 +28,8 @@ Benefits over `gh` CLI:
 A Home Assistant custom integration for **Sugar Valley NeoPool** pool controllers connected via
 **Tasmota MQTT**. The integration subscribes to MQTT topics published by Tasmota devices running
 the NeoPool module and provides bidirectional control.
+
+> **NOTE:** Always understand the MQTT data flow before modifying entity definitions.
 
 ### Integration Type
 
@@ -120,17 +94,7 @@ custom_components/sugar_valley_neopool/
 └── translations/        # 10 languages (de, en, es, et, fi, fr, it, nb, pt, sv)
 ```
 
-## Coding Standards
-
-### Data Storage Pattern
-
-**DO use `runtime_data`** (modern pattern):
-
-```python
-entry.runtime_data = NeoPoolData(device_name=name, mqtt_topic=topic)
-```
-
-**DO NOT use `hass.data[DOMAIN]`** (deprecated pattern)
+## MQTT Coding Patterns
 
 ### MQTT Subscription Pattern
 
@@ -188,28 +152,6 @@ PH_STATE_MAP = {0: "No Alarm", 1: "pH too high", ...}
 
 # In sensor description
 value_fn=lambda x: PH_STATE_MAP.get(safe_int(x), f"Unknown ({x})")
-```
-
-### Logging
-
-Use structured logging:
-
-```python
-_LOGGER.debug("Sensor %s subscribed to %s, path: %s", key, topic, json_path)
-```
-
-**DO NOT** use f-strings in logger calls (deferred formatting is more efficient)
-
-### Type Hints
-
-Always use type hints:
-
-```python
-async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: NeoPoolConfigEntry,
-    async_add_entities: AddEntitiesCallback,
-) -> None:
 ```
 
 ## NodeID-Based Unique IDs and Automatic Migration
@@ -444,149 +386,6 @@ async def _validate_yaml_topic(
 - Users can migrate from custom YAML configurations
 - Topic validation ensures device is actually publishing before setup
 
-## Release Management - CRITICAL
-
-> **STOP: NEVER create git tags or GitHub releases without explicit user command.**
-> This is a hard rule. Always stop after commit/push and wait for user instruction.
-
-**Published releases are FROZEN** - Never modify documentation for released versions.
-
-**Master branch = Next Release** - All commits target the next version with version bumped
-in manifest.json and const.py.
-
-### Version Bumping Rules
-
-> **IMPORTANT: Do NOT bump version during a session. All changes go into the CURRENT unreleased version.**
-
-- The version in `manifest.json` and `const.py` represents the NEXT release being prepared
-- **NEVER bump version until user commands "tag and release"**
-- Multiple features/fixes can be added to the same unreleased version
-- Only bump to a NEW version number AFTER the current version is released
-
-### Version Locations (Must Be Synchronized)
-
-1. `custom_components/sugar_valley_neopool/manifest.json` → `"version": "X.Y.Z"`
-1. `custom_components/sugar_valley_neopool/const.py` → `VERSION = "X.Y.Z"`
-
-### Complete Release Workflow
-
-> **IMPORTANT: Version Validation**
-> The release workflow VALIDATES that tag, manifest.json, and const.py versions all match.
-> You MUST update versions BEFORE creating the release, not after.
-
-| Step | Tool           | Action                                                                  |
-| ---- | -------------- | ----------------------------------------------------------------------- |
-| 1    | Edit           | Update `CHANGELOG.md` with version summary                              |
-| 2    | Edit           | Ensure `manifest.json` and `const.py` have correct version              |
-| 3    | Bash           | Run linting: `ruff format .`, `ruff check . --fix`, `pymarkdown scan .` |
-| 4    | Bash           | `git add . && git commit -m "..."`                                      |
-| 5    | Bash           | `git push`                                                              |
-| 6    | **STOP**       | Wait for user "tag and release" command                                 |
-| 7    | **CI Check**   | Verify ALL CI workflows pass (see CI Verification below)                |
-| 8    | **Checklist**  | Display Release Readiness Checklist (see below)                         |
-| 9    | Bash           | `git tag -a vX.Y.Z -m "Release vX.Y.Z"`                                 |
-| 10   | Bash           | `git push --tags`                                                       |
-| 11   | gh CLI         | `gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(RELEASE_NOTES)"`  |
-| 12   | GitHub Actions | Validates versions match, then auto-uploads ZIP asset                   |
-| 13   | Edit           | Bump versions in `manifest.json` and `const.py` to next version         |
-
-### CI Verification (MANDATORY)
-
-> **CRITICAL: Before tagging/releasing, ALWAYS verify ALL CI workflows are passing.**
-> Use GitHub MCP tools to list workflow runs, then use `gh` CLI to get detailed logs if needed.
-> NEVER proceed if any workflow is failing.
-
-**Verification steps:**
-
-1. Use `mcp__GitHub_MCP_Remote__actions_list` to list recent workflow runs:
-
-   ```text
-   actions_list(method="list_workflow_runs", owner="alexdelprete", repo="ha-sugar-valley-neopool")
-   ```
-
-1. Check that ALL workflows show `conclusion: "success"`:
-   - Lint workflow
-   - Validate workflow
-   - Tests workflow
-
-1. If any workflow is failing, use `gh` CLI to get detailed failure logs:
-
-   ```bash
-   # View failed run logs (replace <run_id> with actual ID from step 1)
-   gh run view <run_id> --log-failed
-
-   # Or view full logs for a specific run
-   gh run view <run_id> --log
-   ```
-
-1. Fix failing tests/issues, commit, push, and re-verify before proceeding
-
-**Example CI Status Check:**
-
-| Workflow | Status |
-|----------|--------|
-| Lint | ✅ PASSED |
-| Validate | ✅ PASSED |
-| Tests | ✅ PASSED |
-
-If ANY workflow shows ❌ FAILED, DO NOT proceed with tagging until fixed.
-
-### Release Notes Format (MANDATORY)
-
-When creating a release, use this format for the release notes:
-
-```markdown
-# Release vX.Y.Z
-
-[![GitHub Downloads](https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/vX.Y.Z/total?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases/tag/vX.Y.Z)
-
-**Release Date:** YYYY-MM-DD
-
-**Type:** [Major/Minor/Patch] release - Brief description.
-
-## What's Changed
-
-### ✨ Added
-- Feature 1
-- Feature 2
-
-### 🔄 Changed
-- Change 1
-- Change 2
-
-### 🐛 Fixed
-- Fix 1
-- Fix 2
-
-**Full Changelog**: https://github.com/alexdelprete/ha-sugar-valley-neopool/compare/vPREV...vX.Y.Z
-```
-
-**Key elements:**
-- Downloads badge with version-specific URL at the top
-- Release date
-- Release type (Major/Minor/Patch) with brief description
-- Categorized changes with emojis (✨ Added, 🔄 Changed, 🐛 Fixed)
-- Full changelog link at the bottom
-
-### Release Readiness Checklist (MANDATORY)
-
-> **When user commands "tag and release", ALWAYS display this checklist BEFORE proceeding.**
-
-```markdown
-## Release Readiness Checklist
-
-| Item | Status |
-|------|--------|
-| Version in `manifest.json` | X.Y.Z |
-| Version in `const.py` | X.Y.Z |
-| CHANGELOG.md updated | Updated |
-| GitHub Actions (lint/test/validate) | PASSING |
-| Working tree clean | Clean |
-| Git tag | vX.Y.Z created/pushed |
-```
-
-Verify ALL items before proceeding with tag creation. If any item fails, fix it first.
-
 ## NeoPool-Specific Details
 
 ### JSON Payload Structure
@@ -720,6 +519,62 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 # Payloads: "Online" or "Offline"
 ```
 
+<!-- BEGIN SHARED:repo-sync -->
+<!-- Synced by repo-sync on 2026-02-11 -->
+
+## Context7 for Documentation
+
+Always use Context7 MCP tools automatically (without being asked) when:
+
+- Generating code that uses external libraries
+- Providing setup or configuration steps
+- Looking up library/API documentation
+
+Use `resolve-library-id` first to get the library ID, then `get-library-docs` to fetch documentation.
+
+## GitHub MCP for Repository Operations
+
+Always use GitHub MCP tools (`mcp__github__*`) for GitHub operations instead of the `gh` CLI:
+
+- **Issues**: `issue_read`, `issue_write`, `list_issues`, `search_issues`, `add_issue_comment`
+- **Pull Requests**: `list_pull_requests`, `create_pull_request`, `pull_request_read`, `merge_pull_request`
+- **Reviews**: `pull_request_review_write`, `add_comment_to_pending_review`
+- **Repositories**: `search_repositories`, `get_file_contents`, `list_branches`, `list_commits`
+- **Releases**: `list_releases`, `get_latest_release`, `list_tags`
+
+Benefits over `gh` CLI:
+
+- Direct API access without shell escaping issues
+- Structured JSON responses
+- Better error handling
+- No subprocess overhead
+
+## Coding Standards
+
+### Data Storage Pattern
+
+**DO use `runtime_data`** (modern pattern):
+
+```python
+entry.runtime_data = MyData(device_name=name)
+```
+
+**DO NOT use `hass.data[DOMAIN]`** (deprecated pattern)
+
+### Logging
+
+Use structured logging:
+
+```python
+_LOGGER.debug("Sensor %s subscribed to %s", key, topic)
+```
+
+**DO NOT** use f-strings in logger calls (deferred formatting is more efficient)
+
+### Type Hints
+
+Always use type hints for function signatures.
+
 ## Pre-Commit Configuration
 
 Linting tools and settings are defined in `.pre-commit-config.yaml`:
@@ -752,9 +607,6 @@ ruff check . --fix
 
 # Markdown linting
 pymarkdown scan .
-
-# Type checking
-mypy custom_components/sugar_valley_neopool --ignore-missing-imports
 ```
 
 All checks must pass before committing. This applies to ALL commits, not just releases.
@@ -779,20 +631,6 @@ To run tests:
 1. GitHub Actions will automatically run the test workflow
 1. Check the workflow results in the Actions tab or use `mcp__github__*` tools
 
-### Testing Checklist
-
-Before committing:
-
-- [ ] Run `uvx pre-commit run --all-files` - all hooks pass
-- [ ] Run `ruff check .` - no errors
-- [ ] Run `ruff format .` - code formatted
-- [ ] Run `pymarkdown scan .` - markdown linted
-- [ ] Run `mypy` - no type errors
-- [ ] Test with real device or MQTT simulator
-- [ ] Verify entities appear in Home Assistant
-- [ ] Test commands actually control the device
-- [ ] Check availability updates correctly
-
 > **CRITICAL: NEVER modify production code to make tests pass. Always fix the tests instead.**
 > Production code is the source of truth. If tests fail, the tests are wrong - not the production code.
 > The only exception is when production code has an actual bug that tests correctly identified.
@@ -810,17 +648,130 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
    - `exempt` with `comment` - Rule doesn't apply (explain why)
 1. Aim to complete all Bronze tier rules first, then Silver, Gold, Platinum
 
-**Priority Todo Items:**
+[qs]: https://developers.home-assistant.io/docs/core/integration-quality-scale/
 
-- `config-flow-test-coverage` - Create test suite
-- `test-coverage` - >95% test coverage
+## Release Management - CRITICAL
 
-## Reference Documentation
+> **STOP: NEVER create git tags or GitHub releases without explicit user command.**
+> This is a hard rule. Always stop after commit/push and wait for user instruction.
 
-- [Tasmota NeoPool Documentation](https://tasmota.github.io/docs/NeoPool/)
-- [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/)
-- [Home Assistant Developer Docs](https://developers.home-assistant.io/)
-- [Project docs/](docs/) folder contains detailed analysis documents
+**Published releases are FROZEN** - Never modify documentation for released versions.
+
+**Master branch = Next Release** - All commits target the next version with version bumped
+in manifest.json and const.py.
+
+### Version Bumping Rules
+
+> **IMPORTANT: Do NOT bump version during a session. All changes go into the CURRENT unreleased version.**
+
+- The version in `manifest.json` and `const.py` represents the NEXT release being prepared
+- **NEVER bump version until user commands "tag and release"**
+- Multiple features/fixes can be added to the same unreleased version
+- Only bump to a NEW version number AFTER the current version is released
+
+### Version Locations (Must Be Synchronized)
+
+1. `custom_components/sugar_valley_neopool/manifest.json` → `"version": "X.Y.Z"`
+1. `custom_components/sugar_valley_neopool/const.py` → `VERSION = "X.Y.Z"`
+
+### Complete Release Workflow
+
+> **IMPORTANT: Version Validation**
+> The release workflow VALIDATES that tag, manifest.json, and const.py versions all match.
+> You MUST update versions BEFORE creating the release, not after.
+
+| Step | Tool           | Action                                                                  |
+| ---- | -------------- | ----------------------------------------------------------------------- |
+| 1    | Edit           | Update `CHANGELOG.md` with version summary                              |
+| 2    | Edit           | Ensure `manifest.json` and `const.py` have correct version              |
+| 3    | Bash           | Run linting: `uvx pre-commit run --all-files`                           |
+| 4    | Bash           | `git add . && git commit -m "..."`                                      |
+| 5    | Bash           | `git push`                                                              |
+| 6    | **STOP**       | Wait for user "tag and release" command                                 |
+| 7    | **CI Check**   | Verify ALL CI workflows pass (see CI Verification below)                |
+| 8    | **Checklist**  | Display Release Readiness Checklist (see below)                         |
+| 9    | Bash           | `git tag -a vX.Y.Z -m "Release vX.Y.Z"`                                |
+| 10   | Bash           | `git push --tags`                                                       |
+| 11   | gh CLI         | `gh release create vX.Y.Z --title "vX.Y.Z" --notes "$(RELEASE_NOTES)"` |
+| 12   | GitHub Actions | Validates versions match, then auto-uploads ZIP asset                   |
+| 13   | Edit           | Bump versions in `manifest.json` and `const.py` to next version         |
+
+### CI Verification (MANDATORY)
+
+> **CRITICAL: Before tagging/releasing, ALWAYS verify ALL CI workflows are passing.**
+> Use GitHub MCP tools to list workflow runs, then use `gh` CLI to get detailed logs if needed.
+> NEVER proceed if any workflow is failing.
+
+**Verification steps:**
+
+1. Use `mcp__GitHub_MCP_Remote__actions_list` to list recent workflow runs:
+
+   ```text
+   actions_list(method="list_workflow_runs", owner="alexdelprete", repo="ha-sugar-valley-neopool")
+   ```
+
+1. Check that ALL workflows show `conclusion: "success"`:
+   - Lint workflow
+   - Validate workflow
+   - Tests workflow
+
+1. If any workflow is failing, use `gh` CLI to get detailed failure logs:
+
+   ```bash
+   # View failed run logs (replace <run_id> with actual ID from step 1)
+   gh run view <run_id> --log-failed
+
+   # Or view full logs for a specific run
+   gh run view <run_id> --log
+   ```
+
+1. Fix failing tests/issues, commit, push, and re-verify before proceeding
+
+### Release Notes Format (MANDATORY)
+
+When creating a release, use this format for the release notes:
+
+```markdown
+# Release vX.Y.Z
+
+[![GitHub Downloads](https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/vX.Y.Z/total?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases/tag/vX.Y.Z)
+
+**Release Date:** YYYY-MM-DD
+
+**Type:** [Major/Minor/Patch] release - Brief description.
+
+## What's Changed
+
+### ✨ Added
+- Feature 1
+
+### 🔄 Changed
+- Change 1
+
+### 🐛 Fixed
+- Fix 1
+
+**Full Changelog**: https://github.com/alexdelprete/ha-sugar-valley-neopool/compare/vPREV...vX.Y.Z
+```
+
+### Release Readiness Checklist (MANDATORY)
+
+> **When user commands "tag and release", ALWAYS display this checklist BEFORE proceeding.**
+
+```markdown
+## Release Readiness Checklist
+
+| Item | Status |
+|------|--------|
+| Version in `manifest.json` | X.Y.Z |
+| Version in `const.py` | X.Y.Z |
+| CHANGELOG.md updated | Updated |
+| GitHub Actions (lint/test/validate) | PASSING |
+| Working tree clean | Clean |
+| Git tag | vX.Y.Z created/pushed |
+```
+
+Verify ALL items before proceeding with tag creation. If any item fails, fix it first.
 
 ## Do's and Don'ts
 
@@ -829,13 +780,11 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
 - Run `uvx pre-commit run --all-files` before EVERY commit
 - Read CLAUDE.md at session start
 - Use `runtime_data` for data storage (not `hass.data[DOMAIN]`)
-- Use `@callback` decorator for MQTT message handlers
+- Use `@callback` decorator for message handlers
 - Log with `%s` formatting (not f-strings)
 - Handle missing data gracefully
 - Update both manifest.json AND const.py for version bumps
 - Get approval before creating tags/releases
-- Subscribe to LWT topic for availability
-- Use NodeID-based unique IDs for entities
 
 **NEVER:**
 
@@ -846,8 +795,16 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
 - Use f-strings in logging (G004)
 - Create git tags or GitHub releases without explicit user instruction
 - Forget to update VERSION in both manifest.json AND const.py
-- Ignore LWT (Last Will and Testament) for availability
 - Use blocking calls in async context
 - Close GitHub issues without explicit user instruction
+
+<!-- END SHARED:repo-sync -->
+
+## Reference Documentation
+
+- [Tasmota NeoPool Documentation](https://tasmota.github.io/docs/NeoPool/)
+- [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/)
+- [Home Assistant Developer Docs](https://developers.home-assistant.io/)
+- [Project docs/](docs/) folder contains detailed analysis documents
 
 [qs]: https://developers.home-assistant.io/docs/core/integration-quality-scale/
