@@ -114,9 +114,11 @@ class TestBinarySensorArrayEdgeCases:
             key="relay_state_10",
             name="Relay State 10",
             json_path="NeoPool.Relay.State.10",  # Index 10 doesn't exist
-            value_fn=lambda x: bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[10]) if isinstance(x, list) and len(x) > 10 else None),
+            value_fn=lambda x: (
+                bit_to_bool(x)
+                if isinstance(x, (str, int))
+                else (bit_to_bool(x[10]) if isinstance(x, list) and len(x) > 10 else None)
+            ),
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
@@ -156,9 +158,11 @@ class TestBinarySensorArrayEdgeCases:
             key="relay_state_0",
             name="Relay State 0",
             json_path="NeoPool.Relay.State.0",
-            value_fn=lambda x: bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[0]) if isinstance(x, list) and len(x) > 0 else None),
+            value_fn=lambda x: (
+                bit_to_bool(x)
+                if isinstance(x, (str, int))
+                else (bit_to_bool(x[0]) if isinstance(x, list) and len(x) > 0 else None)
+            ),
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)

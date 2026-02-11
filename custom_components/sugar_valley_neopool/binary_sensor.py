@@ -80,9 +80,11 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         translation_key="relay_ph_state",
         name="Relay pH State",
         json_path="NeoPool.Relay.State.0",
-        value_fn=lambda x: bit_to_bool(x)
-        if isinstance(x, (str, int))
-        else (bit_to_bool(x[0]) if isinstance(x, list) and len(x) > 0 else None),
+        value_fn=lambda x: (
+            bit_to_bool(x)
+            if isinstance(x, (str, int))
+            else (bit_to_bool(x[0]) if isinstance(x, list) and len(x) > 0 else None)
+        ),
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_filtration_state",
@@ -90,9 +92,11 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         name="Relay Filtration State",
         device_class=BinarySensorDeviceClass.RUNNING,
         json_path="NeoPool.Relay.State.1",
-        value_fn=lambda x: bit_to_bool(x)
-        if isinstance(x, (str, int))
-        else (bit_to_bool(x[1]) if isinstance(x, list) and len(x) > 1 else None),
+        value_fn=lambda x: (
+            bit_to_bool(x)
+            if isinstance(x, (str, int))
+            else (bit_to_bool(x[1]) if isinstance(x, list) and len(x) > 1 else None)
+        ),
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_light_state",
@@ -100,9 +104,11 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         name="Relay Light State",
         device_class=BinarySensorDeviceClass.LIGHT,
         json_path="NeoPool.Relay.State.2",
-        value_fn=lambda x: bit_to_bool(x)
-        if isinstance(x, (str, int))
-        else (bit_to_bool(x[2]) if isinstance(x, list) and len(x) > 2 else None),
+        value_fn=lambda x: (
+            bit_to_bool(x)
+            if isinstance(x, (str, int))
+            else (bit_to_bool(x[2]) if isinstance(x, list) and len(x) > 2 else None)
+        ),
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_acid_state",

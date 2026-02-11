@@ -203,9 +203,11 @@ class TestNeoPoolBinarySensor:
             key="relay_filtration_state",
             name="Relay Filtration State",
             json_path="NeoPool.Relay.State.1",
-            value_fn=lambda x: bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[1]) if isinstance(x, list) and len(x) > 1 else None),
+            value_fn=lambda x: (
+                bit_to_bool(x)
+                if isinstance(x, (str, int))
+                else (bit_to_bool(x[1]) if isinstance(x, list) and len(x) > 1 else None)
+            ),
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
