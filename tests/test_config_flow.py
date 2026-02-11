@@ -1464,10 +1464,10 @@ class TestFindActiveEntities:
         mock_state2 = MagicMock()
         mock_state2.state = "7.2"
 
-        mock_hass.states.get.side_effect = lambda entity_id: {
+        mock_hass.states.get.side_effect = {
             "sensor.neopool_water_temp": mock_state1,
             "sensor.neopool_ph": mock_state2,
-        }.get(entity_id)
+        }.get
 
         result = flow._find_active_entities([entity1, entity2])
 
@@ -1493,10 +1493,10 @@ class TestFindActiveEntities:
         mock_state2 = MagicMock()
         mock_state2.state = "unknown"
 
-        mock_hass.states.get.side_effect = lambda entity_id: {
+        mock_hass.states.get.side_effect = {
             "sensor.neopool_water_temp": mock_state1,
             "sensor.neopool_ph": mock_state2,
-        }.get(entity_id)
+        }.get
 
         result = flow._find_active_entities([entity1, entity2])
 
@@ -1526,11 +1526,11 @@ class TestFindActiveEntities:
         mock_state3 = MagicMock()
         mock_state3.state = "unknown"
 
-        mock_hass.states.get.side_effect = lambda entity_id: {
+        mock_hass.states.get.side_effect = {
             "sensor.neopool_water_temp": mock_state1,
             "sensor.neopool_ph": mock_state2,
             "sensor.neopool_redox": mock_state3,
-        }.get(entity_id)
+        }.get
 
         result = flow._find_active_entities([entity1, entity2, entity3])
 
