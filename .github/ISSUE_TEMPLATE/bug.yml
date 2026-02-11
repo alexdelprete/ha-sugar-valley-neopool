@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug with the NeoPool MQTT integration
+description: Report a bug with the Sugar Valley NeoPool integration
 labels: ["bug"]
 body:
   - type: markdown
@@ -61,7 +61,7 @@ body:
         logger:
           default: warning
           logs:
-            custom_components.neopool: debug
+            custom_components.sugar_valley_neopool: debug
         ```
       render: shell
     validations:
@@ -82,11 +82,8 @@ body:
       placeholder: "1.0.0"
     validations:
       required: true
-
   - type: input
     id: tasmota_version
     attributes:
-      label: Tasmota Firmware Version
-      placeholder: "14.3.0"
-    validations:
+      label: Tasmota Firmware Version      placeholder: "14.3.0"    validations:
       required: false

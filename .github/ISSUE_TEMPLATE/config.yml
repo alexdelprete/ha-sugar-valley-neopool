@@ -1,11 +1,10 @@
 blank_issues_enabled: false
 contact_links:
   - name: Support & Questions
-    url: https://github.com/alexdelprete/HA-NeoPool-MQTT/discussions
+    url: https://github.com/alexdelprete/ha-sugar-valley-neopool/discussions
     about: Get help with setup and configuration
   - name: Feature Ideas
-    url: https://github.com/alexdelprete/HA-NeoPool-MQTT/discussions/categories/ideas
-    about: Share and discuss feature ideas
-  - name: Tasmota NeoPool Documentation
+    url: https://github.com/alexdelprete/ha-sugar-valley-neopool/discussions/categories/ideas
+    about: Share and discuss feature ideas  - name: Tasmota NeoPool Documentation
     url: https://tasmota.github.io/docs/NeoPool/
     about: Official Tasmota NeoPool documentation
