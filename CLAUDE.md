@@ -520,7 +520,7 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 ```
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-02-11 -->
+<!-- Synced by repo-sync on 2026-02-20 -->
 
 ## Context7 for Documentation
 
