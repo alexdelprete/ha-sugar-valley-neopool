@@ -85,7 +85,5 @@ body:
   - type: input
     id: tasmota_version
     attributes:
-      label: Tasmota Firmware Version
-      placeholder: "14.3.0"
-    validations:
+      label: Tasmota Firmware Version      placeholder: "14.3.0"    validations:
       required: false

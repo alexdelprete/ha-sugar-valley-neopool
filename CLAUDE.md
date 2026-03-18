@@ -520,7 +520,7 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 ```
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-02-22 -->
+<!-- Synced by repo-sync on 2026-03-18 -->
 
 ## Context7 for Documentation
 
@@ -570,22 +570,16 @@ gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool
 **Get test coverage from Tests workflow logs:**
 
 ```bash
-gh run view <run_id> \
-  --repo alexdelprete/ha-sugar-valley-neopool \
-  --log 2>&1 | grep "TOTAL"
+gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
 ```
 
 **Quick one-liner to get latest Tests run coverage:**
 
 ```bash
 # Get latest Tests run ID and fetch coverage
-gh run list \
-  --repo alexdelprete/ha-sugar-valley-neopool \
-  --limit 5 | grep Tests
+gh run list --repo alexdelprete/ha-sugar-valley-neopool --limit 5 | grep Tests
 # Then use the run ID from the output
-gh run view <run_id> \
-  --repo alexdelprete/ha-sugar-valley-neopool \
-  --log 2>&1 | grep "TOTAL"
+gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
 ```
 
 ## Coding Standards
@@ -599,6 +593,14 @@ entry.runtime_data = MyData(device_name=name)
 ```
 
 **DO NOT use `hass.data[DOMAIN]`** (deprecated pattern)
+
+### Translations (Custom Integrations)
+
+Per [HA developer docs](https://developers.home-assistant.io/docs/internationalization/custom_integration/):
+
+- **DO use `translations/en.json`** as the source of truth for English strings
+- **DO NOT create `strings.json`** — it is a Core-only build-time feature and is ignored by custom integrations
+- All translation files go in `translations/<lang>.json` (e.g., `en.json`, `de.json`, `it.json`)
 
 ### Logging
 
@@ -925,12 +927,8 @@ Check CI workflows and display:
 **How to get test coverage:**
 
 ```bash
-gh run list \
-  --repo alexdelprete/ha-sugar-valley-neopool \
-  --limit 5 | grep Tests
-gh run view <run_id> \
-  --repo alexdelprete/ha-sugar-valley-neopool \
-  --log 2>&1 | grep "TOTAL"
+gh run list --repo alexdelprete/ha-sugar-valley-neopool --limit 5 | grep Tests
+gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
 ```
 
 The coverage percentage is the last column in the TOTAL line.
