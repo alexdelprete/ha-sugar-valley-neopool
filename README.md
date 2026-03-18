@@ -144,10 +144,15 @@ any migration steps.
 1. Go to **Settings** → **Devices & Services**
 1. Click **Add Integration**
 1. Search for "Sugar Valley NeoPool"
-1. Enter:
-   - **Device Name**: A friendly name for your pool controller
-   - **Tasmota Device Topic**: The MQTT topic used by your Tasmota device
-     (e.g., `SmartPool`)
+1. **Confirm prerequisites**: If you previously used the YAML package, you
+   must have already removed it and restarted Home Assistant. Confirm that
+   no active YAML package is running.
+1. **Choose setup path**:
+   - **Fresh installation**: Leave the migration checkbox unchecked. You'll
+     be asked to enter your device name and MQTT topic.
+   - **Migrate from YAML**: Check the migration checkbox to preserve your
+     existing entities and historical data. See
+     [Migration Steps](#migration-steps) below.
 
 The integration also supports **automatic MQTT discovery** - if your Tasmota
 device is publishing NeoPool data, it may be discovered automatically.
@@ -211,7 +216,8 @@ If you're currently using the YAML package
 1. **Add the integration** in Home Assistant:
    - Go to **Settings** → **Devices & Services** → **Add Integration**
    - Search for "Sugar Valley NeoPool"
-   - Check the box **"Migrate from YAML package"**
+   - Confirm that no active YAML package is running
+   - Check **"Yes, migrate my entities from the old YAML package"**
 1. **Auto-detection**: The integration will automatically:
    - Scan for NeoPool messages and detect your MQTT topic
    - Find migratable entities using the default `neopool_mqtt_` prefix
@@ -225,6 +231,8 @@ If you're currently using the YAML package
      (hydrolysis_runtime, powerunit_nodeid, etc.)
    - You'll be asked to confirm the detected prefix
    - Or you can manually enter your custom prefix
+   - If no entities are found at all, you can skip migration and proceed
+     with a fresh device setup instead
 1. **Review and confirm**: Before migration, you'll see:
    - Validated MQTT topic and NodeID
    - List of entities to be migrated
@@ -233,6 +241,27 @@ If you're currently using the YAML package
    - Number of entities found and migrated
    - List of successfully migrated entities
    - Any errors that occurred
+
+### How Auto-Detection Works
+
+The integration uses two auto-detection mechanisms during setup:
+
+**MQTT Topic Detection**: The integration subscribes to the wildcard topic
+`tele/+/SENSOR` and waits up to 10 seconds for a message containing
+`"NeoPool"` in the JSON payload. If found, the device topic is extracted
+automatically. Note that the `+` wildcard only matches single-level topics
+(e.g., `SmartPool`). If you use a multi-level custom Tasmota topic (e.g.,
+`tasmota/GA_po_IO_Oxilife`), auto-detection won't find it and you'll be
+asked to enter the topic manually.
+
+**Entity Prefix Detection**: When migrating, the integration first searches
+for entities with the default `neopool_mqtt_` prefix. If none are found, it
+falls back to smart detection: it scans all MQTT platform entities and checks
+if their `unique_id` values end with NeoPool-specific signatures such as
+`water_temperature`, `ph_data`, `hydrolysis_runtime_total`, and others. Each
+signature carries a confidence weight. If the total confidence score is high
+enough, the detected prefix is presented for your confirmation. Otherwise,
+you can enter a custom prefix manually or skip migration entirely.
 
 ### How History Preservation Works
 

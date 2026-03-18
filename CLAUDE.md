@@ -570,16 +570,22 @@ gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool
 **Get test coverage from Tests workflow logs:**
 
 ```bash
-gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
+gh run view <run_id> \
+  --repo alexdelprete/ha-sugar-valley-neopool \
+  --log 2>&1 | grep "TOTAL"
 ```
 
 **Quick one-liner to get latest Tests run coverage:**
 
 ```bash
 # Get latest Tests run ID and fetch coverage
-gh run list --repo alexdelprete/ha-sugar-valley-neopool --limit 5 | grep Tests
+gh run list \
+  --repo alexdelprete/ha-sugar-valley-neopool \
+  --limit 5 | grep Tests
 # Then use the run ID from the output
-gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
+gh run view <run_id> \
+  --repo alexdelprete/ha-sugar-valley-neopool \
+  --log 2>&1 | grep "TOTAL"
 ```
 
 ## Coding Standards
@@ -919,8 +925,12 @@ Check CI workflows and display:
 **How to get test coverage:**
 
 ```bash
-gh run list --repo alexdelprete/ha-sugar-valley-neopool --limit 5 | grep Tests
-gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | grep "TOTAL"
+gh run list \
+  --repo alexdelprete/ha-sugar-valley-neopool \
+  --limit 5 | grep Tests
+gh run view <run_id> \
+  --repo alexdelprete/ha-sugar-valley-neopool \
+  --log 2>&1 | grep "TOTAL"
 ```
 
 The coverage percentage is the last column in the TOTAL line.

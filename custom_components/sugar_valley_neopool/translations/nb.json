@@ -2,15 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Sugar Valley NeoPool-konfigurasjon",
-        "description": "Konfigurer NeoPool-enheten din tilkoblet via Tasmota MQTT.\n\nFor mer informasjon, se [Tasmota NeoPool-dokumentasjonen]({docs_url}).",
+        "title": "Sugar Valley NeoPool oppsett",
+        "description": "Velkommen til NeoPool-integrasjonsoppsettet.\n\n**Viktig:** Hvis du tidligere brukte YAML-pakkekonfigurasjonen, **må** du fjerne den fra `configuration.yaml` og starte Home Assistant på nytt **før** du fortsetter.\n\nHvis dette er en ny installasjon, bekreft nedenfor og fortsett.",
         "data": {
-          "device_name": "Enhetsnavn",
-          "discovery_prefix": "Tasmota-enhetens emne (f.eks. SmartPool)"
-        },
-        "data_description": {
-          "device_name": "Et vennlig navn for bassengkontrolleren din",
-          "discovery_prefix": "MQTT-emnet brukt av Tasmota-enheten din (finnes i Tasmota-webgrensesnittet under MQTT-innstillinger)"
+          "confirm_no_yaml": "Jeg bekrefter at ingen aktiv YAML-pakke kjører"
         }
       },
       "mqtt_confirm": {
@@ -22,9 +17,9 @@
       },
       "yaml_migration": {
         "title": "YAML-pakkemigrering",
-        "description": "Migrerer du fra YAML-pakkekonfigurasjonen?\n\n⚠️ **Viktig**: Før du fortsetter med migreringen, må du:\n1. **Fjerne** YAML-pakken fra `configuration.yaml`\n2. **Starte** Home Assistant på nytt\n\nDette sikrer at gamle enheter slettes og historiske data bevares.\n\nKryss av denne boksen hvis du har fullført disse trinnene og ønsker å migrere.",
+        "description": "Brukte du tidligere YAML-pakkekonfigurasjonen og ønsker å migrere dine eksisterende entiteter?\n\nMigrering vil bevare alle historiske data (grafer, statistikk) og entitetstilpasninger.\n\nHvis dette er en **ny installasjon** uten tidligere YAML-pakke, la den være umarkert.",
         "data": {
-          "migrate_yaml": "Jeg har fjernet YAML-pakken og startet Home Assistant på nytt"
+          "migrate_yaml": "Ja, migrer mine entiteter fra den gamle YAML-pakken"
         }
       },
       "yaml_topic": {
@@ -32,6 +27,13 @@
         "description": "Kunne ikke automatisk oppdage NeoPool-enheten din.\n\nVennligst skriv inn MQTT-emnet konfigurert i Tasmota-enheten din.",
         "data": {
           "yaml_topic": "MQTT-emne (f.eks. SmartPool)"
+        }
+      },
+      "yaml_no_entities": {
+        "title": "Ingen YAML-entiteter funnet",
+        "description": "Ingen eksisterende YAML-pakke-entiteter ble funnet i Home Assistant-instansen din.\n\nHvis du brukte et egendefinert `unique_id`-prefiks i YAML-pakken din, merk av boksen nedenfor for å angi det manuelt.\n\nEllers la det være umarkert for å hoppe over migrering og sette opp enheten som en ny installasjon.",
+        "data": {
+          "try_custom_prefix": "Jeg har et egendefinert unique_id-prefiks å prøve"
         }
       },
       "yaml_prefix": {
