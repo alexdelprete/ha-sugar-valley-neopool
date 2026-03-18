@@ -45,13 +45,13 @@ def neopool_setup_fixture():
         yield
 
 
-async def test_form_user_starts_yaml_migration(hass: HomeAssistant) -> None:
-    """Test the user config flow starts with yaml_migration step."""
+async def test_form_user_starts_with_user_step(hass: HomeAssistant) -> None:
+    """Test the user config flow starts with user step (prerequisite confirmation)."""
     result = await hass.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "yaml_migration"
+    assert result["step_id"] == "user"
 
 
 async def test_mqtt_discovery(hass: HomeAssistant) -> None:
@@ -277,8 +277,8 @@ async def test_config_flow_version() -> None:
 class TestAsyncStepUserDirect:
     """Direct tests for async_step_user without full integration loading."""
 
-    async def test_async_step_user_redirects_to_yaml_migration(self, mock_hass: MagicMock) -> None:
-        """Test user step redirects to yaml_migration step."""
+    async def test_async_step_user_shows_prerequisite_form(self, mock_hass: MagicMock) -> None:
+        """Test user step shows prerequisite confirmation form."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
         flow.context = {"source": config_entries.SOURCE_USER}
@@ -286,7 +286,7 @@ class TestAsyncStepUserDirect:
         result = await flow.async_step_user(None)
 
         assert result["type"] == FlowResultType.FORM
-        assert result["step_id"] == "yaml_migration"
+        assert result["step_id"] == "user"
 
     async def test_async_step_yaml_migration_shows_form(self, mock_hass: MagicMock) -> None:
         """Test yaml_migration step shows form."""
