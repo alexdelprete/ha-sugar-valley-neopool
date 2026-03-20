@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.15] - 2026-03-18
+
+### Fixed
+
+- **Config flow stuck on fresh install** (Fixes #9): Restructured the setup
+  flow into two clear steps — prerequisite confirmation and migration choice.
+  Fresh installs no longer get stuck in the YAML migration path. Added escape
+  path when no YAML entities are found.
+
+### Added
+
+- **Orphaned YAML entity cleanup**: During YAML migration, the integration now
+  automatically deletes orphaned binary sensor entities that were replaced by
+  switch entities (relay_aux1-4_state, relay_filtration_state, relay_light_state).
+- **Auto-detection documentation**: Added README section explaining how MQTT
+  topic and entity prefix auto-detection work, including limitations.
+- **Local brand assets**: Added brand assets for HA 2026.3 brands proxy API.
+
+### Changed
+
+- **Config flow UX**: Split the initial setup into two steps — first confirm
+  no active YAML package, then choose between fresh install or migration.
+- **Minimum Python version**: Bumped `requires-python` to >=3.13.2 for
+  HA 2026.x compatibility.
+
+### Documentation
+
+- **README**: Updated Initial Setup and Migration Steps sections to match
+  the restructured config flow. Added "How Auto-Detection Works" subsection.
+
+## [0.2.14] - 2026-01-12
+
 ### Added
 
 - **Orphaned YAML entity cleanup**: During YAML migration, the integration now

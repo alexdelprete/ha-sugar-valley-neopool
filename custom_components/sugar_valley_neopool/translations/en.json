@@ -2,15 +2,10 @@
   "config": {
     "step": {
       "user": {
-        "title": "Sugar Valley NeoPool Configuration",
-        "description": "Configure your NeoPool device connected via Tasmota MQTT.\n\nFor more information, see the [Tasmota NeoPool documentation]({docs_url}).",
+        "title": "Sugar Valley NeoPool Setup",
+        "description": "Welcome to the NeoPool integration setup.\n\n**Important:** If you previously used the YAML package configuration, you **must** remove it from `configuration.yaml` and restart Home Assistant **before** proceeding.\n\nIf this is a fresh installation, simply confirm below and continue.",
         "data": {
-          "device_name": "Device Name",
-          "discovery_prefix": "Tasmota Device Topic (e.g., SmartPool)"
-        },
-        "data_description": {
-          "device_name": "A friendly name for your pool controller",
-          "discovery_prefix": "The MQTT topic used by your Tasmota device (found in Tasmota web UI under MQTT settings)"
+          "confirm_no_yaml": "I confirm there is no active YAML package running"
         }
       },
       "mqtt_confirm": {
@@ -22,9 +17,9 @@
       },
       "yaml_migration": {
         "title": "YAML Package Migration",
-        "description": "Are you migrating from the YAML package configuration?\n\n⚠️ **Important**: Before proceeding with migration, you must:\n1. **Remove** the YAML package from `configuration.yaml`\n2. **Restart** Home Assistant\n\nThis ensures old entities are cleared and historical data can be preserved.\n\nCheck this box if you have completed these steps and want to migrate.",
+        "description": "Did you previously use the YAML package configuration and want to migrate your existing entities?\n\nMigration will preserve all historical data (graphs, statistics) and entity customizations.\n\nIf this is a **fresh installation** with no previous YAML package, leave unchecked.",
         "data": {
-          "migrate_yaml": "I have removed the YAML package and restarted Home Assistant"
+          "migrate_yaml": "Yes, migrate my entities from the old YAML package"
         }
       },
       "yaml_topic": {
@@ -32,6 +27,13 @@
         "description": "Could not auto-detect your NeoPool device.\n\nPlease enter the MQTT topic configured in your Tasmota device.",
         "data": {
           "yaml_topic": "MQTT Topic (e.g., SmartPool)"
+        }
+      },
+      "yaml_no_entities": {
+        "title": "No YAML Entities Found",
+        "description": "No existing YAML package entities were found in your Home Assistant instance.\n\nIf you used a custom `unique_id` prefix in your YAML package, check the box below to enter it manually.\n\nOtherwise, leave unchecked to skip migration and set up your device as a fresh installation.",
+        "data": {
+          "try_custom_prefix": "I have a custom unique_id prefix to try"
         }
       },
       "yaml_prefix": {

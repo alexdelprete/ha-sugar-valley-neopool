@@ -142,20 +142,30 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         self._matched_signatures: list[str] = []
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Handle the initial step - ask about YAML migration first."""
-        return await self.async_step_yaml_migration()
+        """Handle the initial step - warn about YAML package removal."""
+        if user_input is not None:
+            return await self.async_step_yaml_migration()
+
+        return self.async_show_form(
+            step_id="user",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("confirm_no_yaml", default=False): cv.boolean,
+                }
+            ),
+        )
 
     async def async_step_yaml_migration(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Ask if user is migrating from YAML package."""
+        """Ask if user wants to migrate from YAML package."""
         if user_input is not None:
             self._migrate_yaml = user_input.get(CONF_MIGRATE_YAML, False)
 
             if self._migrate_yaml:
                 # Try auto-detection first
                 return await self.async_step_yaml_detect()
-            # No migration needed, continue with normal flow
+            # No migration needed, continue with fresh install
             return await self.async_step_discover_device()
 
         return self.async_show_form(
@@ -165,9 +175,6 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_MIGRATE_YAML, default=False): cv.boolean,
                 }
             ),
-            description_placeholders={
-                "info": "Check this if you're currently using the YAML package configuration"
-            },
         )
 
     async def async_step_yaml_detect(
@@ -297,13 +304,13 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             )
             return await self.async_step_yaml_detect_confirm()
 
-        # Step 3: Nothing found - ask user manually
+        # Step 3: Nothing found - offer escape path instead of dead-ending
         _LOGGER.debug(
-            "Smart detection failed (prefix=%s, confidence=%d), asking user for prefix",
+            "Smart detection failed (prefix=%s, confidence=%d), no entities to migrate",
             detection.get("prefix"),
             detection.get("confidence", 0),
         )
-        return await self.async_step_yaml_prefix()
+        return await self.async_step_yaml_no_entities()
 
     def _find_migratable_entities(self, prefix: str) -> list[RegistryEntry]:
         """Find migratable entities with given unique_id prefix.
@@ -396,6 +403,26 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         if len(entities) > 5:
             lines.append(f"• ...and {len(entities) - 5} more")
         return "\n".join(lines)
+
+    async def async_step_yaml_no_entities(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """No YAML entities found - offer to try custom prefix or skip to fresh setup."""
+        if user_input is not None:
+            if user_input.get("try_custom_prefix", False):
+                return await self.async_step_yaml_prefix()
+            # Skip migration, proceed to fresh device setup
+            self._migrate_yaml = False
+            return await self.async_step_discover_device()
+
+        return self.async_show_form(
+            step_id="yaml_no_entities",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("try_custom_prefix", default=False): cv.boolean,
+                }
+            ),
+        )
 
     async def async_step_yaml_prefix(
         self, user_input: dict[str, Any] | None = None

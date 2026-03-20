@@ -3,14 +3,9 @@
     "step": {
       "user": {
         "title": "Sugar Valley NeoPool seadistamine",
-        "description": "Seadistage oma NeoPool seade, mis on ühendatud Tasmota MQTT kaudu.\n\nLisateabe saamiseks vaadake [Tasmota NeoPool dokumentatsiooni]({docs_url}).",
+        "description": "Tere tulemast NeoPool integratsiooni seadistamisse.\n\n**Oluline:** Kui kasutasite varem YAML-paketi konfiguratsiooni, **peate** selle `configuration.yaml`-ist eemaldama ja Home Assistanti **enne** jätkamist taaskäivitama.\n\nKui see on uus installimine, kinnitage lihtsalt allpool ja jätkake.",
         "data": {
-          "device_name": "Seadme nimi",
-          "discovery_prefix": "Tasmota seadme teema (nt SmartPool)"
-        },
-        "data_description": {
-          "device_name": "Sõbralik nimi teie basseini kontrollerile",
-          "discovery_prefix": "MQTT teema, mida kasutab teie Tasmota seade (leitav Tasmota veebiliideses MQTT seadete alt)"
+          "confirm_no_yaml": "Kinnitan, et aktiivne YAML-pakett ei tööta"
         }
       },
       "mqtt_confirm": {
@@ -21,10 +16,10 @@
         }
       },
       "yaml_migration": {
-        "title": "YAML paketi migratsioon",
-        "description": "Kas migreerite YAML paketi konfiguratsioonist?\n\n⚠️ **Tähtis**: Enne migratsiooni jätkamist peate:\n1. **Eemaldama** YAML paketi failist `configuration.yaml`\n2. **Taaskäivitama** Home Assistanti\n\nSee tagab, et vanad olemid kustutatakse ja ajaloolised andmed säilivad.\n\nMärkige see ruut, kui olete need sammud lõpetanud ja soovite migreerida.",
+        "title": "YAML-paketi migratsioon",
+        "description": "Kas kasutasite varem YAML-paketi konfiguratsiooni ja soovite oma olemasolevad olemid migreerida?\n\nMigratsioon säilitab kõik ajaloolised andmed (graafikud, statistika) ja olemi kohandused.\n\nKui see on **uus installimine** ilma eelneva YAML-paketita, jätke märkimata.",
         "data": {
-          "migrate_yaml": "Olen YAML paketi eemaldanud ja Home Assistanti taaskäivitanud"
+          "migrate_yaml": "Jah, migreerige minu olemid vanast YAML-paketist"
         }
       },
       "yaml_topic": {
@@ -32,6 +27,13 @@
         "description": "NeoPool seadet ei õnnestunud automaatselt tuvastada.\n\nPalun sisestage MQTT teema, mis on seadistatud teie Tasmota seadmes.",
         "data": {
           "yaml_topic": "MQTT teema (nt SmartPool)"
+        }
+      },
+      "yaml_no_entities": {
+        "title": "YAML olemeid ei leitud",
+        "description": "Teie Home Assistanti instantsis ei leitud olemasolevaid YAML-paketi olemeid.\n\nKui kasutasite oma YAML-paketis kohandatud `unique_id` eesliidet, märkige allolev ruut, et see käsitsi sisestada.\n\nVastasel juhul jätke see märkimata, et jätta migratsioon vahele ja seadistada seade uue installimisena.",
+        "data": {
+          "try_custom_prefix": "Mul on kohandatud unique_id eesliide, mida proovida"
         }
       },
       "yaml_prefix": {

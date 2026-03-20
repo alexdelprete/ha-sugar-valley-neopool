@@ -656,8 +656,8 @@ class TestWaitForNodeidExtended:
 class TestCheckMigratableEntities:
     """Tests for _check_migratable_entities method."""
 
-    async def test_check_with_no_migratable_goes_to_prefix(self, mock_hass: MagicMock) -> None:
-        """Test check migratable entities with none found asks for custom prefix."""
+    async def test_check_with_no_migratable_goes_to_no_entities(self, mock_hass: MagicMock) -> None:
+        """Test check migratable entities with none found goes to escape path."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
         flow._yaml_topic = "SmartPool"
@@ -674,14 +674,14 @@ class TestCheckMigratableEntities:
                 "entity_count": 0,
             }
         )
-        flow.async_step_yaml_prefix = AsyncMock(
-            return_value={"type": FlowResultType.FORM, "step_id": "yaml_prefix"}
+        flow.async_step_yaml_no_entities = AsyncMock(
+            return_value={"type": FlowResultType.FORM, "step_id": "yaml_no_entities"}
         )
 
         result = await flow._check_migratable_entities()
 
-        # When no migratable entities found with default prefix, asks for custom prefix
-        assert result["step_id"] == "yaml_prefix"
+        # When no migratable entities found, offers escape path
+        assert result["step_id"] == "yaml_no_entities"
 
     async def test_check_with_migratable_found(self, mock_hass: MagicMock) -> None:
         """Test check migratable entities with entities found (no active entities)."""

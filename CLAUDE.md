@@ -520,7 +520,7 @@ lwt_topic = f"tele/{mqtt_topic}/LWT"
 ```
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-02-22 -->
+<!-- Synced by repo-sync on 2026-03-18 -->
 
 ## Context7 for Documentation
 
@@ -593,6 +593,14 @@ entry.runtime_data = MyData(device_name=name)
 ```
 
 **DO NOT use `hass.data[DOMAIN]`** (deprecated pattern)
+
+### Translations (Custom Integrations)
+
+Per [HA developer docs](https://developers.home-assistant.io/docs/internationalization/custom_integration/):
+
+- **DO use `translations/en.json`** as the source of truth for English strings
+- **DO NOT create `strings.json`** — it is a Core-only build-time feature and is ignored by custom integrations
+- All translation files go in `translations/<lang>.json` (e.g., `en.json`, `de.json`, `it.json`)
 
 ### Logging
 
