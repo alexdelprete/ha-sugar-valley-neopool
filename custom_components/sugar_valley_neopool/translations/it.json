@@ -248,6 +248,27 @@
       "relay_acid_state": {
         "name": "Stato relè acido"
       },
+      "relay_base_state": {
+        "name": "Stato relè base"
+      },
+      "relay_redox_state": {
+        "name": "Stato relè redox"
+      },
+      "relay_chlorine_state": {
+        "name": "Stato relè cloro"
+      },
+      "relay_conductivity_state": {
+        "name": "Stato relè conduttività"
+      },
+      "relay_heating_state": {
+        "name": "Stato relè riscaldamento"
+      },
+      "relay_uv_state": {
+        "name": "Stato relè UV"
+      },
+      "relay_valve_state": {
+        "name": "Stato relè valvola"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },

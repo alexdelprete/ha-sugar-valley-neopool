@@ -116,6 +116,48 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         name="Relay Acid State",
         json_path="NeoPool.Relay.Acid",
     ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_base_state",
+        translation_key="relay_base_state",
+        name="Relay Base State",
+        json_path="NeoPool.Relay.Base",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_redox_state",
+        translation_key="relay_redox_state",
+        name="Relay Redox State",
+        json_path="NeoPool.Relay.Redox",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_chlorine_state",
+        translation_key="relay_chlorine_state",
+        name="Relay Chlorine State",
+        json_path="NeoPool.Relay.Chlorine",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_conductivity_state",
+        translation_key="relay_conductivity_state",
+        name="Relay Conductivity State",
+        json_path="NeoPool.Relay.Conductivity",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_heating_state",
+        translation_key="relay_heating_state",
+        name="Relay Heating State",
+        json_path="NeoPool.Relay.Heating",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_uv_state",
+        translation_key="relay_uv_state",
+        name="Relay UV State",
+        json_path="NeoPool.Relay.UV",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="relay_valve_state",
+        translation_key="relay_valve_state",
+        name="Relay Valve State",
+        json_path="NeoPool.Relay.Valve",
+    ),
     # Flow and tank level sensors
     NeoPoolBinarySensorEntityDescription(
         key="ph_fl1",

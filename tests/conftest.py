@@ -104,6 +104,13 @@ SAMPLE_NEOPOOL_PAYLOAD: dict[str, Any] = {
             "State": [1, 1, 0, 0, 0, 0, 0],
             "Aux": [0, 1, 0, 1],
             "Acid": 0,
+            "Base": 0,
+            "Redox": 1,
+            "Chlorine": 0,
+            "Conductivity": 0,
+            "Heating": 0,
+            "UV": 0,
+            "Valve": 0,
         },
         "Modules": {
             "pH": 1,

@@ -255,6 +255,27 @@
       "relay_acid_state": {
         "name": "Relay Acid State"
       },
+      "relay_base_state": {
+        "name": "Relay Base State"
+      },
+      "relay_redox_state": {
+        "name": "Relay Redox State"
+      },
+      "relay_chlorine_state": {
+        "name": "Relay Chlorine State"
+      },
+      "relay_conductivity_state": {
+        "name": "Relay Conductivity State"
+      },
+      "relay_heating_state": {
+        "name": "Relay Heating State"
+      },
+      "relay_uv_state": {
+        "name": "Relay UV State"
+      },
+      "relay_valve_state": {
+        "name": "Relay Valve State"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },

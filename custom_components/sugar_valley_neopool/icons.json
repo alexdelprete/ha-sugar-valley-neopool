@@ -114,6 +114,27 @@
       "relay_acid_state": {
         "default": "mdi:flask"
       },
+      "relay_base_state": {
+        "default": "mdi:flask-outline"
+      },
+      "relay_redox_state": {
+        "default": "mdi:flash"
+      },
+      "relay_chlorine_state": {
+        "default": "mdi:water-outline"
+      },
+      "relay_conductivity_state": {
+        "default": "mdi:water-sync"
+      },
+      "relay_heating_state": {
+        "default": "mdi:radiator"
+      },
+      "relay_uv_state": {
+        "default": "mdi:weather-sunny"
+      },
+      "relay_valve_state": {
+        "default": "mdi:valve"
+      },
       "ph_fl1": {
         "default": "mdi:water-pump"
       },

@@ -248,6 +248,27 @@
       "relay_acid_state": {
         "name": "Relais Säure-Zustand"
       },
+      "relay_base_state": {
+        "name": "Relais Base-Zustand"
+      },
+      "relay_redox_state": {
+        "name": "Relais Redox-Zustand"
+      },
+      "relay_chlorine_state": {
+        "name": "Relais Chlor-Zustand"
+      },
+      "relay_conductivity_state": {
+        "name": "Relais Leitfähigkeit-Zustand"
+      },
+      "relay_heating_state": {
+        "name": "Relais Heizung-Zustand"
+      },
+      "relay_uv_state": {
+        "name": "Relais UV-Zustand"
+      },
+      "relay_valve_state": {
+        "name": "Relais Ventil-Zustand"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },

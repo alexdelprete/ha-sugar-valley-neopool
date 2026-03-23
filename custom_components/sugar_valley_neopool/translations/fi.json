@@ -248,6 +248,27 @@
       "relay_acid_state": {
         "name": "Rele happotila"
       },
+      "relay_base_state": {
+        "name": "Rele emästila"
+      },
+      "relay_redox_state": {
+        "name": "Rele redox-tila"
+      },
+      "relay_chlorine_state": {
+        "name": "Rele klooritila"
+      },
+      "relay_conductivity_state": {
+        "name": "Rele johtavuustila"
+      },
+      "relay_heating_state": {
+        "name": "Rele lämmitystila"
+      },
+      "relay_uv_state": {
+        "name": "Rele UV-tila"
+      },
+      "relay_valve_state": {
+        "name": "Rele venttiilitila"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },

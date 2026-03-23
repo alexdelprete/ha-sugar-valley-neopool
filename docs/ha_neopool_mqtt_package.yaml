@@ -1,4 +1,4 @@
-# HA NeoPool MQTT v3.5
+# HA NeoPool MQTT v4.0
 # Tasmota NeoPool module integration via MQTT
 # by @alexdelprete
 # repo: https://github.com/alexdelprete/HA-NeoPool-MQTT
@@ -41,8 +41,7 @@ mqtt:
       icon: mdi:ph
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
-        {% set values = { 0:'No Alarm', 1:'pH too high', 2:'pH too low',
-        3:'Pump exceeded working time', 4:'pH high', 5:'pH low', 6:'Tank level low' } %}
+        {% set values = { 0:'No Alarm', 1:'pH too high', 2:'pH too low', 3:'Pump exceeded working time', 4:'pH high', 5:'pH low', 6:'Tank level low' } %}
         {{ values[value_json.NeoPool.pH.State] if value_json.NeoPool.pH.State in values.keys() }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
@@ -90,8 +89,7 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Hydrolysis.Data | round(1) }}"
       availability_topic: "tele/SmartPool/SENSOR"
       availability_template: >-
-        {% if value_json.NeoPool.Hydrolysis.Unit == "g/h"
-        and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
+        {% if value_json.NeoPool.Hydrolysis.Unit == "g/h" and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
           Online
         {% else %}
           Offline
@@ -104,10 +102,8 @@ mqtt:
       icon: mdi:water-opacity
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
-        {% set values = { 'OFF':'Cell Inactive', 'FLOW':'Flow Alarm',
-        'POL1':'Pol1 active', 'POL2':'Pol2 active' } %}
-        {% set state = value_json.NeoPool.Hydrolysis.State | upper %}
-        {{ values[state] | string if state in values.keys() }}
+        {% set values = { 'OFF':'Cell Inactive', 'FLOW':'Flow Alarm', 'POL1':'Pol1 active', 'POL2':'Pol2 active' } %}
+        {{ values[value_json.NeoPool.Hydrolysis.State | upper] | string if value_json.NeoPool.Hydrolysis.State | upper in values.keys() }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
@@ -182,10 +178,7 @@ mqtt:
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
         {% set duration = value_json.NeoPool.Hydrolysis.Runtime.Total %}
-        {% set days = duration.split('T')[0] | int * 24 %}
-        {% set hours = duration.split('T')[1].split(':')[0] | int %}
-        {% set mins = duration.split('T')[1].split(':')[1] | int / 60 %}
-        {{ (days + hours + mins) | round(1) }}
+        {{ (duration.split('T')[0] | int * 24) + (duration.split('T')[1].split(':')[0] | int) + (duration.split('T')[1].split(':')[1] | int / 60) | round(1) }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
@@ -198,10 +191,7 @@ mqtt:
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
         {% set duration = value_json.NeoPool.Hydrolysis.Runtime.Part %}
-        {% set days = duration.split('T')[0] | int * 24 %}
-        {% set hours = duration.split('T')[1].split(':')[0] | int %}
-        {% set mins = duration.split('T')[1].split(':')[1] | int / 60 %}
-        {{ (days + hours + mins) | round(1) }}
+        {{ (duration.split('T')[0] | int * 24) + (duration.split('T')[1].split(':')[0] | int) + (duration.split('T')[1].split(':')[1] | int / 60) | round(1) }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
@@ -214,10 +204,7 @@ mqtt:
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
         {% set duration = value_json.NeoPool.Hydrolysis.Runtime.Pol1 %}
-        {% set days = duration.split('T')[0] | int * 24 %}
-        {% set hours = duration.split('T')[1].split(':')[0] | int %}
-        {% set mins = duration.split('T')[1].split(':')[1] | int / 60 %}
-        {{ (days + hours + mins) | round(1) }}
+        {{ (duration.split('T')[0] | int * 24) + (duration.split('T')[1].split(':')[0] | int) + (duration.split('T')[1].split(':')[1] | int / 60) | round(1) }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
@@ -230,10 +217,7 @@ mqtt:
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
         {% set duration = value_json.NeoPool.Hydrolysis.Runtime.Pol2 %}
-        {% set days = duration.split('T')[0] | int * 24 %}
-        {% set hours = duration.split('T')[1].split(':')[0] | int %}
-        {% set mins = duration.split('T')[1].split(':')[1] | int / 60 %}
-        {{ (days + hours + mins) | round(1) }}
+        {{ (duration.split('T')[0] | int * 24) + (duration.split('T')[1].split(':')[0] | int) + (duration.split('T')[1].split(':')[1] | int / 60) | round(1) }}
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
@@ -256,8 +240,7 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Connection.MBRequests }}"
       availability_topic: "tele/SmartPool/SENSOR"
       availability_template: >-
-        {% if value_json.NeoPool.Connection.MBRequests is defined
-        and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
+        {% if value_json.NeoPool.Connection.MBRequests is defined and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
           Online
         {% else %}
           Offline
@@ -273,8 +256,7 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Connection.MBNoError }}"
       availability_topic: "tele/SmartPool/SENSOR"
       availability_template: >-
-        {% if value_json.NeoPool.Connection.MBNoError is defined
-        and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
+        {% if value_json.NeoPool.Connection.MBNoError is defined and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
           Online
         {% else %}
           Offline
@@ -290,8 +272,7 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Connection.MBNoResponse }}"
       availability_topic: "tele/SmartPool/SENSOR"
       availability_template: >-
-        {% if value_json.NeoPool.Connection.MBNoResponse is defined
-        and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
+        {% if value_json.NeoPool.Connection.MBNoResponse is defined and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
           Online
         {% else %}
           Offline
@@ -307,8 +288,7 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Connection.DataOutOfRange }}"
       availability_topic: "tele/SmartPool/SENSOR"
       availability_template: >-
-        {% if value_json.NeoPool.Connection.DataOutOfRange is defined
-        and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
+        {% if value_json.NeoPool.Connection.DataOutOfRange is defined and states('sensor.neopool_mqtt_system_model') != 'unavailable' %}
           Online
         {% else %}
           Offline
@@ -451,6 +431,76 @@ mqtt:
       name: "NeoPool MQTT Relay Acid State"
       state_topic: "tele/SmartPool/SENSOR"
       value_template: "{{ value_json.NeoPool.Relay.Acid }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_base_state"
+      name: "NeoPool MQTT Relay Base State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Base }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_redox_state"
+      name: "NeoPool MQTT Relay Redox State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Redox }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_chlorine_state"
+      name: "NeoPool MQTT Relay Chlorine State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Chlorine }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_conductivity_state"
+      name: "NeoPool MQTT Relay Conductivity State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Conductivity }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_heating_state"
+      name: "NeoPool MQTT Relay Heating State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Heating }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_uv_state"
+      name: "NeoPool MQTT Relay UV State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.UV }}"
+      payload_on: "1"
+      payload_off: "0"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_relay_valve_state"
+      name: "NeoPool MQTT Relay Valve State"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Relay.Valve }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"

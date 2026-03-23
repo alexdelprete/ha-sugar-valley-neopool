@@ -38,7 +38,8 @@ NeoPool system:
 ### Binary Sensors
 
 - Module presence (pH, Redox, Hydrolysis, Chlorine, Conductivity, Ionization)
-- Relay states (pH, Filtration, Light, Acid)
+- Relay states (pH, Filtration, Light, Acid, Base, Redox, Chlorine,
+  Conductivity, Heating, UV, Valve)
 - Water flow and tank level indicators
 
 ### Controls

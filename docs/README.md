@@ -186,7 +186,8 @@ Replace `%topic%` with your device topic (e.g., "poolcontroller")
 - **Hydrolysis:** Chlorine production (% or g/h)
 - **Filtration:** Pump state, speed, mode
 - **Light:** Pool light state
-- **Relays:** Up to 7 relays + 4 auxiliary
+- **Relays:** Up to 7 relays + 4 auxiliary + named relays (Acid, Base, Redox,
+  Chlorine, Conductivity, Heating, UV, Valve)
 
 ### Main Control Commands
 
@@ -208,11 +209,11 @@ Based on a fully equipped NeoPool system:
 | Entity Type    | Approximate Count  |
 | -------------- | ------------------ |
 | Sensors        | 20-30              |
-| Binary Sensors | 8-12               |
+| Binary Sensors | 15-24              |
 | Numbers        | 5-8                |
 | Selects        | 3-4                |
 | Switches       | 10-15              |
-| **Total**      | **46-69 entities** |
+| **Total**      | **53-81 entities** |
 
 **Note:** Actual count depends on installed modules and configuration.
 
@@ -409,7 +410,7 @@ ______________________________________________________________________
 | MQTT_TOPIC_QUICK_REFERENCE.md     | 353       | 8.3 KB     | 2025-12-13   |
 | HA_INTEGRATION_IMPLEMENTATION.md  | 1,091     | 27 KB      | 2025-12-13   |
 | HA_MQTT_INTEGRATION_GUIDE.md      | 1,704     | 45 KB      | 2025-12-13   |
-| ha_neopool_mqtt_package.yaml      | N/A       | 29 KB      | 2025-12-13   |
+| ha_neopool_mqtt_package.yaml      | N/A       | 29 KB      | 2026-03-23   |
 | **Total**                         | **4,818** | **149 KB** |              |
 
 ______________________________________________________________________
@@ -449,6 +450,6 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-**Last Updated:** 2025-12-13
+**Last Updated:** 2026-03-23
 **Total Documentation:** 4,818 lines, 149 KB
 **Document Count:** 5 files

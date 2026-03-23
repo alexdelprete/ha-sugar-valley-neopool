@@ -248,6 +248,27 @@
       "relay_acid_state": {
         "name": "Relee happe olek"
       },
+      "relay_base_state": {
+        "name": "Relee aluse olek"
+      },
+      "relay_redox_state": {
+        "name": "Relee redoksi olek"
+      },
+      "relay_chlorine_state": {
+        "name": "Relee kloori olek"
+      },
+      "relay_conductivity_state": {
+        "name": "Relee juhtivuse olek"
+      },
+      "relay_heating_state": {
+        "name": "Relee kütte olek"
+      },
+      "relay_uv_state": {
+        "name": "Relee UV olek"
+      },
+      "relay_valve_state": {
+        "name": "Relee klapi olek"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },

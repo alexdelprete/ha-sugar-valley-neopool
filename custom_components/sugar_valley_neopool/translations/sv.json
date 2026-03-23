@@ -248,6 +248,27 @@
       "relay_acid_state": {
         "name": "Relä syrastatus"
       },
+      "relay_base_state": {
+        "name": "Relä basstatus"
+      },
+      "relay_redox_state": {
+        "name": "Relä redoxstatus"
+      },
+      "relay_chlorine_state": {
+        "name": "Relä klorstatus"
+      },
+      "relay_conductivity_state": {
+        "name": "Relä ledningsförmågastatus"
+      },
+      "relay_heating_state": {
+        "name": "Relä värmestatus"
+      },
+      "relay_uv_state": {
+        "name": "Relä UV-status"
+      },
+      "relay_valve_state": {
+        "name": "Relä ventilstatus"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },
