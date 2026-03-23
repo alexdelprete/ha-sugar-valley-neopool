@@ -24,7 +24,6 @@ vars:
 
   # ── Workflow tuning ──
   jsonlint_flags: ""
-  pymarkdown_config: ""
   version_grep_pattern: 'VERSION: Final = '
 
   # ── Dependabot ──
@@ -38,8 +37,6 @@ vars:
   ruff_lint_extra_ignores: []
   ruff_lint_extra_perfile_ignores: {}
   ruff_tests_extra_ignores: []
-  pymarkdown_line_length: 120
-  pymarkdown_strict_md013: false
 
   # ── Extras ──
   requirements_extra_deps: []
@@ -57,6 +54,7 @@ vars:
 
 copy_files:
   - .gitattributes
+  - .pymarkdownlint.json
   - .github/workflows/dbautomerge.yml
   - .github/FUNDING.yml
   - LICENSE
