@@ -48,6 +48,7 @@ repos:
         entry: pymarkdown --config .pymarkdownlint.json scan
         language: system
         types: [markdown]
+        exclude: ^docs/releases/
         verbose: true
 
       # Type checking (devcontainer only — requires HA deps installed)
