@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-04-02
+
+### Fixed
+
+- **Relay.State[n] assumed mapping**: Removed 3 binary sensors
+  (relay_ph_state, relay_filtration_state, relay_light_state) that
+  incorrectly assumed a fixed physical relay-to-function mapping.
+  The relay mapping is configurable per installation. Use named relay
+  entities (Relay.Acid, Relay.Base, Relay.Redox, etc.) for functional
+  status instead.
+- **Module/Modules JSON path bug**: Fixed incorrect JSON path for module
+  detection sensors. SENSOR telemetry uses `NeoPool.Module` (singular)
+  but code was reading `NeoPool.Modules` (plural). Module presence
+  binary sensors now work correctly.
+
+### Added
+
+- **Automatic entity cleanup**: Deprecated relay entities are
+  automatically removed from the entity registry on startup.
+
+### Removed
+
+- `RELAY_NAMES` constant (no longer used).
+- `relay_ph_state`, `relay_filtration_state`, `relay_light_state`
+  binary sensors.
+
 ## [0.2.15] - 2026-03-18
 
 ### Fixed
