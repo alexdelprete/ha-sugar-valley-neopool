@@ -78,8 +78,6 @@ NEOPOOL_SIGNATURES: dict[str, int] = {
     "powerunit_4ma": 20,
     "hydrolysis_polarity_changes": 20,
     # NeoPool-specific naming - medium weight (15 points)
-    "relay_filtration_state": 15,
-    "relay_light_state": 15,
     "hydrolysis_state": 15,
     "hydrolysis_data": 15,
     "hydrolysis_percent": 15,

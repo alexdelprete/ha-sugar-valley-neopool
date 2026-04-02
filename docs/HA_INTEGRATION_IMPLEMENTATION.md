@@ -663,10 +663,14 @@ ______________________________________________________________________
 }
 ```
 
-### Relay Switches (7 relays)
+### Relay Switches (7 physical relays)
+
+> **NOTE:** `Relay.State[n]` are physical relay states only. The relay-to-function
+> mapping is configurable per installation. Do not assume a fixed mapping.
+> Use named relay fields (`Relay.Acid`, `Relay.Base`, etc.) for functional status.
 
 ```python
-# Relay 1
+# Physical Relay 1 (index 0) - function depends on installation configuration
 {
     "name": "Relay 1",
     "unique_id": "neopool_{device_id}_relay_1",

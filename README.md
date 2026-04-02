@@ -3,27 +3,21 @@
 <!-- BEGIN SHARED:repo-sync:badges -->
 <!-- Synced by repo-sync on 2026-02-20 -->
 
-[![GitHub Release](https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/alexdelprete)
-[![Tests](https://img.shields.io/github/actions/workflow/status/alexdelprete/ha-sugar-valley-neopool/test.yml?style=for-the-badge&label=Tests)](https://github.com/alexdelprete/ha-sugar-valley-neopool/actions/workflows/test.yml)
-[![Coverage](https://img.shields.io/codecov/c/github/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://codecov.io/gh/alexdelprete/ha-sugar-valley-neopool)
-[![GitHub Downloads](https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/total?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
+[![GitHub Release][releases-shield]][releases]
+[![Buy Me A Coffee][buymecoffee-shield]][buymecoffee]
+[![Tests][tests-shield]][tests]
+[![Coverage][coverage-shield]][coverage]
+[![GitHub Downloads][downloads-shield]][downloads]
 
 <!-- END SHARED:repo-sync:badges -->
 
 ## Introduction
 
 Home Assistant custom integration for **Sugar Valley NeoPool** controllers
-connected via **Tasmota MQTT**.
-
-NeoPool controllers are used in many pool systems for water treatment,
-filtration control, and monitoring. This integration provides comprehensive
-monitoring and control of your pool system through Home Assistant.
+connected via **Tasmota MQTT**. Provides comprehensive monitoring and control
+of your pool system through Home Assistant.
 
 ## Features
-
-This integration provides comprehensive monitoring and control of your
-NeoPool system:
 
 ### Sensors
 
@@ -38,8 +32,8 @@ NeoPool system:
 ### Binary Sensors
 
 - Module presence (pH, Redox, Hydrolysis, Chlorine, Conductivity, Ionization)
-- Relay states (pH, Filtration, Light, Acid, Base, Redox, Chlorine,
-  Conductivity, Heating, UV, Valve)
+- Named relay states (Acid, Base, Redox, Chlorine, Conductivity,
+  Heating, UV, Valve)
 - Water flow and tank level indicators
 
 ### Controls
@@ -329,26 +323,7 @@ On every integration startup, a sanity check runs that:
 - Entity customizations (friendly names, icons, areas)
 - Automation and script references
 
-**Debug logging:**
-
-To see the migration process in action, enable debug logging:
-
-```yaml
-logger:
-  logs:
-    custom_components.sugar_valley_neopool: debug
-```
-
-You'll see detailed logs like:
-
-```text
-Starting masked unique_id sanity check for entry abc123...
-Found 45 entities with masked unique_ids
-SetOption157 is disabled, enabling it to get real NodeID
-Got real NodeID: 4C7525BFB344
-Migrated entity sensor.neopool_ph_data: neopool_mqtt_XXXX...3435_ph_data -> neopool_mqtt_4C7525BFB344_ph_data
-Migration complete: 45/45 entities migrated
-```
+To monitor the migration process, [enable debug logging](#enable-debug-logging).
 
 ### Startup Validation and Runtime Monitoring
 
@@ -522,16 +497,9 @@ automation:
 
 ## Recovery Script
 
-You can configure a Home Assistant script to run automatically when the
-device has been offline for the configured threshold. This is useful for
-automated recovery actions.
-
-### Configuration
-
-1. Go to **Settings > Devices & Services > Sugar Valley NeoPool**
-1. Click **Configure** to open the options dialog
-1. Select a script from the **Recovery script** dropdown
-1. The script will run when the failure threshold is reached
+You can configure a recovery script in [Runtime Options](#runtime-options).
+The script runs automatically when the device has been offline for the
+configured failure threshold.
 
 ### Recovery Script Variables
 
@@ -590,23 +558,7 @@ The integration expects MQTT messages on these topics:
 
 For detailed Tasmota NeoPool setup instructions, see the
 [official documentation](https://tasmota.github.io/docs/NeoPool/).
-
-### Recommended Tasmota Configuration
-
-```console
-# REQUIRED: Enable NodeID exposure for stable entity unique IDs
-SetOption157 1
-
-# Enable NeoPool telemetry (interval in seconds)
-NPTelePeriod 60
-
-# Enable all data in telemetry
-NPResult 2
-```
-
-> ⚠️ **SetOption157 is required!** Without it, the integration cannot create
-> stable unique IDs for entities. See [Tasmota SetOption157](#tasmota-setoption157-required)
-> for details.
+SetOption157 setup is covered in [Requirements](#tasmota-setoption157-required).
 
 ## Known Limitations
 
@@ -859,7 +811,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [coverage-shield]: https://img.shields.io/codecov/c/github/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge
 [downloads]: https://github.com/alexdelprete/ha-sugar-valley-neopool/releases
 [downloads-shield]: https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/total?style=for-the-badge
-[HACS]: https://hacs.xyz/
 [issues]: https://github.com/alexdelprete/ha-sugar-valley-neopool/issues
 [releases]: https://github.com/alexdelprete/ha-sugar-valley-neopool/releases
 [releases-shield]: https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge&color=darkgreen

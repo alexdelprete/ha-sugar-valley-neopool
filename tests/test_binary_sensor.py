@@ -29,7 +29,7 @@ class TestBinarySensorDescriptions:
         """Test pH module binary sensor description."""
         desc = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "modules_ph")
 
-        assert desc.json_path == "NeoPool.Modules.pH"
+        assert desc.json_path == "NeoPool.Module.pH"
         assert desc.invert is False
 
     def test_water_flow_description(self) -> None:
@@ -47,14 +47,14 @@ class TestBinarySensorDescriptions:
         assert desc.device_class == BinarySensorDeviceClass.PROBLEM
         assert desc.invert is True  # Tank=0 means low
 
-    def test_relay_state_descriptions(self) -> None:
-        """Test relay state binary sensor descriptions."""
+    def test_named_relay_state_descriptions(self) -> None:
+        """Test named relay binary sensor descriptions exist."""
         relay_descs = [d for d in BINARY_SENSOR_DESCRIPTIONS if d.key.startswith("relay_")]
 
-        assert len(relay_descs) >= 3
-        # Check filtration relay
-        filtration = next(d for d in relay_descs if d.key == "relay_filtration_state")
-        assert filtration.device_class == BinarySensorDeviceClass.RUNNING
+        # Named relay entities (functional state regardless of physical relay assignment)
+        assert any(d.key == "relay_acid_state" for d in relay_descs)
+        assert any(d.key == "relay_base_state" for d in relay_descs)
+        assert any(d.key == "relay_redox_state" for d in relay_descs)
 
     def test_all_descriptions_have_json_path(self) -> None:
         """Test all descriptions have json_path field."""
@@ -88,7 +88,7 @@ class TestNeoPoolBinarySensor:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary_sensor",
             name="Test Binary Sensor",
-            json_path="NeoPool.Modules.pH",
+            json_path="NeoPool.Module.pH",
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
@@ -111,7 +111,7 @@ class TestNeoPoolBinarySensor:
             await sensor.async_added_to_hass()
 
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"pH": 1}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"pH": 1}}})
         sensor_callback(mock_msg)
 
         assert sensor._attr_is_on is True
@@ -125,7 +125,7 @@ class TestNeoPoolBinarySensor:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary_sensor",
             name="Test Binary Sensor",
-            json_path="NeoPool.Modules.Chlorine",
+            json_path="NeoPool.Module.Chlorine",
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
@@ -148,7 +148,7 @@ class TestNeoPoolBinarySensor:
             await sensor.async_added_to_hass()
 
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"Chlorine": 0}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"Chlorine": 0}}})
         sensor_callback(mock_msg)
 
         assert sensor._attr_is_on is False
@@ -200,8 +200,8 @@ class TestNeoPoolBinarySensor:
     ) -> None:
         """Test binary sensor handles array access in JSON path."""
         desc = NeoPoolBinarySensorEntityDescription(
-            key="relay_filtration_state",
-            name="Relay Filtration State",
+            key="test_relay_array",
+            name="Test Relay Array",
             json_path="NeoPool.Relay.State.1",
             value_fn=lambda x: (
                 bit_to_bool(x)
@@ -212,7 +212,7 @@ class TestNeoPoolBinarySensor:
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
         sensor.hass = mock_hass
-        sensor.entity_id = "binary_sensor.relay_filtration"
+        sensor.entity_id = "binary_sensor.test_relay_array"
         sensor.async_write_ha_state = MagicMock()
 
         sensor_callback = None

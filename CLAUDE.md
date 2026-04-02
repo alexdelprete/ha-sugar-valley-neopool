@@ -419,9 +419,17 @@ async def _validate_yaml_topic(
     },
     "Relay": {
       "State": [1, 1, 0, 0, 0, 0, 0],
-      "Aux": [0, 0, 0, 0]
+      "Aux": [0, 0, 0, 0],
+      "Acid": 1,
+      "Base": 0,
+      "Redox": 1,
+      "Chlorine": 0,
+      "Conductivity": 0,
+      "Heating": 0,
+      "UV": 0,
+      "Valve": 0
     },
-    "Modules": {
+    "Module": {
       "pH": 1,
       "Redox": 1,
       "Hydrolysis": 1
@@ -489,9 +497,13 @@ Relay states are arrays. Handle both direct access and array index:
 
 ```python
 # NeoPool.Relay.State is [1, 1, 0, 0, 0, 0, 0]
-# To get filtration relay (index 1):
+# To get physical relay 1 (index 1):
 json_path="NeoPool.Relay.State.1"
 ```
+
+> **NOTE:** `Relay.State[n]` are physical relay states only. Do NOT assume a fixed
+> relay-to-function mapping (e.g., State[0]=pH). The mapping is configurable per installation.
+> Use named relay fields (`Relay.Acid`, `Relay.Base`, `Relay.Redox`, etc.) for functional status.
 
 ### 2. Inverted Boolean Logic
 

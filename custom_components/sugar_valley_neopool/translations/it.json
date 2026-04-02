@@ -236,15 +236,6 @@
       "modules_ionization": {
         "name": "Modulo ionizzazione"
       },
-      "relay_ph_state": {
-        "name": "Stato relè pH"
-      },
-      "relay_filtration_state": {
-        "name": "Stato relè filtrazione"
-      },
-      "relay_light_state": {
-        "name": "Stato relè luce"
-      },
       "relay_acid_state": {
         "name": "Stato relè acido"
       },

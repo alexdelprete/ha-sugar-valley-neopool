@@ -235,15 +235,6 @@
       "modules_ionization": {
         "name": "Módulo de Ionização"
       },
-      "relay_ph_state": {
-        "name": "Estado do Relé de pH"
-      },
-      "relay_filtration_state": {
-        "name": "Estado do Relé de Filtração"
-      },
-      "relay_light_state": {
-        "name": "Estado do Relé de Luz"
-      },
       "relay_acid_state": {
         "name": "Estado do Relé de Ácido"
       },

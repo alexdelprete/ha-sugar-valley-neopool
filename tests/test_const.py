@@ -71,7 +71,6 @@ from custom_components.sugar_valley_neopool.const import (
     PH_STATE_MAP,
     # Platforms
     PLATFORMS,
-    RELAY_NAMES,
     TOPIC_COMMAND,
     TOPIC_LWT,
     TOPIC_RESULT,
@@ -359,16 +358,6 @@ class TestStateMappings:
         assert 0 in BOOST_MODE_MAP  # Off
         assert 1 in BOOST_MODE_MAP  # On
         assert 2 in BOOST_MODE_MAP  # On (Redox)
-
-    def test_relay_names_completeness(self) -> None:
-        """Test RELAY_NAMES covers all expected relays."""
-        assert isinstance(RELAY_NAMES, list)
-        assert len(RELAY_NAMES) == 7
-        assert "pH" in RELAY_NAMES
-        assert "Filtration" in RELAY_NAMES
-        assert "Light" in RELAY_NAMES
-        assert "AUX1" in RELAY_NAMES
-        assert "AUX4" in RELAY_NAMES
 
 
 class TestCommands:

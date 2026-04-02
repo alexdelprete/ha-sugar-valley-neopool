@@ -131,7 +131,7 @@ class TestNeoPoolBinarySensorExtended:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary",
             name="Test Binary",
-            json_path="NeoPool.Modules.pH",
+            json_path="NeoPool.Module.pH",
             invert=False,
         )
 
@@ -156,12 +156,12 @@ class TestNeoPoolBinarySensorExtended:
 
         # Value 1 should be True (not inverted)
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"pH": 1}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"pH": 1}}})
         sensor_callback(mock_msg)
         assert sensor._attr_is_on is True
 
         # Value 0 should be False (not inverted)
-        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"pH": 0}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"pH": 0}}})
         sensor_callback(mock_msg)
         assert sensor._attr_is_on is False
 

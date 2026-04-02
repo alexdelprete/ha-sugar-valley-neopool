@@ -236,15 +236,6 @@
       "modules_ionization": {
         "name": "Ionisaatiomoduuli"
       },
-      "relay_ph_state": {
-        "name": "Rele pH-tila"
-      },
-      "relay_filtration_state": {
-        "name": "Rele suodatustila"
-      },
-      "relay_light_state": {
-        "name": "Rele valotila"
-      },
       "relay_acid_state": {
         "name": "Rele happotila"
       },

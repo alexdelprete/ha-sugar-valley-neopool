@@ -102,15 +102,6 @@
       "modules_ionization": {
         "default": "mdi:atom"
       },
-      "relay_ph_state": {
-        "default": "mdi:ph"
-      },
-      "relay_filtration_state": {
-        "default": "mdi:pump"
-      },
-      "relay_light_state": {
-        "default": "mdi:lightbulb"
-      },
       "relay_acid_state": {
         "default": "mdi:flask"
       },

@@ -42,74 +42,39 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="modules_ph",
         translation_key="modules_ph",
         name="pH Module",
-        json_path="NeoPool.Modules.pH",
+        json_path="NeoPool.Module.pH",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_redox",
         translation_key="modules_redox",
         name="Redox Module",
-        json_path="NeoPool.Modules.Redox",
+        json_path="NeoPool.Module.Redox",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_hydrolysis",
         translation_key="modules_hydrolysis",
         name="Hydrolysis Module",
-        json_path="NeoPool.Modules.Hydrolysis",
+        json_path="NeoPool.Module.Hydrolysis",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_chlorine",
         translation_key="modules_chlorine",
         name="Chlorine Module",
-        json_path="NeoPool.Modules.Chlorine",
+        json_path="NeoPool.Module.Chlorine",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_conductivity",
         translation_key="modules_conductivity",
         name="Conductivity Module",
-        json_path="NeoPool.Modules.Conductivity",
+        json_path="NeoPool.Module.Conductivity",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_ionization",
         translation_key="modules_ionization",
         name="Ionization Module",
-        json_path="NeoPool.Modules.Ionization",
+        json_path="NeoPool.Module.Ionization",
     ),
-    # Relay state sensors
-    NeoPoolBinarySensorEntityDescription(
-        key="relay_ph_state",
-        translation_key="relay_ph_state",
-        name="Relay pH State",
-        json_path="NeoPool.Relay.State.0",
-        value_fn=lambda x: (
-            bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[0]) if isinstance(x, list) and len(x) > 0 else None)
-        ),
-    ),
-    NeoPoolBinarySensorEntityDescription(
-        key="relay_filtration_state",
-        translation_key="relay_filtration_state",
-        name="Relay Filtration State",
-        device_class=BinarySensorDeviceClass.RUNNING,
-        json_path="NeoPool.Relay.State.1",
-        value_fn=lambda x: (
-            bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[1]) if isinstance(x, list) and len(x) > 1 else None)
-        ),
-    ),
-    NeoPoolBinarySensorEntityDescription(
-        key="relay_light_state",
-        translation_key="relay_light_state",
-        name="Relay Light State",
-        device_class=BinarySensorDeviceClass.LIGHT,
-        json_path="NeoPool.Relay.State.2",
-        value_fn=lambda x: (
-            bit_to_bool(x)
-            if isinstance(x, (str, int))
-            else (bit_to_bool(x[2]) if isinstance(x, list) and len(x) > 2 else None)
-        ),
-    ),
+    # Named relay state sensors (functional state regardless of physical relay assignment)
     NeoPoolBinarySensorEntityDescription(
         key="relay_acid_state",
         translation_key="relay_acid_state",

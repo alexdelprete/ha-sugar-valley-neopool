@@ -236,15 +236,6 @@
       "modules_ionization": {
         "name": "Ionisatsiooni moodul"
       },
-      "relay_ph_state": {
-        "name": "Relee pH olek"
-      },
-      "relay_filtration_state": {
-        "name": "Relee filtreerimise olek"
-      },
-      "relay_light_state": {
-        "name": "Relee valguse olek"
-      },
       "relay_acid_state": {
         "name": "Relee happe olek"
       },

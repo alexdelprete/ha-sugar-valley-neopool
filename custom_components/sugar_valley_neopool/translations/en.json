@@ -243,15 +243,6 @@
       "modules_ionization": {
         "name": "Ionization Module"
       },
-      "relay_ph_state": {
-        "name": "Relay pH State"
-      },
-      "relay_filtration_state": {
-        "name": "Relay Filtration State"
-      },
-      "relay_light_state": {
-        "name": "Relay Light State"
-      },
       "relay_acid_state": {
         "name": "Relay Acid State"
       },

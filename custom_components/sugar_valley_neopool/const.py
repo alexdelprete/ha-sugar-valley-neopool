@@ -128,17 +128,6 @@ BOOST_MODE_MAP: Final[dict[int, str]] = {
     2: "On (Redox)",
 }
 
-# Relay names (indices 0-6 for main relays)
-RELAY_NAMES: Final[list[str]] = [
-    "pH",
-    "Filtration",
-    "Light",
-    "AUX1",
-    "AUX2",
-    "AUX3",
-    "AUX4",
-]
-
 # NeoPool commands (via MQTT cmnd topic)
 CMD_FILTRATION: Final = "NPFiltration"
 CMD_FILTRATION_MODE: Final = "NPFiltrationmode"
@@ -191,12 +180,12 @@ JSON_PATH_LIGHT: Final = "NeoPool.Light"
 JSON_PATH_RELAY_STATE: Final = "NeoPool.Relay.State"
 JSON_PATH_RELAY_AUX: Final = "NeoPool.Relay.Aux"
 JSON_PATH_RELAY_ACID: Final = "NeoPool.Relay.Acid"
-JSON_PATH_MODULES_PH: Final = "NeoPool.Modules.pH"
-JSON_PATH_MODULES_REDOX: Final = "NeoPool.Modules.Redox"
-JSON_PATH_MODULES_HYDROLYSIS: Final = "NeoPool.Modules.Hydrolysis"
-JSON_PATH_MODULES_CHLORINE: Final = "NeoPool.Modules.Chlorine"
-JSON_PATH_MODULES_CONDUCTIVITY: Final = "NeoPool.Modules.Conductivity"
-JSON_PATH_MODULES_IONIZATION: Final = "NeoPool.Modules.Ionization"
+JSON_PATH_MODULES_PH: Final = "NeoPool.Module.pH"
+JSON_PATH_MODULES_REDOX: Final = "NeoPool.Module.Redox"
+JSON_PATH_MODULES_HYDROLYSIS: Final = "NeoPool.Module.Hydrolysis"
+JSON_PATH_MODULES_CHLORINE: Final = "NeoPool.Module.Chlorine"
+JSON_PATH_MODULES_CONDUCTIVITY: Final = "NeoPool.Module.Conductivity"
+JSON_PATH_MODULES_IONIZATION: Final = "NeoPool.Module.Ionization"
 JSON_PATH_POWERUNIT_VERSION: Final = "NeoPool.Powerunit.Version"
 JSON_PATH_POWERUNIT_NODEID: Final = "NeoPool.Powerunit.NodeID"
 JSON_PATH_POWERUNIT_5V: Final = "NeoPool.Powerunit.5V"
@@ -279,8 +268,9 @@ YAML_ENTITIES_TO_DELETE: Final[list[tuple[str, str]]] = [
     ("binary_sensor", "relay_aux2_state"),
     ("binary_sensor", "relay_aux3_state"),
     ("binary_sensor", "relay_aux4_state"),
-    # Relay filtration state - replaced by switch entity (filtration)
+    # Relay.State[n] binary sensors - removed (assumed fixed relay-to-function mapping)
+    # Physical relay states should not be labeled with function names
+    ("binary_sensor", "relay_ph_state"),
     ("binary_sensor", "relay_filtration_state"),
-    # Relay light state - replaced by switch entity (light)
     ("binary_sensor", "relay_light_state"),
 ]

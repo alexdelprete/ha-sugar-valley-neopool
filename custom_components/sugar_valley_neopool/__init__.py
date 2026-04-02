@@ -118,6 +118,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         # Don't fail setup - let integration continue with potentially masked IDs
         # User can fix via Options flow
 
+    # Clean up removed entities (runs for all users, not just YAML migration)
+    _cleanup_removed_entities(hass, entry)
+
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _LOGGER.debug("Platform setup complete for %d platforms", len(PLATFORMS))
@@ -413,6 +416,35 @@ async def _cleanup_orphaned_yaml_entities(
         )
     else:
         _LOGGER.debug("No orphaned YAML entities found to clean up")
+
+
+@callback
+def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Remove entities that were deleted from the integration.
+
+    Removes registry entries for entities whose descriptions have been removed,
+    preventing them from lingering as unavailable.
+    """
+    # Entities removed in this version (Relay.State[n] with assumed function mapping)
+    removed_entity_keys = [
+        ("binary_sensor", "relay_ph_state"),
+        ("binary_sensor", "relay_filtration_state"),
+        ("binary_sensor", "relay_light_state"),
+    ]
+
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    for domain, entity_key in removed_entity_keys:
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_entry = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+        if entity_entry:
+            entity_registry.async_remove(entity_entry)
+            _LOGGER.info(
+                "Removed deprecated entity %s (unique_id=%s)",
+                entity_entry,
+                unique_id,
+            )
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
