@@ -130,6 +130,9 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
 
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
+                self._attr_current_option = None
+                self._attr_available = False
+                self.async_write_ha_state()
                 return
 
             # Convert raw value to option string

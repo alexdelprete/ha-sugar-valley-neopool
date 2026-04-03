@@ -350,6 +350,9 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
             # Extract value using JSON path
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
+                self._attr_native_value = None
+                self._attr_available = False
+                self.async_write_ha_state()
                 return
 
             # Apply transformation function if defined

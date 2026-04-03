@@ -131,7 +131,7 @@ class TestNeoPoolBinarySensorExtended:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary",
             name="Test Binary",
-            json_path="NeoPool.Module.pH",
+            json_path="NeoPool.Modules.pH",
             invert=False,
         )
 

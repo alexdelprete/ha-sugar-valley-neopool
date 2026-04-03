@@ -29,7 +29,7 @@ class TestBinarySensorDescriptions:
         """Test pH module binary sensor description."""
         desc = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "modules_ph")
 
-        assert desc.json_path == "NeoPool.Module.pH"
+        assert desc.json_path == "NeoPool.Modules.pH"
         assert desc.invert is False
 
     def test_water_flow_description(self) -> None:
@@ -88,7 +88,7 @@ class TestNeoPoolBinarySensor:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary_sensor",
             name="Test Binary Sensor",
-            json_path="NeoPool.Module.pH",
+            json_path="NeoPool.Modules.pH",
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)
@@ -125,7 +125,7 @@ class TestNeoPoolBinarySensor:
         desc = NeoPoolBinarySensorEntityDescription(
             key="test_binary_sensor",
             name="Test Binary Sensor",
-            json_path="NeoPool.Module.Chlorine",
+            json_path="NeoPool.Modules.Chlorine",
         )
 
         sensor = NeoPoolBinarySensor(mock_config_entry, desc)

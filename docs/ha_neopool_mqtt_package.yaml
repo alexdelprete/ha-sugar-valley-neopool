@@ -42,11 +42,9 @@ mqtt:
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
         {% set values = {
-          0:'No Alarm', 1:'pH too high',
-          2:'pH too low',
+          0:'No Alarm', 1:'pH too high', 2:'pH too low',
           3:'Pump exceeded working time',
-          4:'pH high', 5:'pH low',
-          6:'Tank level low'
+          4:'pH high', 5:'pH low', 6:'Tank level low'
         } %}
         {{ values[value_json.NeoPool.pH.State] if value_json.NeoPool.pH.State in values.keys() }}
       availability_topic: "tele/SmartPool/LWT"
@@ -110,7 +108,10 @@ mqtt:
       icon: mdi:water-opacity
       state_topic: "tele/SmartPool/SENSOR"
       value_template: >-
-        {% set values = { 'OFF':'Cell Inactive', 'FLOW':'Flow Alarm', 'POL1':'Pol1 active', 'POL2':'Pol2 active' } %}
+        {% set values = {
+          'OFF':'Cell Inactive', 'FLOW':'Flow Alarm',
+          'POL1':'Pol1 active', 'POL2':'Pol2 active'
+        } %}
         {{ values[value_json.NeoPool.Hydrolysis.State
           | upper] | string
           if value_json.NeoPool.Hydrolysis.State
@@ -335,7 +336,7 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_ph"
       name: "NeoPool MQTT pH Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.pH }}"
+      value_template: "{{ value_json.NeoPool.Modules.pH }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
@@ -345,7 +346,7 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_redox"
       name: "NeoPool MQTT Redox Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.Redox }}"
+      value_template: "{{ value_json.NeoPool.Modules.Redox }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
@@ -355,7 +356,7 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_hydrolysis"
       name: "NeoPool MQTT Hydrolysis Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.Hydrolysis }}"
+      value_template: "{{ value_json.NeoPool.Modules.Hydrolysis }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
@@ -365,7 +366,7 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_chlorine"
       name: "NeoPool MQTT Chlorine Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.Chlorine }}"
+      value_template: "{{ value_json.NeoPool.Modules.Chlorine }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
@@ -375,7 +376,7 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_conductivity"
       name: "NeoPool MQTT Conductivity Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.Conductivity }}"
+      value_template: "{{ value_json.NeoPool.Modules.Conductivity }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
@@ -385,16 +386,13 @@ mqtt:
     - unique_id: "neopool_mqtt_modules_ionization"
       name: "NeoPool MQTT Ionization Module"
       state_topic: "tele/SmartPool/SENSOR"
-      value_template: "{{ value_json.NeoPool.Module.Ionization }}"
+      value_template: "{{ value_json.NeoPool.Modules.Ionization }}"
       payload_on: "1"
       payload_off: "0"
       availability_topic: "tele/SmartPool/LWT"
       payload_available: "Online"
       payload_not_available: "Offline"
 
-    # NOTE: Relay.State[n] are physical relay states. The names below (pH, Filtration,
-    # Light) assume the DEFAULT factory mapping which is configurable per installation.
-    # For accurate functional status, use named relay fields (Relay.Acid, Relay.Base, etc.)
     - unique_id: "neopool_mqtt_relay_ph_state"
       name: "NeoPool MQTT Relay pH State"
       state_topic: "tele/SmartPool/SENSOR"

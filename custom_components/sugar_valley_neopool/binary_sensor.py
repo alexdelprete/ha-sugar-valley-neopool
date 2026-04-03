@@ -42,37 +42,37 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="modules_ph",
         translation_key="modules_ph",
         name="pH Module",
-        json_path="NeoPool.Module.pH",
+        json_path="NeoPool.Modules.pH",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_redox",
         translation_key="modules_redox",
         name="Redox Module",
-        json_path="NeoPool.Module.Redox",
+        json_path="NeoPool.Modules.Redox",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_hydrolysis",
         translation_key="modules_hydrolysis",
         name="Hydrolysis Module",
-        json_path="NeoPool.Module.Hydrolysis",
+        json_path="NeoPool.Modules.Hydrolysis",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_chlorine",
         translation_key="modules_chlorine",
         name="Chlorine Module",
-        json_path="NeoPool.Module.Chlorine",
+        json_path="NeoPool.Modules.Chlorine",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_conductivity",
         translation_key="modules_conductivity",
         name="Conductivity Module",
-        json_path="NeoPool.Module.Conductivity",
+        json_path="NeoPool.Modules.Conductivity",
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_ionization",
         translation_key="modules_ionization",
         name="Ionization Module",
-        json_path="NeoPool.Module.Ionization",
+        json_path="NeoPool.Modules.Ionization",
     ),
     # Named relay state sensors (functional state regardless of physical relay assignment)
     NeoPoolBinarySensorEntityDescription(
@@ -236,6 +236,9 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
                 raw_value = get_nested_value(payload, json_path)
 
             if raw_value is None:
+                self._attr_is_on = None
+                self._attr_available = False
+                self.async_write_ha_state()
                 return
 
             # Apply transformation function

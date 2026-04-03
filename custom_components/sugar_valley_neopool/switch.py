@@ -138,6 +138,9 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
                 raw_value = get_nested_value(payload, json_path)
 
             if raw_value is None:
+                self._attr_is_on = None
+                self._attr_available = False
+                self.async_write_ha_state()
                 return
 
             self._attr_is_on = self.entity_description.value_fn(raw_value)

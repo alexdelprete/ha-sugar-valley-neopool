@@ -138,6 +138,9 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
 
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
+                self._attr_native_value = None
+                self._attr_available = False
+                self.async_write_ha_state()
                 return
 
             self._attr_native_value = self.entity_description.value_fn(raw_value)

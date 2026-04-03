@@ -112,7 +112,7 @@ SAMPLE_NEOPOOL_PAYLOAD: dict[str, Any] = {
             "UV": 0,
             "Valve": 0,
         },
-        "Module": {
+        "Modules": {
             "pH": 1,
             "Redox": 1,
             "Hydrolysis": 1,

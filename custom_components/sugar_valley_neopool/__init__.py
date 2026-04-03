@@ -436,15 +436,19 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
     nodeid = entry.data.get(CONF_NODEID, "")
 
     for domain, entity_key in removed_entity_keys:
-        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
-        entity_entry = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
-        if entity_entry:
-            entity_registry.async_remove(entity_entry)
-            _LOGGER.info(
-                "Removed deprecated entity %s (unique_id=%s)",
-                entity_entry,
-                unique_id,
-            )
+        # Check both NodeID-based and legacy (no NodeID) unique_id formats
+        unique_ids = [f"neopool_mqtt_{nodeid}_{entity_key}"]
+        if nodeid:
+            unique_ids.append(f"neopool_mqtt_{entity_key}")
+        for unique_id in unique_ids:
+            entity_entry = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if entity_entry:
+                entity_registry.async_remove(entity_entry)
+                _LOGGER.info(
+                    "Removed deprecated entity %s (unique_id=%s)",
+                    entity_entry,
+                    unique_id,
+                )
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
