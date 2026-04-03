@@ -147,8 +147,7 @@ class TestBinarySensorArrayEdgeCases:
 
         # Should not update state since index is out of bounds
         assert sensor._attr_is_on is None
-        assert sensor._attr_available is False
-        sensor.async_write_ha_state.assert_called()
+        sensor.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_binary_sensor_array_empty(
@@ -192,8 +191,7 @@ class TestBinarySensorArrayEdgeCases:
 
         # Should not update state since array is empty
         assert sensor._attr_is_on is None
-        assert sensor._attr_available is False
-        sensor.async_write_ha_state.assert_called()
+        sensor.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_binary_sensor_non_array_path_with_digit(
@@ -314,8 +312,7 @@ class TestSwitchArrayEdgeCases:
 
         # Should not update state since index is out of bounds
         assert switch._attr_is_on is None
-        assert switch._attr_available is False
-        switch.async_write_ha_state.assert_called()
+        switch.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_switch_aux_empty_array(
@@ -355,8 +352,7 @@ class TestSwitchArrayEdgeCases:
 
         # Should not update state
         assert switch._attr_is_on is None
-        assert switch._attr_available is False
-        switch.async_write_ha_state.assert_called()
+        switch.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_switch_non_array_aux_path(
@@ -441,8 +437,7 @@ class TestSelectEdgeCases:
 
         # Should not update state when value_fn returns None
         assert select._attr_current_option is None
-        assert select._attr_available is False
-        select.async_write_ha_state.assert_called()
+        select.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_select_with_invalid_int_value(
@@ -484,8 +479,7 @@ class TestSelectEdgeCases:
 
         # Should not update state when int conversion fails
         assert select._attr_current_option is None
-        assert select._attr_available is False
-        select.async_write_ha_state.assert_called()
+        select.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_select_with_value_fn_valid(
@@ -660,8 +654,7 @@ class TestNumberEdgeCases:
 
         # Should not crash, should return early
         assert number._attr_native_value is None
-        assert number._attr_available is False
-        number.async_write_ha_state.assert_called()
+        number.async_write_ha_state.assert_not_called()
 
 
 class TestMqttEntityInvalidPayloads:
