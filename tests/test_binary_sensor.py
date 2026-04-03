@@ -111,7 +111,7 @@ class TestNeoPoolBinarySensor:
             await sensor.async_added_to_hass()
 
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"pH": 1}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"pH": 1}}})
         sensor_callback(mock_msg)
 
         assert sensor._attr_is_on is True
@@ -148,7 +148,7 @@ class TestNeoPoolBinarySensor:
             await sensor.async_added_to_hass()
 
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Module": {"Chlorine": 0}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Modules": {"Chlorine": 0}}})
         sensor_callback(mock_msg)
 
         assert sensor._attr_is_on is False
@@ -271,7 +271,8 @@ class TestNeoPoolBinarySensor:
         sensor_callback(mock_msg)
 
         assert sensor._attr_is_on is None
-        sensor.async_write_ha_state.assert_not_called()
+        assert sensor._attr_available is False
+        sensor.async_write_ha_state.assert_called()
 
 
 class TestAsyncSetupEntry:

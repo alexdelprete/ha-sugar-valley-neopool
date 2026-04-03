@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.17] - 2026-04-03
+
+### Added
+
+- **7 named relay binary sensors**: Base, Redox, Chlorine, Conductivity,
+  Heating, UV, Valve (`NeoPool.Relay.*`) with translations and icons.
+
+### Fixed
+
+- **Modules JSON path**: Corrected `NeoPool.Module` (singular) back to
+  `NeoPool.Modules` (plural) per Tasmota source code. The v0.2.16
+  change was incorrect.
+- **Entity availability AND logic**: Entities marked unavailable when
+  JSON key absent from payload. Applied to all entity platforms.
+- **Legacy entity cleanup**: Handles unique_ids without NodeID from
+  YAML-migrated entities.
+
+### Changed
+
+- Updated `docs/ha_neopool_mqtt_package.yaml` to upstream v4.0.
+
 ## [0.2.16] - 2026-04-02
 
 ### Fixed
