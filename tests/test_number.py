@@ -336,7 +336,8 @@ class TestNeoPoolNumber:
         sensor_callback(mock_msg)
 
         assert number._attr_native_value is None
-        number.async_write_ha_state.assert_not_called()
+        assert number._attr_available is False
+        number.async_write_ha_state.assert_called()
 
 
 class TestAsyncSetupEntry:

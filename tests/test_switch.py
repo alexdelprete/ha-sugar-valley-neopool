@@ -284,7 +284,8 @@ class TestNeoPoolSwitch:
         sensor_callback(mock_msg)
 
         assert switch._attr_is_on is None
-        switch.async_write_ha_state.assert_not_called()
+        assert switch._attr_available is False
+        switch.async_write_ha_state.assert_called()
 
 
 class TestAsyncSetupEntry:

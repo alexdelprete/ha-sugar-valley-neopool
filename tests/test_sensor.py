@@ -236,7 +236,8 @@ class TestNeoPoolSensor:
 
         # Value should remain None
         assert sensor._attr_native_value is None
-        sensor.async_write_ha_state.assert_not_called()
+        assert sensor._attr_available is False
+        sensor.async_write_ha_state.assert_called()
 
     @pytest.mark.asyncio
     async def test_sensor_applies_value_function(
