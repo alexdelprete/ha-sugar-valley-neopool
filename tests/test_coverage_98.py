@@ -451,7 +451,7 @@ class TestGetDeviceInfo:
         info = get_device_info(entry)
 
         assert info["manufacturer"] == "Hayward"
-        assert info["sw_version"] == "V2.0.0 (Powerunit)"
+        assert info["sw_version"] == "Powerunit V2.0.0"
 
     def test_device_info_without_runtime_data(self) -> None:
         """Test device info uses defaults without runtime_data."""

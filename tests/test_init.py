@@ -379,7 +379,7 @@ class TestGetDeviceInfo:
         assert device_info["identifiers"] == {(DOMAIN, "ABC123")}
         assert device_info["name"] == "Test Pool"
         assert device_info["manufacturer"] == "Bayrol"
-        assert device_info["sw_version"] == "V6.0.0 (Powerunit)"
+        assert device_info["sw_version"] == "Powerunit V6.0.0"
 
     def test_get_device_info_default_name(self) -> None:
         """Test device info uses default name."""

@@ -740,8 +740,14 @@ def get_device_info(entry: NeoPoolConfigEntry) -> dr.DeviceInfo:
     if hasattr(entry, "runtime_data") and entry.runtime_data:
         if entry.runtime_data.manufacturer:
             manufacturer = entry.runtime_data.manufacturer
+        # Build sw_version: "Tasmota X.Y.Z / Powerunit VX.Y"
+        sw_parts = []
+        if entry.runtime_data.tasmota_version:
+            sw_parts.append(f"Tasmota {entry.runtime_data.tasmota_version}")
         if entry.runtime_data.fw_version:
-            sw_version = f"{entry.runtime_data.fw_version} (Powerunit)"
+            sw_parts.append(f"Powerunit {entry.runtime_data.fw_version}")
+        if sw_parts:
+            sw_version = " / ".join(sw_parts)
 
     # Use device IP for configuration URL if available, otherwise Tasmota docs
     config_url = "https://tasmota.github.io/docs/NeoPool/"
