@@ -1084,26 +1084,35 @@ async def async_fetch_device_metadata(
         )
         _LOGGER.debug("Sent TelePeriod and Backlog Status 2/5 to %s", mqtt_topic)
 
-        # Wait for responses
-        try:
-            await asyncio.wait_for(
-                asyncio.gather(
-                    sensor_event.wait(),
-                    status2_event.wait(),
-                    status5_event.wait(),
-                ),
-                timeout=wait_timeout,
-            )
-        except TimeoutError:
-            _LOGGER.debug(
-                "Timeout waiting for device metadata from %s (got: manufacturer=%s, "
-                "fw=%s, tasmota=%s, ip=%s)",
-                mqtt_topic,
-                manufacturer,
-                fw_version,
-                tasmota_version,
-                device_ip,
-            )
+        # Wait for responses independently - collect whatever arrives
+        # within the timeout window. Each event is waited on separately
+        # so a slow/missing SENSOR doesn't block Status 2/5 results.
+        deadline = hass.loop.time() + wait_timeout
+        for event_name, event in [
+            ("SENSOR", sensor_event),
+            ("Status2", status2_event),
+            ("Status5", status5_event),
+        ]:
+            remaining = deadline - hass.loop.time()
+            if remaining <= 0:
+                break
+            try:
+                await asyncio.wait_for(event.wait(), timeout=remaining)
+            except TimeoutError:
+                _LOGGER.debug(
+                    "Timeout waiting for %s from %s (%.1fs remaining)",
+                    event_name,
+                    mqtt_topic,
+                    remaining,
+                )
+        _LOGGER.debug(
+            "Device metadata fetch complete for %s (manufacturer=%s, fw=%s, tasmota=%s, ip=%s)",
+            mqtt_topic,
+            manufacturer,
+            fw_version,
+            tasmota_version,
+            device_ip,
+        )
     finally:
         unsub_sensor()
         unsub_status2()

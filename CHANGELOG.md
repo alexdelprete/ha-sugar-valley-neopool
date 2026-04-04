@@ -7,6 +7,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18-beta.13] - 2026-04-04
+
+### Fixed
+
+- **Device metadata fetch**: Fixed `asyncio.gather` blocking all results when
+  SENSOR telemetry is slow. Status 2/5 responses were lost even though they
+  arrived in ~200ms, because the gather waited for all three events and timed
+  out on SENSOR. Now waits for each event independently with a shared deadline.
+
+## [0.2.18-beta.12] - 2026-04-04
+
+### Fixed
+
+- **Status 5 IP fetch**: Tasmota was dropping second `Status` command; now uses
+  `Backlog Status 2; Status 5` to send both in a single command.
+
+## [0.2.18-beta.11] - 2026-04-04
+
+### Fixed
+
+- **Status 5 IP fetch timing**: Added 0.5s delay between Status 2 and Status 5
+  commands to prevent Tasmota from dropping the second command.
+- **Debug logging**: Added trace logging for `status5_received` callback.
+
+## [0.2.18-beta.10] - 2026-04-04
+
+### Added
+
+- **Smart relay entity disable**: Detects which named relays are present in
+  SENSOR payload; only disables absent ones.
+- **Serial number**: Device info shows hashed System ID as serial number.
+- **Tasmota firmware version**: Fetched via `Status 2` command, shows
+  `"Tasmota X.Y.Z / Powerunit VX.Y"`.
+- **Dynamic configuration URL**: Points to actual Tasmota device web UI
+  (`http://{ip}`).
+
+### Changed
+
+- Named relay entities disabled by default for new installs.
+- Device removal allowed from UI.
+
+### Fixed
+
+- **Status 2/5 topic subscription**: Separate callbacks for reliable IP fetch.
+- **Device migration**: Preserves original device.
+- Removed blind relay disable that was disabling all 8 relay entities.
+
+## [0.2.18-beta.9] - 2026-04-04
+
+### Fixed
+
+- **Separate Status 2/5 callbacks**: Split single callback into
+  `status2_received` and `status5_received` with independent events.
+- **Removed blind relay disable**: Removed auto-disable that was disabling
+  all 8 relay entities including available ones.
+
+## [0.2.18-beta.8] - 2026-04-04
+
+### Fixed
+
+- **Status 2/5 MQTT subscription**: Fixed wildcard `STATUS+` not matching
+  Tasmota response topics; now subscribes to specific `stat/{topic}/STATUS2`
+  and `stat/{topic}/STATUS5`.
+
+### Changed
+
+- Disable relay entities on upgrade for existing installations.
+
+## [0.2.18-beta.7] - 2026-04-04
+
+### Added
+
+- **Serial number**: Device info shows hashed System ID as serial number.
+- **Tasmota firmware version**: Fetched via `Status 2` command, shows
+  `"Tasmota X.Y.Z / Powerunit VX.Y"`.
+- **Dynamic configuration URL**: Points to actual Tasmota device web UI
+  (`http://{ip}`).
+
+### Changed
+
+- Named relay entities disabled by default (all 8: Acid, Base, Redox,
+  Chlorine, Conductivity, Heating, UV, Valve).
+- Device removal allowed from UI.
+
+### Fixed
+
+- Device migration preserves original device.
+
+## [0.2.18-beta.6] - 2026-04-04
+
+### Fixed
+
+- **Device migration**: Now correctly removes the duplicate device and updates
+  the original's identifier to canonical hashed value.
+
+## [0.2.18-beta.5] - 2026-04-04
+
+### Fixed
+
+- **Complete migration fix**: Added standalone `_migrate_to_canonical_nodeid()`
+  that runs on every startup, independent of acquisition. Handles all edge
+  cases: entities with real NodeID unique_ids, duplicate entities from failed
+  migrations, device registry updates.
+
+## [0.2.18-beta.4] - 2026-04-04
+
+### Fixed
+
+- **Duplicate device on upgrade (root cause)**: Dual NodeID acquisition now
+  runs before device registration in `async_setup_entry`.
+
+## [0.2.18-beta.3] - 2026-04-04
+
+### Fixed
+
+- **Duplicate device on upgrade**: Properly migrates device registry identifier
+  and entity unique_ids from real NodeID to hashed canonical.
+- **Device removal blocked**: Fixed `async_remove_config_entry_device`
+  incorrectly blocking all device removal from UI.
+
+## [0.2.18-beta.2] - 2026-04-04
+
+### Added
+
+- **Dual NodeID recognition**: Acquires both hashed (AA55 prefix) and real
+  NodeIDs during setup.
+- **Auto-acquisition on startup**: Existing installations get dual NodeIDs
+  automatically.
+
+### Changed
+
+- **SO157 no longer required**: SetOption157 is no longer a prerequisite.
+- **Canonical ID is hashed**: Entity unique_ids use hashed NodeID (AA55 prefix)
+  for privacy.
+- **Renamed sensor**: `powerunit_nodeid` → `system_id` (per @curzon01).
+
+### Removed
+
+- SO157 runtime enforcement.
+- SO157 status display in Options flow.
+- Helper functions: `async_query_setoption157()` and
+  `async_ensure_setoption157_enabled()`.
+
 ## [0.2.18-beta.1] - 2026-04-04
 
 ### Added
