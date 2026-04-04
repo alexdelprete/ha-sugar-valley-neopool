@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18-beta.17] - 2026-04-04
+
+### Fixed
+
+- **Status 5 fetch**: Replaced Backlog with sequential commands — send Status 2,
+  wait for response, then send Status 5, wait for response. Backlog queue is
+  interrupted by regular SENSOR telemetry, causing Tasmota to drop Status 5.
+  Sequential send-and-wait avoids all queue competition.
+
 ## [0.2.18-beta.16] - 2026-04-04
 
 ### Fixed

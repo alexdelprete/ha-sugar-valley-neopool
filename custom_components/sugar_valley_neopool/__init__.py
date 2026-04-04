@@ -960,6 +960,26 @@ async def async_migrate_masked_unique_ids(
     return True
 
 
+async def _send_and_wait(
+    hass: HomeAssistant,
+    topic: str,
+    payload: str,
+    event: asyncio.Event,
+    label: str,
+    deadline: float,
+) -> None:
+    """Publish an MQTT command and wait for the response event."""
+    remaining = deadline - hass.loop.time()
+    if remaining <= 0:
+        return
+    await mqtt.async_publish(hass, topic, payload, qos=1, retain=False)
+    _LOGGER.debug("Sent %s to %s", label, topic)
+    try:
+        await asyncio.wait_for(event.wait(), timeout=remaining)
+    except TimeoutError:
+        _LOGGER.debug("Timeout waiting for %s", label)
+
+
 async def async_fetch_device_metadata(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -1078,40 +1098,22 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Send Status 2 and 5 via Backlog. Do NOT send TelePeriod here —
-        # any MQTT command sent after the Backlog interrupts its queue and
-        # causes Tasmota to drop Status 5. SENSOR data arrives naturally
-        # from the regular telemetry cycle.
-        await mqtt.async_publish(
-            hass,
-            f"cmnd/{mqtt_topic}/Backlog",
-            "Status 2; Status 5",
-            qos=1,
-            retain=False,
-        )
-        _LOGGER.debug("Sent Backlog Status 2/5 to %s", mqtt_topic)
-
-        # Wait for responses independently - collect whatever arrives
-        # within the timeout window. Each event is waited on separately
-        # so a slow/missing response doesn't block the others.
+        # Send Status commands one at a time, waiting for each response
+        # before sending the next. Backlog doesn't work reliably because
+        # regular SENSOR telemetry interrupts Tasmota's command queue.
+        cmnd_topic = f"cmnd/{mqtt_topic}/Status"
         deadline = hass.loop.time() + wait_timeout
-        for event_name, event in [
-            ("Status2", status2_event),
-            ("Status5", status5_event),
-            ("SENSOR", sensor_event),
-        ]:
-            remaining = deadline - hass.loop.time()
-            if remaining <= 0:
-                break
+
+        await _send_and_wait(hass, cmnd_topic, "2", status2_event, "Status 2", deadline)
+        await _send_and_wait(hass, cmnd_topic, "5", status5_event, "Status 5", deadline)
+
+        # SENSOR data arrives naturally from the regular telemetry cycle
+        remaining = deadline - hass.loop.time()
+        if remaining > 0 and not sensor_event.is_set():
             try:
-                await asyncio.wait_for(event.wait(), timeout=remaining)
+                await asyncio.wait_for(sensor_event.wait(), timeout=remaining)
             except TimeoutError:
-                _LOGGER.debug(
-                    "Timeout waiting for %s from %s (%.1fs remaining)",
-                    event_name,
-                    mqtt_topic,
-                    remaining,
-                )
+                _LOGGER.debug("Timeout waiting for SENSOR from %s", mqtt_topic)
         _LOGGER.debug(
             "Device metadata fetch complete for %s (manufacturer=%s, fw=%s, tasmota=%s, ip=%s)",
             mqtt_topic,
