@@ -30,6 +30,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_NODEID,
+    CONF_NODEID_HASHED,
     DOMAIN,
 )
 from custom_components.sugar_valley_neopool.helpers import (
@@ -177,11 +178,15 @@ class TestAsyncFetchDeviceMetadata:
             name="Test Pool",
         )
 
-        received_callback = None
+        sensor_callback = None
+        status_callback = None
 
         async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
+            nonlocal sensor_callback, status_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            elif "STATUS" in topic:
+                status_callback = callback
             return MagicMock()
 
         with (
@@ -191,8 +196,8 @@ class TestAsyncFetchDeviceMetadata:
             task = asyncio.create_task(async_fetch_device_metadata(hass, entry, wait_timeout=5.0))
             await asyncio.sleep(0.1)
 
-            # Simulate telemetry with metadata
-            if received_callback:
+            # Simulate SENSOR telemetry with metadata
+            if sensor_callback:
                 mock_msg = MagicMock()
                 mock_msg.payload = json.dumps(
                     {
@@ -202,7 +207,19 @@ class TestAsyncFetchDeviceMetadata:
                         }
                     }
                 )
-                received_callback(mock_msg)
+                sensor_callback(mock_msg)
+
+            # Simulate Status 2 (firmware) and Status 5 (network) responses
+            if status_callback:
+                mock_status2 = MagicMock()
+                mock_status2.payload = json.dumps(
+                    {"StatusFWR": {"Version": "15.3.0(release-tasmota)"}}
+                )
+                status_callback(mock_status2)
+
+                mock_status5 = MagicMock()
+                mock_status5.payload = json.dumps({"StatusNET": {"IPAddress": "192.168.1.100"}})
+                status_callback(mock_status5)
 
             await task
 
@@ -309,11 +326,15 @@ class TestAsyncFetchDeviceMetadata:
             name="Test Pool",
         )
 
-        received_callback = None
+        sensor_callback = None
+        status_callback = None
 
         async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
+            nonlocal sensor_callback, status_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            elif "STATUS" in topic:
+                status_callback = callback
             return MagicMock()
 
         with (
@@ -323,13 +344,23 @@ class TestAsyncFetchDeviceMetadata:
             task = asyncio.create_task(async_fetch_device_metadata(hass, entry, wait_timeout=5.0))
             await asyncio.sleep(0.1)
 
-            # Send bytes payload
-            if received_callback:
+            # Send bytes payload for SENSOR
+            if sensor_callback:
                 mock_msg = MagicMock()
                 mock_msg.payload = (
                     b'{"NeoPool": {"Type": "Zodiac", "Powerunit": {"Version": "1.0"}}}'
                 )
-                received_callback(mock_msg)
+                sensor_callback(mock_msg)
+
+            # Send Status responses to satisfy gather
+            if status_callback:
+                mock_status2 = MagicMock()
+                mock_status2.payload = json.dumps({"StatusFWR": {"Version": "15.0.0"}})
+                status_callback(mock_status2)
+
+                mock_status5 = MagicMock()
+                mock_status5.payload = json.dumps({"StatusNET": {"IPAddress": "10.0.0.1"}})
+                status_callback(mock_status5)
 
             await task
 
@@ -396,7 +427,7 @@ class TestUpdateDeviceRegistryMetadata:
         device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
         assert device is not None
         assert device.manufacturer == "Hayward"
-        assert device.sw_version == "V2.5.0 (Powerunit)"
+        assert device.sw_version == "Powerunit V2.5.0"
 
 
 class TestGetDeviceInfo:
@@ -441,8 +472,8 @@ class TestAsyncRemoveConfigEntryDevice:
     """Tests for async_remove_config_entry_device."""
 
     @pytest.mark.asyncio
-    async def test_remove_device_returns_false(self, hass: HomeAssistant) -> None:
-        """Test remove device returns False to prevent removal."""
+    async def test_remove_device_returns_true(self, hass: HomeAssistant) -> None:
+        """Test remove device returns True to allow removal."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={CONF_DEVICE_NAME: "Test"},
@@ -453,7 +484,7 @@ class TestAsyncRemoveConfigEntryDevice:
 
         result = await async_remove_config_entry_device(hass, entry, device_entry)
 
-        assert result is False
+        assert result is True
 
 
 class TestSetupEntryLogging:
@@ -468,6 +499,7 @@ class TestSetupEntryLogging:
                 CONF_DEVICE_NAME: "Test Pool",
                 CONF_DISCOVERY_PREFIX: "SmartPool",
                 CONF_NODEID: "ABC123",
+                CONF_NODEID_HASHED: "AA55HASHED",
                 "entity_id_mapping": {
                     "ph_data": "sensor.neopool_ph",
                     "water_temperature": "sensor.neopool_temp",
@@ -493,6 +525,9 @@ class TestSetupEntryLogging:
             patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 new_callable=AsyncMock,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._migrate_to_canonical_nodeid",
             ),
             patch(
                 "custom_components.sugar_valley_neopool.async_migrate_masked_unique_ids",
