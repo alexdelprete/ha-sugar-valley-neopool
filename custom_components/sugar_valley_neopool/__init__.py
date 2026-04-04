@@ -907,8 +907,8 @@ async def async_fetch_device_metadata(
     tasmota_version: str | None = None
     device_ip: str | None = None
     sensor_event = asyncio.Event()
-    status_event = asyncio.Event()
-    status_count = 0
+    status2_event = asyncio.Event()
+    status5_event = asyncio.Event()
 
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
@@ -934,48 +934,54 @@ async def async_fetch_device_metadata(
             _LOGGER.debug("Failed to parse SENSOR for metadata: %s", err)
 
     @callback
-    def status_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle Status 2 (firmware) and Status 5 (network) responses."""
-        nonlocal tasmota_version, device_ip, status_count
+    def status2_received(msg: mqtt.ReceiveMessage) -> None:
+        """Handle Status 2 (firmware) response."""
+        nonlocal tasmota_version
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
                 if isinstance(msg.payload, (bytes, bytearray))
                 else msg.payload
             )
-            # Status 2: {"StatusFWR":{"Version":"15.3.0(...)",...}}
             status_fwr = payload.get("StatusFWR", {})
             if status_fwr:
                 ver = status_fwr.get("Version", "")
                 if ver:
-                    # Strip build info in parentheses: "15.3.0(release-...)" → "15.3.0"
                     tasmota_version = ver.split("(")[0].strip()
                     _LOGGER.debug("Extracted Tasmota version: %s", tasmota_version)
-                    status_count += 1
+                    status2_event.set()
+        except (json.JSONDecodeError, UnicodeDecodeError) as err:
+            _LOGGER.debug("Failed to parse Status 2 response: %s", err)
 
-            # Status 5: {"StatusNET":{"IPAddress":"10.1.10.158",...}}
+    @callback
+    def status5_received(msg: mqtt.ReceiveMessage) -> None:
+        """Handle Status 5 (network) response."""
+        nonlocal device_ip
+        try:
+            payload = json.loads(
+                msg.payload.decode("utf-8")
+                if isinstance(msg.payload, (bytes, bytearray))
+                else msg.payload
+            )
             status_net = payload.get("StatusNET", {})
             if status_net:
                 ip = status_net.get("IPAddress", "")
                 if ip:
                     device_ip = str(ip)
                     _LOGGER.debug("Extracted device IP: %s", device_ip)
-                    status_count += 1
-
-            if status_count >= 2:
-                status_event.set()
+                    status5_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
-            _LOGGER.debug("Failed to parse Status response: %s", err)
+            _LOGGER.debug("Failed to parse Status 5 response: %s", err)
 
     # Subscribe to SENSOR and specific Status response topics
     unsub_sensor = await mqtt.async_subscribe(
         hass, f"tele/{mqtt_topic}/SENSOR", sensor_received, qos=1
     )
     unsub_status2 = await mqtt.async_subscribe(
-        hass, f"stat/{mqtt_topic}/STATUS2", status_received, qos=1
+        hass, f"stat/{mqtt_topic}/STATUS2", status2_received, qos=1
     )
     unsub_status5 = await mqtt.async_subscribe(
-        hass, f"stat/{mqtt_topic}/STATUS5", status_received, qos=1
+        hass, f"stat/{mqtt_topic}/STATUS5", status5_received, qos=1
     )
 
     try:
@@ -987,7 +993,11 @@ async def async_fetch_device_metadata(
         # Wait for responses
         try:
             await asyncio.wait_for(
-                asyncio.gather(sensor_event.wait(), status_event.wait()),
+                asyncio.gather(
+                    sensor_event.wait(),
+                    status2_event.wait(),
+                    status5_event.wait(),
+                ),
                 timeout=wait_timeout,
             )
         except TimeoutError:
