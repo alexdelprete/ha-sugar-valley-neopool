@@ -96,7 +96,7 @@
       "already_configured": "Denna enhet är redan konfigurerad",
       "invalid_discovery_info": "Ogiltig upptäcktsinformation mottagen",
       "not_neopool_device": "Den upptäckta enheten är inte en NeoPool-kontroller",
-      "nodeid_configuration_failed": "Misslyckades med att konfigurera NodeID. Ställ in SetOption157 1 manuellt i Tasmota-konsolen och försök igen.",
+      "nodeid_configuration_failed": "Misslyckades med att konfigurera NodeID. Ställ in att enheten är online och nåbar via MQTT.",
       "unique_id_mismatch": "Enhetens NodeID matchar inte den ursprungliga konfigurationen."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "NeoPool-alternativ",
-        "description": "Konfigurera körtidsalternativ för din NeoPool-enhet.\n\n{setoption157_status}\n\n**Återställningsskriptvariabler:**\nNär det är konfigurerat får återställningsskriptet dessa variabler:\n\n- `device_name` : Enhetsnamn\n- `mqtt_topic` : MQTT-ämne\n- `nodeid` : Enhetens NodeID\n- `failures_count` : Antal på varandra följande fel",
+        "description": "Konfigurera körtidsalternativ för din NeoPool-enhet.\n\n**Återställningsskriptvariabler:**\nNär det är konfigurerat får återställningsskriptet dessa variabler:\n\n- `device_name` : Enhetsnamn\n- `mqtt_topic` : MQTT-ämne\n- `nodeid` : Enhetens NodeID\n- `failures_count` : Antal på varandra följande fel",
         "data": {
           "recovery_script": "Återställningsskript (valfritt)",
           "enable_repair_notification": "Aktivera reparationsaviseringar",
@@ -213,7 +213,7 @@
       "connection_out_of_range": {
         "name": "Anslutning utanför räckvidd"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "name": "Kraftenhet NodeID"
       }
     },

@@ -76,7 +76,7 @@
       "connection_out_of_range": {
         "default": "mdi:alert-octagon-outline"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "default": "mdi:information-outline"
       },
       "boost_mode": {

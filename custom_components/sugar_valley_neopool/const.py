@@ -39,7 +39,9 @@ CONF_FAILURES_THRESHOLD: Final = "failures_threshold"
 CONF_RECOVERY_SCRIPT: Final = "recovery_script"
 CONF_OFFLINE_TIMEOUT: Final = "offline_timeout"
 CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
-CONF_SETOPTION157: Final = "setoption157"
+CONF_NODEID_HASHED: Final = "nodeid_hashed"
+CONF_NODEID_REAL: Final = "nodeid_real"
+CONF_NODEID_MASKED: Final = "nodeid_masked"
 
 # Device metadata keys (stored in runtime_data, updated from MQTT)
 CONF_MANUFACTURER: Final = "manufacturer"
@@ -144,9 +146,8 @@ CMD_REDOX: Final = "NPRedox"
 CMD_HYDROLYSIS: Final = "NPHydrolysis"
 CMD_ESCAPE: Final = "NPEscape"
 
-# Tasmota SetOption157 commands (for NodeID visibility)
-CMD_SETOPTION157: Final = "SetOption157"  # Set command (payload: 1 or 0)
-CMD_SO157: Final = "SO157"  # Query command (no payload)
+# Tasmota SetOption157 command (used only during setup for NodeID acquisition)
+CMD_SETOPTION157: Final = "SetOption157"
 
 # JSON paths for sensor data extraction
 JSON_PATH_TYPE: Final = "NeoPool.Type"

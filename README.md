@@ -55,7 +55,7 @@ of your pool system through Home Assistant.
   language (supports German, English, Spanish, Estonian, Finnish, French,
   Italian, Norwegian, Portuguese, and Swedish)
 - **Options flow**: Adjust offline timeout, recovery script, repair
-  notification settings, and Tasmota SetOption157 at runtime
+  notification settings at runtime
 - **Reconfigure flow**: Change device name and MQTT topic
 - **Repair notifications**: Device offline issues are surfaced in Home
   Assistant's repair system with configurable threshold
@@ -76,37 +76,21 @@ of your pool system through Home Assistant.
 - Tasmota firmware with NeoPool support
   ([Documentation](https://tasmota.github.io/docs/NeoPool/))
 - MQTT broker configured in Home Assistant
-- **Tasmota SetOption157 enabled** (see below)
 
-### Tasmota SetOption157 (Required)
+### NodeID and SetOption157
 
-> ⚠️ **IMPORTANT**: Tasmota `SetOption157` **MUST** be set to `1` to expose
-> the NeoPool hardware NodeID. This is a **prerequisite** for the integration
-> to work correctly.
+The integration uses the NeoPool hardware NodeID to create stable,
+unique identifiers for all entities. It works regardless of the Tasmota
+`SetOption157` setting:
 
-The integration uses the hardware NodeID from your NeoPool controller to
-create stable, unique identifiers for all entities. Without `SetOption157 1`,
-the NodeID is masked (shown as `XXXX XXXX XXXX XXXX`) and entities will have
-incorrect unique IDs.
+- **SO157=0 (default)**: Modern Tasmota versions output a hashed NodeID
+  (prefix `AA55`). Older versions mask it with `XXXX`.
+- **SO157=1**: The real hardware NodeID is shown.
 
-**To enable SetOption157:**
-
-```console
-# In Tasmota console
-SetOption157 1
-```
-
-**What happens if SetOption157 is disabled:**
-
-- The integration will **automatically enable it** during initial setup
-- If entities were created with masked NodeIDs, the integration will
-  **automatically detect and migrate them** on startup (see
-  [Automatic NodeID Migration](#automatic-nodeid-migration))
-- The Options flow includes a SetOption157 checkbox to check/change its status
-
-While the integration handles this automatically, it's recommended to enable
-`SetOption157 1` in Tasmota **before** setting up the integration to avoid
-any migration steps.
+During setup, the integration automatically reads **both** the hashed
+and real NodeIDs by briefly toggling SO157. Both values are stored, so
+the device is recognized regardless of how SO157 is set afterward.
+No manual configuration of SO157 is required.
 
 <!-- BEGIN SHARED:repo-sync:installation -->
 <!-- Synced by repo-sync on 2026-02-20 -->
@@ -165,13 +149,7 @@ After installation, you can adjust runtime settings without restart:
      triggering notifications (1-10)
    - **Offline timeout**: How long the device must be offline before triggering
      notifications (60-3600 seconds)
-   - **SetOption157 (Show NodeID)**: Enable/disable Tasmota's SetOption157 to
-     expose the hardware NodeID. Shows current status and warns if disabled.
 1. Click **Submit** - changes apply immediately
-
-> 💡 **Tip**: The SetOption157 checkbox shows the current status queried from
-> your Tasmota device. If it shows as disabled, check the box to enable it.
-> The integration will verify the change was successful.
 
 ### Reconfiguring Connection Settings
 
@@ -217,7 +195,7 @@ If you're currently using the YAML package
    - Scan for NeoPool messages and detect your MQTT topic
    - Find migratable entities using the default `neopool_mqtt_` prefix
    - If not found, use smart detection with NeoPool-specific signatures
-   - Configure Tasmota with `SetOption157 1` to expose NodeID (if needed)
+   - Acquire device NodeID automatically
 1. **Active entity check**: If the integration detects entities are still
    receiving updates (YAML package still running), it will warn you and
    ask you to remove the YAML package first
@@ -289,32 +267,9 @@ create stable unique identifiers:
 
 ### Automatic NodeID Migration
 
-If entities were created with masked NodeIDs (when `SetOption157` was
-disabled), the integration automatically detects and fixes them on startup.
-
-**What is a masked NodeID?**
-
-When Tasmota's `SetOption157` is set to `0` (default), the NodeID is masked
-for privacy. Instead of the real NodeID like `4C7525BFB344`, you see something
-like `XXXX XXXX XXXX XXXX 3435`. This results in entity unique IDs like:
-
-- `neopool_mqtt_XXXX XXXX XXXX XXXX 3435_water_temperature` (masked - bad)
-
-Instead of:
-
-- `neopool_mqtt_4C7525BFB344_water_temperature` (real - good)
-
-**Automatic migration process:**
-
-On every integration startup, a sanity check runs that:
-
-1. **Detects** entities with masked unique IDs (containing "XXXX")
-2. **Checks** if `SetOption157` is enabled on Tasmota
-3. **Enables** `SetOption157` if it was disabled
-4. **Retrieves** the real NodeID from telemetry
-5. **Normalizes** the NodeID (removes spaces, uppercase)
-6. **Migrates** all entity unique IDs to use the real NodeID
-7. **Updates** the config entry and device registry
+If entities were created with old-format NodeIDs (masked XXXX or real),
+the integration automatically detects and migrates them on startup to use
+the hashed NodeID as the canonical identifier.
 
 **What gets preserved:**
 
@@ -337,16 +292,14 @@ process to ensure everything is properly configured:
 
 | Check | Description | Action if Failed |
 |-------|-------------|------------------|
-| **Masked NodeID Detection** | Scans entities for masked IDs ("XXXX") | Enables SO157, migrates entities |
-| **Config Entry NodeID** | Verifies stored NodeID is unmasked | Updates config entry |
+| **NodeID Migration** | Scans for old-format unique_ids | Migrates to hashed NodeID |
 | **Entity ID Mapping** | Checks YAML-migrated entity_ids | Renames to preserve original IDs |
-| **Orphaned Entity Cleanup** | Finds replaced YAML entities | Deletes orphaned binary sensors |
-| **Device Registry** | Verifies device uses real NodeID | Updates device identifier |
+| **Orphaned Entity Cleanup** | Finds replaced/renamed entities | Removes deprecated entities |
+| **Device Registry** | Verifies device identifier | Updates if needed |
 
 **Why run on every startup?**
 
 - Users might restore backups with old entity configurations
-- Tasmota configuration might change (SO157 disabled externally)
 - Safer to always verify than assume persisted state is correct
 - Operations are idempotent (running multiple times produces same result)
 
@@ -356,35 +309,15 @@ everything is aligned and log debug messages like "already correct" or
 
 #### Runtime Monitoring (While Running)
 
-While Home Assistant is running, the integration actively monitors:
+While Home Assistant is running, the integration monitors:
 
 | Monitor | Description | Action |
 |---------|-------------|--------|
-| **SetOption157 Enforcement** | Monitors SENSOR for masked NodeID | Re-enables SO157 automatically |
 | **Device Availability** | Subscribes to LWT topic | Marks entities unavailable |
+| **NodeID Recognition** | Matches NodeID against stored values | Recognizes hashed, real, or masked |
 
-**SetOption157 Runtime Enforcement:**
-
-The integration subscribes to `tele/{topic}/SENSOR` and checks every message
-for a masked NodeID. If someone disables SO157 via Tasmota console, the
-integration detects the masked NodeID pattern and automatically sends
-`SetOption157 1` to re-enable it.
-
-```text
-# Example log when enforcement triggers:
-WARNING Detected masked NodeID 'XXXX XXXX XXXX XXXX 3435' in SENSOR data,
-        enforcing SetOption157
-INFO Successfully enforced SetOption157 for SmartPool
-```
-
-**What is NOT monitored at runtime:**
-
-- Entity unique_id alignment (requires restart)
-- Entity_id mapping correctness (requires restart)
-- Orphaned entities (requires restart)
-
-These checks only run at startup because entity registry changes require
-a Home Assistant restart to take effect anyway.
+Entity registry changes (unique_id migration, entity cleanup) only run
+at startup.
 
 ### Troubleshooting Migration
 
@@ -415,8 +348,7 @@ a Home Assistant restart to take effect anyway.
 
 **Problem**: "Failed to configure NodeID"
 
-- Manually set `SetOption157 1` in Tasmota console, then retry setup
-- Some Tasmota versions may require this to be set manually
+- Ensure the device is online and reachable via MQTT, then retry setup
 
 **Problem**: Entities appear duplicated
 
@@ -558,7 +490,7 @@ The integration expects MQTT messages on these topics:
 
 For detailed Tasmota NeoPool setup instructions, see the
 [official documentation](https://tasmota.github.io/docs/NeoPool/).
-SetOption157 setup is covered in [Requirements](#tasmota-setoption157-required).
+NodeID handling is covered in [Requirements](#nodeid-and-setoption157).
 
 ## Known Limitations
 

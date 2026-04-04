@@ -20,6 +20,7 @@ from .const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
     CONF_NODEID,
+    CONF_NODEID_REAL,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
     DEFAULT_DEVICE_NAME,
@@ -37,12 +38,9 @@ from .const import (
     YAML_TO_INTEGRATION_KEY_MAP,
 )
 from .helpers import (
-    async_ensure_setoption157_enabled,
-    async_set_setoption157,
     extract_entity_key_from_masked_unique_id,
     get_nested_value,
     is_masked_unique_id,
-    is_nodeid_masked,
     normalize_nodeid,
     validate_nodeid,
 )
@@ -147,10 +145,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         # Clean up orphaned YAML entities that can't be migrated (e.g., binary sensors
         # replaced by switches). This runs only when entity_id_mapping exists (YAML migration).
         await _cleanup_orphaned_yaml_entities(hass, entry)
-
-    # Set up runtime enforcement of SetOption157
-    # This monitors SENSOR data and enforces SO157=ON if NodeID becomes masked
-    await _setup_setoption157_enforcement(hass, entry)
 
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
@@ -425,11 +419,16 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
     Removes registry entries for entities whose descriptions have been removed,
     preventing them from lingering as unavailable.
     """
-    # Entities removed in this version (Relay.State[n] with assumed function mapping)
+    # Entities removed in previous versions (Relay.State[n] with assumed function mapping)
     removed_entity_keys = [
         ("binary_sensor", "relay_ph_state"),
         ("binary_sensor", "relay_filtration_state"),
         ("binary_sensor", "relay_light_state"),
+    ]
+
+    # Entities renamed in this version
+    renamed_entity_keys = [
+        ("sensor", "powerunit_nodeid", "system_id"),
     ]
 
     entity_registry = er.async_get(hass)
@@ -449,6 +448,19 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
                     entity_entry,
                     unique_id,
                 )
+
+    for domain, old_key, new_key in renamed_entity_keys:
+        old_unique_id = f"neopool_mqtt_{nodeid}_{old_key}"
+        new_unique_id = f"neopool_mqtt_{nodeid}_{new_key}"
+        entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, old_unique_id)
+        if entity_id:
+            entity_registry.async_update_entity(entity_id, new_unique_id=new_unique_id)
+            _LOGGER.info(
+                "Renamed entity %s: %s -> %s",
+                entity_id,
+                old_unique_id,
+                new_unique_id,
+            )
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
@@ -606,18 +618,22 @@ async def async_migrate_masked_unique_ids(
         len(masked_entities),
     )
 
-    # Step 2: Ensure SetOption157 is enabled (always send, don't query)
-    # This is simpler and more reliable than querying - we verify via SENSOR data
-    _LOGGER.info("Sending SetOption157 1 to %s to enable NodeID visibility", mqtt_topic)
-    await async_set_setoption157(hass, mqtt_topic, enable=True)
-
-    # Step 3: Trigger telemetry and wait for real NodeID
-    _LOGGER.debug("Waiting for real NodeID from telemetry on %s", mqtt_topic)
-    raw_nodeid = await _wait_for_real_nodeid(hass, mqtt_topic)
-    _LOGGER.debug("Raw NodeID from telemetry: %s", raw_nodeid)
+    # Step 2: Get the canonical NodeID from config entry
+    # With dual recognition, the config entry should already have the real NodeID
+    # from setup. If we're migrating from an older version, try to get it from
+    # the stored nodeid_real value first.
+    stored_real = entry.data.get(CONF_NODEID_REAL)
+    if stored_real:
+        _LOGGER.info("Using stored real NodeID for migration: %s", stored_real)
+        raw_nodeid = stored_real
+    else:
+        # Fallback: wait for NodeID from telemetry (legacy migration path)
+        _LOGGER.debug("Waiting for NodeID from telemetry on %s", mqtt_topic)
+        raw_nodeid = await _wait_for_real_nodeid(hass, mqtt_topic)
+        _LOGGER.debug("Raw NodeID from telemetry: %s", raw_nodeid)
 
     if not raw_nodeid:
-        _LOGGER.error("Could not get real NodeID from telemetry, migration aborted")
+        _LOGGER.error("Could not get NodeID for migration, migration aborted")
         return False
 
     # Normalize NodeID (remove spaces, uppercase) for clean unique_ids
@@ -918,82 +934,3 @@ async def _wait_for_real_nodeid(
         unsubscribe()
 
     return real_nodeid
-
-
-async def _setup_setoption157_enforcement(
-    hass: HomeAssistant,
-    entry: NeoPoolConfigEntry,
-) -> None:
-    """Set up runtime enforcement of SetOption157.
-
-    Subscribes to SENSOR topic and monitors NodeID in each message.
-    If NodeID appears masked (contains XXXX or spaces), sends SetOption157 1
-    command to re-enable NodeID visibility.
-
-    This ensures SO157 stays ON even if someone changes it via Tasmota console.
-
-    Args:
-        hass: Home Assistant instance
-        entry: Config entry with runtime_data
-    """
-    mqtt_topic = entry.runtime_data.mqtt_topic
-    sensor_topic = f"tele/{mqtt_topic}/SENSOR"
-
-    # Track if enforcement is in progress to avoid duplicate commands
-    enforcement_in_progress = False
-
-    @callback
-    def check_nodeid_and_enforce(msg: mqtt.ReceiveMessage) -> None:
-        """Check NodeID in SENSOR message and enforce SO157 if masked."""
-        nonlocal enforcement_in_progress
-
-        if enforcement_in_progress:
-            return  # Skip if already enforcing
-
-        try:
-            if isinstance(msg.payload, (bytes, bytearray)):
-                payload_str = msg.payload.decode("utf-8")
-            else:
-                payload_str = msg.payload
-
-            payload = json.loads(payload_str)
-            nodeid = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
-
-            if nodeid and is_nodeid_masked(str(nodeid)):
-                _LOGGER.warning(
-                    "Detected masked NodeID '%s' in SENSOR data, enforcing SetOption157",
-                    nodeid,
-                )
-                enforcement_in_progress = True
-                # Schedule async enforcement task
-                hass.async_create_task(
-                    _enforce_setoption157(hass, entry, mqtt_topic),
-                    name=f"neopool_enforce_so157_{mqtt_topic}",
-                )
-
-        except (json.JSONDecodeError, UnicodeDecodeError) as err:
-            _LOGGER.debug("Failed to parse SENSOR payload for SO157 check: %s", err)
-
-    async def _enforce_setoption157(
-        hass_ref: HomeAssistant,
-        entry_ref: NeoPoolConfigEntry,
-        topic: str,
-    ) -> None:
-        """Enforce SetOption157 and reset enforcement flag."""
-        nonlocal enforcement_in_progress
-        try:
-            success = await async_ensure_setoption157_enabled(hass_ref, topic)
-            if success:
-                _LOGGER.info("Successfully enforced SetOption157 for %s", topic)
-            else:
-                _LOGGER.error("Failed to enforce SetOption157 for %s", topic)
-        finally:
-            enforcement_in_progress = False
-
-    # Subscribe to SENSOR topic for monitoring
-    unsubscribe = await mqtt.async_subscribe(hass, sensor_topic, check_nodeid_and_enforce, qos=1)
-
-    # Store unsubscribe callback for cleanup on unload
-    entry.async_on_unload(unsubscribe)
-
-    _LOGGER.debug("SetOption157 enforcement monitoring active on %s", sensor_topic)

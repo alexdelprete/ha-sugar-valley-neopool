@@ -55,14 +55,7 @@ from .const import (
     MIN_FAILURES_THRESHOLD,
     MIN_OFFLINE_TIMEOUT,
 )
-from .helpers import (
-    async_ensure_setoption157_enabled,
-    async_query_setoption157,
-    get_nested_value,
-    is_nodeid_masked,
-    normalize_nodeid,
-    validate_nodeid,
-)
+from .helpers import async_set_setoption157, classify_nodeid, get_nested_value, normalize_nodeid
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,7 +67,7 @@ NEOPOOL_SIGNATURES: dict[str, int] = {
     "hydrolysis_runtime_pol1": 25,
     "hydrolysis_runtime_pol2": 25,
     # Quite unique - medium-high weight (20 points)
-    "powerunit_nodeid": 20,
+    "system_id": 20,
     "powerunit_4ma": 20,
     "hydrolysis_polarity_changes": 20,
     # NeoPool-specific naming - medium weight (15 points)
@@ -128,7 +121,10 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._discovery_prefix: str | None = None
         self._device_name: str | None = None
-        self._nodeid: str | None = None
+        self._nodeid: str | None = None  # canonical (hashed or real)
+        self._nodeid_hashed: str | None = None
+        self._nodeid_real: str | None = None
+        self._nodeid_masked: str | None = None
         self._yaml_topic: str | None = None
         self._migrate_yaml: bool = False
         self._unique_id_prefix: str = DEFAULT_UNIQUE_ID_PREFIX
@@ -191,16 +187,10 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._yaml_topic = detected_topic
                 self._discovery_prefix = detected_topic
 
-                nodeid = validation_result.get("nodeid")
-                if not validate_nodeid(nodeid):
-                    config_result = await self._auto_configure_nodeid(detected_topic)
-                    if config_result["success"]:
-                        nodeid = config_result["nodeid"]
-                    else:
-                        # NodeID config failed, ask for topic manually
-                        return await self.async_step_yaml_topic()
-
-                self._nodeid = normalize_nodeid(nodeid)
+                config_result = await self._acquire_and_store_nodeids(detected_topic)
+                if not config_result["success"]:
+                    # NodeID acquisition failed, ask for topic manually
+                    return await self.async_step_yaml_topic()
 
                 # Now try to find migratable entities
                 return await self._check_migratable_entities()
@@ -225,22 +215,14 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 self._yaml_topic = yaml_topic
                 self._discovery_prefix = yaml_topic
 
-                # Extract NodeID from validation result
-                nodeid = validation_result.get("nodeid")
-
-                # If NodeID is hidden, auto-configure Tasmota
-                if not validate_nodeid(nodeid):
-                    config_result = await self._auto_configure_nodeid(yaml_topic)
-                    if not config_result["success"]:
-                        return self.async_abort(
-                            reason="nodeid_configuration_failed",
-                            description_placeholders={
-                                "error": config_result.get("error", "Failed to enable NodeID")
-                            },
-                        )
-                    nodeid = config_result["nodeid"]
-
-                self._nodeid = normalize_nodeid(nodeid)
+                config_result = await self._acquire_and_store_nodeids(yaml_topic)
+                if not config_result["success"]:
+                    return self.async_abort(
+                        reason="nodeid_configuration_failed",
+                        description_placeholders={
+                            "error": config_result.get("error", "Failed to acquire NodeID")
+                        },
+                    )
 
                 # Now check for migratable entities
                 return await self._check_migratable_entities()
@@ -736,14 +718,15 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
             return self.async_create_entry(
                 title=device_name,
-                data={
-                    CONF_DEVICE_NAME: device_name,
-                    CONF_DISCOVERY_PREFIX: self._yaml_topic,
-                    CONF_NODEID: self._nodeid,
-                    CONF_UNIQUE_ID_PREFIX: self._unique_id_prefix,
-                    CONF_MIGRATE_YAML: True,
-                    "entity_id_mapping": result.get("entity_id_mapping", {}),
-                },
+                data=self._build_entry_data(
+                    device_name,
+                    self._yaml_topic or "",
+                    **{
+                        CONF_UNIQUE_ID_PREFIX: self._unique_id_prefix,
+                        CONF_MIGRATE_YAML: True,
+                        "entity_id_mapping": result.get("entity_id_mapping", {}),
+                    },
+                ),
             )
 
         # Format results for display
@@ -789,31 +772,22 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 if not validation_result["valid"]:
                     errors["base"] = "cannot_connect"
                 else:
-                    nodeid = validation_result.get("nodeid")
-
-                    # If NodeID is hidden, auto-configure Tasmota
-                    if not validate_nodeid(nodeid):
-                        config_result = await self._auto_configure_nodeid(discovery_prefix)
-                        if not config_result["success"]:
-                            return self.async_abort(
-                                reason="nodeid_configuration_failed",
-                                description_placeholders={
-                                    "error": config_result.get("error", "Failed to enable NodeID")
-                                },
-                            )
-                        nodeid = config_result["nodeid"]
+                    config_result = await self._acquire_and_store_nodeids(discovery_prefix)
+                    if not config_result["success"]:
+                        return self.async_abort(
+                            reason="nodeid_configuration_failed",
+                            description_placeholders={
+                                "error": config_result.get("error", "Failed to acquire NodeID")
+                            },
+                        )
 
                     # Set unique ID and check for duplicates
-                    await self.async_set_unique_id(f"{DOMAIN}_{nodeid}")
+                    await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
                     self._abort_if_unique_id_configured()
 
                     return self.async_create_entry(
                         title=device_name,
-                        data={
-                            CONF_DEVICE_NAME: device_name,
-                            CONF_DISCOVERY_PREFIX: discovery_prefix,
-                            CONF_NODEID: nodeid,
-                        },
+                        data=self._build_entry_data(device_name, discovery_prefix),
                     )
 
         return self.async_show_form(
@@ -847,25 +821,19 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         except (json.JSONDecodeError, TypeError):
             return self.async_abort(reason="invalid_discovery_info")
 
-        # Extract NodeID from payload
-        nodeid = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
-
-        # If NodeID is hidden, auto-configure Tasmota
-        if not validate_nodeid(nodeid):
-            config_result = await self._auto_configure_nodeid(device_topic)
-            if not config_result["success"]:
-                return self.async_abort(
-                    reason="nodeid_configuration_failed",
-                    description_placeholders={
-                        "error": config_result.get("error", "Failed to enable NodeID")
-                    },
-                )
-            nodeid = config_result["nodeid"]
-
-        # Store discovery info and NodeID (normalized for clean unique_ids)
+        # Store discovery info
         self._discovery_prefix = device_topic
         self._device_name = f"NeoPool {device_topic}"
-        self._nodeid = normalize_nodeid(nodeid)
+
+        # Acquire dual NodeIDs
+        config_result = await self._acquire_and_store_nodeids(device_topic)
+        if not config_result["success"]:
+            return self.async_abort(
+                reason="nodeid_configuration_failed",
+                description_placeholders={
+                    "error": config_result.get("error", "Failed to acquire NodeID")
+                },
+            )
 
         # Set unique ID based on NodeID to prevent duplicate discoveries
         await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
@@ -887,11 +855,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             discovery_prefix = self._discovery_prefix or ""
             return self.async_create_entry(
                 title=device_name,
-                data={
-                    CONF_DEVICE_NAME: device_name,
-                    CONF_DISCOVERY_PREFIX: discovery_prefix,
-                    CONF_NODEID: self._nodeid,
-                },
+                data=self._build_entry_data(device_name, discovery_prefix),
             )
 
         return self.async_show_form(
@@ -987,56 +951,112 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         return result
 
     async def _auto_configure_nodeid(self, device_topic: str) -> dict[str, Any]:
-        """Auto-configure Tasmota SetOption157 to enable NodeID.
+        """Acquire both hashed and real NodeIDs via dual recognition.
 
-        Ensures SO157 is ON (send + verify via stat/{topic}/SO), then retrieves
-        the unmasked NodeID from SENSOR data.
+        Reads the current NodeID, classifies it, toggles SO157 once to get
+        the other format, then restores SO157 to its original state.
 
-        Returns dict with 'success' boolean and optionally 'nodeid' or 'error'.
+        Returns dict with 'success' boolean and NodeID values or 'error'.
+        Keys on success: 'nodeid' (canonical), 'nodeid_hashed', 'nodeid_real',
+        'nodeid_masked'.
         """
-        _LOGGER.info(
-            "NodeID is hidden/masked. Ensuring SetOption157 is enabled for %s", device_topic
-        )
+        # Step 1: Read current NodeID from SENSOR
+        _LOGGER.info("Reading initial NodeID from %s", device_topic)
+        await self._trigger_telemetry(device_topic)
+        first_nodeid = await self._wait_for_any_nodeid(device_topic)
 
-        # Step 1: Ensure SetOption157 is enabled (send + verify)
-        so157_enabled = await async_ensure_setoption157_enabled(self.hass, device_topic)
-        if not so157_enabled:
+        if not first_nodeid:
             return {
                 "success": False,
-                "error": "Failed to enable SetOption157. Device may be offline or not responding.",
+                "error": "No NodeID received from device. Check MQTT connection.",
             }
 
-        # Step 2: Trigger telemetry to get the now-unmasked NodeID
-        _LOGGER.info("SetOption157 enabled, triggering telemetry for NodeID...")
+        first_type = classify_nodeid(first_nodeid)
+        _LOGGER.info("Received NodeID: %s (type: %s)", first_nodeid, first_type)
+
+        if first_type == "invalid":
+            return {
+                "success": False,
+                "error": f"Invalid NodeID received: '{first_nodeid}'",
+            }
+
+        # Step 2: Toggle SO157 to get the other format
+        # Got hashed/masked (SO157=0) → toggle to 1 to get real
+        # Got real (SO157=1) → toggle to 0 to get hashed/masked
+        toggle_to = first_type in ("hashed", "masked")
+        _LOGGER.info(
+            "Toggling SetOption157 to %s to acquire second NodeID",
+            "1" if toggle_to else "0",
+        )
+        await async_set_setoption157(self.hass, device_topic, enable=toggle_to)
+        await asyncio.sleep(1)
+        await self._trigger_telemetry(device_topic)
+        second_nodeid = await self._wait_for_any_nodeid(device_topic)
+
+        # Step 3: Restore SO157 to original state
+        _LOGGER.info("Restoring SetOption157 to %s", "0" if toggle_to else "1")
+        await async_set_setoption157(self.hass, device_topic, enable=not toggle_to)
+
+        # Step 4: Classify and store both NodeIDs
+        second_type = classify_nodeid(second_nodeid) if second_nodeid else "invalid"
+        _LOGGER.info("Second NodeID: %s (type: %s)", second_nodeid, second_type)
+
+        nodeid_hashed = None
+        nodeid_real = None
+        nodeid_masked = None
+
+        for nodeid, ntype in [(first_nodeid, first_type), (second_nodeid, second_type)]:
+            if ntype == "hashed":
+                nodeid_hashed = normalize_nodeid(nodeid)
+            elif ntype == "real":
+                nodeid_real = normalize_nodeid(nodeid)
+            elif ntype == "masked":
+                nodeid_masked = normalize_nodeid(nodeid)
+
+        # Must have at least the real NodeID
+        if not nodeid_real:
+            return {
+                "success": False,
+                "error": "Could not acquire real NodeID. Device may not be responding.",
+            }
+
+        # Canonical: prefer hashed (privacy), fall back to real
+        canonical = nodeid_hashed or nodeid_real
+
+        _LOGGER.info(
+            "NodeID acquisition complete. Canonical: %s, Real: %s, Hashed: %s, Masked: %s",
+            canonical,
+            nodeid_real,
+            nodeid_hashed or "N/A",
+            nodeid_masked or "N/A",
+        )
+
+        return {
+            "success": True,
+            "nodeid": canonical,
+            "nodeid_hashed": nodeid_hashed,
+            "nodeid_real": nodeid_real,
+            "nodeid_masked": nodeid_masked,
+        }
+
+    async def _trigger_telemetry(self, device_topic: str) -> None:
+        """Trigger immediate telemetry from the device."""
         await mqtt.async_publish(
             self.hass,
             f"cmnd/{device_topic}/TelePeriod",
-            "",  # Empty payload queries current period and triggers immediate telemetry
+            "",
             qos=1,
             retain=False,
         )
 
-        # Step 3: Wait for NodeID in the telemetry message
-        nodeid = await self._wait_for_nodeid(device_topic)
+    async def _wait_for_any_nodeid(
+        self, device_topic: str, timeout_seconds: int = 10
+    ) -> str | None:
+        """Wait for any NodeID to appear in MQTT message.
 
-        if not validate_nodeid(nodeid):
-            return {
-                "success": False,
-                "error": "SetOption157 enabled but NodeID still masked or not received.",
-            }
-
-        # Step 4: Verify NodeID is actually unmasked
-        if is_nodeid_masked(nodeid):
-            return {
-                "success": False,
-                "error": f"NodeID '{nodeid}' is still masked. SetOption157 may not have taken effect.",
-            }
-
-        _LOGGER.info("Successfully configured SetOption157. NodeID: %s", nodeid)
-        return {"success": True, "nodeid": nodeid}
-
-    async def _wait_for_nodeid(self, device_topic: str, timeout_seconds: int = 10) -> str | None:
-        """Wait for NodeID to appear in MQTT message."""
+        Unlike the old _wait_for_nodeid, this accepts ALL formats including
+        masked (XXXX) and hashed (AA55) — classification happens in the caller.
+        """
         received_nodeid: str | None = None
         event = asyncio.Event()
 
@@ -1046,13 +1066,12 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 payload = json.loads(msg.payload)
                 nodeid = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
-                if validate_nodeid(nodeid):
-                    received_nodeid = nodeid
+                if nodeid and str(nodeid).strip():
+                    received_nodeid = str(nodeid)
                     event.set()
             except (json.JSONDecodeError, TypeError):
                 pass
 
-        # Subscribe to sensor topic
         unsubscribe = await mqtt.async_subscribe(
             self.hass,
             f"tele/{device_topic}/SENSOR",
@@ -1061,14 +1080,47 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         try:
-            # Wait for NodeID or timeout
             await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
         except TimeoutError:
-            _LOGGER.warning("Timeout waiting for NodeID from Tasmota")
+            _LOGGER.warning("Timeout waiting for NodeID from %s", device_topic)
         finally:
             unsubscribe()
 
         return received_nodeid
+
+    def _build_entry_data(
+        self, device_name: str, discovery_prefix: str, **extra: Any
+    ) -> dict[str, Any]:
+        """Build config entry data dict with all NodeID values."""
+        from .const import CONF_NODEID_HASHED, CONF_NODEID_MASKED, CONF_NODEID_REAL  # noqa: PLC0415
+
+        data: dict[str, Any] = {
+            CONF_DEVICE_NAME: device_name,
+            CONF_DISCOVERY_PREFIX: discovery_prefix,
+            CONF_NODEID: self._nodeid,
+            CONF_NODEID_HASHED: self._nodeid_hashed,
+            CONF_NODEID_REAL: self._nodeid_real,
+            CONF_NODEID_MASKED: self._nodeid_masked,
+        }
+        data.update(extra)
+        return data
+
+    async def _acquire_and_store_nodeids(self, device_topic: str) -> dict[str, Any]:
+        """Acquire dual NodeIDs and store in instance variables.
+
+        Convenience wrapper around _auto_configure_nodeid that stores
+        results in self._nodeid, self._nodeid_hashed, self._nodeid_real,
+        and self._nodeid_masked.
+
+        Returns the raw result dict from _auto_configure_nodeid.
+        """
+        result = await self._auto_configure_nodeid(device_topic)
+        if result["success"]:
+            self._nodeid = result["nodeid"]
+            self._nodeid_hashed = result.get("nodeid_hashed")
+            self._nodeid_real = result.get("nodeid_real")
+            self._nodeid_masked = result.get("nodeid_masked")
+        return result
 
     async def async_step_reconfigure(
         self, user_input: dict[str, Any] | None = None
@@ -1102,19 +1154,13 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 if not validation_result["valid"]:
                     errors["base"] = "cannot_connect"
                 else:
-                    nodeid = validation_result.get("nodeid")
-
-                    # If NodeID is hidden, auto-configure Tasmota
-                    if not validate_nodeid(nodeid):
-                        config_result = await self._auto_configure_nodeid(discovery_prefix)
-                        if not config_result["success"]:
-                            errors["base"] = "nodeid_configuration_failed"
-                        else:
-                            nodeid = config_result["nodeid"]
+                    config_result = await self._acquire_and_store_nodeids(discovery_prefix)
+                    if not config_result["success"]:
+                        errors["base"] = "nodeid_configuration_failed"
 
                     if not errors:
                         # Verify unique ID matches before updating
-                        await self.async_set_unique_id(f"{DOMAIN}_{nodeid}")
+                        await self.async_set_unique_id(f"{DOMAIN}_{self._nodeid}")
                         self._abort_if_unique_id_mismatch()
 
                         # Regenerate entity IDs if requested and device name changed
@@ -1133,17 +1179,13 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                         _LOGGER.debug(
                             "Connection test passed, applying reconfigure: nodeid=%s, "
                             "regenerated=%d",
-                            nodeid,
+                            self._nodeid,
                             regenerated_count,
                         )
                         return self.async_update_reload_and_abort(
                             reconfigure_entry,
                             title=device_name,
-                            data_updates={
-                                CONF_DEVICE_NAME: device_name,
-                                CONF_DISCOVERY_PREFIX: discovery_prefix,
-                                CONF_NODEID: nodeid,
-                            },
+                            data_updates=self._build_entry_data(device_name, discovery_prefix),
                         )
 
         return self.async_show_form(
@@ -1213,16 +1255,6 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 class NeoPoolOptionsFlow(OptionsFlowWithReload):
     """Config flow options handler with auto-reload."""
 
-    _setoption157_status: bool | None = None
-
-    async def _get_setoption157_status(self) -> bool | None:
-        """Get SetOption157 status via direct MQTT query.
-
-        Returns True if SO157 is ON, False if OFF, None if device is offline.
-        """
-        mqtt_topic = self.config_entry.data.get(CONF_DISCOVERY_PREFIX, "")
-        return await async_query_setoption157(self.hass, mqtt_topic)
-
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
@@ -1235,9 +1267,6 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                 user_input.get(CONF_RECOVERY_SCRIPT),
             )
             return self.async_create_entry(data=user_input)
-
-        # Get current SetOption157 status for informational display only
-        self._setoption157_status = await self._get_setoption157_status()
 
         return await self._show_options_form()
 
@@ -1255,20 +1284,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
         recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
         offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
 
-        # Build description placeholders for SO157 status info
-        # SO157 is now enforced automatically, this is just informational
         description_placeholders: dict[str, str] = {}
-        if self._setoption157_status is True:
-            description_placeholders["setoption157_status"] = "✅ SetOption157 is enabled"
-        elif self._setoption157_status is False:
-            description_placeholders["setoption157_status"] = (
-                "⚠️ SetOption157 is disabled. It will be automatically enabled "
-                "when SENSOR data is received."
-            )
-        else:
-            description_placeholders["setoption157_status"] = (
-                "⚠️ Could not query SetOption157 status. Device may be offline."
-            )
 
         return self.async_show_form(
             step_id="init",

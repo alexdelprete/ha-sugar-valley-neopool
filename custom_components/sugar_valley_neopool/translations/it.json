@@ -96,7 +96,7 @@
       "already_configured": "Questo dispositivo è già configurato",
       "invalid_discovery_info": "Informazioni di rilevamento non valide ricevute",
       "not_neopool_device": "Il dispositivo rilevato non è un controller NeoPool",
-      "nodeid_configuration_failed": "Impossibile configurare il NodeID. Imposta manualmente SetOption157 1 nella console Tasmota e riprova.",
+      "nodeid_configuration_failed": "Impossibile configurare il NodeID. Imposta manualmente il dispositivo sia online e raggiungibile via MQTT.",
       "unique_id_mismatch": "Il NodeID del dispositivo non corrisponde alla configurazione originale."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "Opzioni NeoPool",
-        "description": "Configura le opzioni runtime per il tuo dispositivo NeoPool.\n\n{setoption157_status}\n\n**Variabili script di ripristino:**\nQuando configurato, lo script di ripristino riceve queste variabili:\n\n- `device_name` : Nome dispositivo\n- `mqtt_topic` : Topic MQTT\n- `nodeid` : NodeID dispositivo\n- `failures_count` : Numero di fallimenti consecutivi",
+        "description": "Configura le opzioni runtime per il tuo dispositivo NeoPool.\n\n**Variabili script di ripristino:**\nQuando configurato, lo script di ripristino riceve queste variabili:\n\n- `device_name` : Nome dispositivo\n- `mqtt_topic` : Topic MQTT\n- `nodeid` : NodeID dispositivo\n- `failures_count` : Numero di fallimenti consecutivi",
         "data": {
           "recovery_script": "Script di ripristino (opzionale)",
           "enable_repair_notification": "Abilita notifiche di riparazione",
@@ -213,7 +213,7 @@
       "connection_out_of_range": {
         "name": "Connessione fuori portata"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "name": "NodeID Powerunit"
       }
     },

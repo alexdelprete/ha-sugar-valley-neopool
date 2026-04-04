@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 from typing import TYPE_CHECKING, Any, overload
@@ -130,13 +129,9 @@ def clamp(value: float, min_val: float, max_val: float) -> float:
 
 
 def is_nodeid_masked(nodeid: str | None) -> bool:
-    """Check if a NodeID is masked (SetOption157 disabled).
+    """Check if a NodeID is masked (old Tasmota, SetOption157=0).
 
-    When SetOption157 is OFF, NodeID appears as 'XXXX XXXX XXXX XXXX XXXX 3435'.
-    When SetOption157 is ON, NodeID appears as '0026 0051 5443 5016 2036 3435'.
-
-    Note: Valid unmasked NodeIDs from Tasmota contain spaces between hex groups.
-    Only the 'XXXX XXXX' pattern indicates masking.
+    Old Tasmota masks NodeID as 'XXXX XXXX XXXX XXXX XXXX 3435'.
 
     Args:
         nodeid: The NodeID value from NeoPool.Powerunit.NodeID.
@@ -149,29 +144,58 @@ def is_nodeid_masked(nodeid: str | None) -> bool:
     return "xxxx xxxx" in nodeid.lower()
 
 
-def validate_nodeid(nodeid: str | None) -> bool:
-    """Validate NodeID is present, not 'hidden', and not masked.
+def is_nodeid_hashed(nodeid: str | None) -> bool:
+    """Check if a NodeID is hashed (new Tasmota, SetOption157=0).
 
-    This is the single source of truth for NodeID validation.
-    Uses is_nodeid_masked() internally for mask detection.
+    New Tasmota (post PR #24573) hashes the NodeID when SO157=0.
+    The hash is indicated by 0xAA55 prefix in the first 2 bytes.
+
+    Args:
+        nodeid: The NodeID value from NeoPool.Powerunit.NodeID.
+
+    Returns:
+        True if hashed (starts with 'AA55' after normalization), False otherwise.
+    """
+    if not nodeid:
+        return False
+    return nodeid.replace(" ", "").upper().startswith("AA55")
+
+
+def classify_nodeid(nodeid: str | None) -> str:
+    """Classify a NodeID into its format type.
+
+    Args:
+        nodeid: The NodeID value to classify.
+
+    Returns:
+        "masked" if old Tasmota XXXX format,
+        "hashed" if new Tasmota AA55 format,
+        "real" if actual hardware NodeID,
+        "invalid" if None/empty/hidden.
+    """
+    if not nodeid or nodeid.lower() in ("hidden", "hidden_by_default"):
+        return "invalid"
+    if is_nodeid_masked(nodeid):
+        return "masked"
+    if is_nodeid_hashed(nodeid):
+        return "hashed"
+    return "real"
+
+
+def validate_nodeid(nodeid: str | None) -> bool:
+    """Validate NodeID is present and usable as an identifier.
+
+    Accepts real and hashed NodeIDs. Rejects None, empty, hidden,
+    and old masked (XXXX) format.
 
     Args:
         nodeid: The NodeID value to validate.
 
     Returns:
-        True if NodeID is valid (present, not hidden, not masked), False otherwise.
+        True if NodeID is valid and usable, False otherwise.
     """
-    if nodeid is None or nodeid == "":
-        return False
-    if isinstance(nodeid, str):
-        nodeid_lower = nodeid.lower()
-        # Check for literal hidden values
-        if nodeid_lower in ["hidden", "hidden_by_default"]:
-            return False
-        # Check for masked NodeID pattern using single source of truth
-        if is_nodeid_masked(nodeid):
-            return False
-    return True
+    classification = classify_nodeid(nodeid)
+    return classification in ("real", "hashed")
 
 
 def normalize_nodeid(nodeid: str | None) -> str:
@@ -275,140 +299,15 @@ def extract_entity_key_from_masked_unique_id(unique_id: str) -> str | None:
     return None
 
 
-async def async_query_setoption157(
-    hass: HomeAssistant, mqtt_topic: str, wait_timeout: float = 5.0
-) -> bool | None:
-    """Query SetOption157 status from Tasmota via MQTT.
-
-    Sends SO157 query command and waits for response on stat/{topic}/SO.
-    Response format: {"SetOption157":"ON"} or {"SetOption157":"OFF"}
-
-    Args:
-        hass: Home Assistant instance
-        mqtt_topic: The MQTT topic prefix for the device
-        wait_timeout: Maximum time to wait for response (seconds)
-
-    Returns:
-        True if SO157 is ON, False if OFF, None if timeout/error.
-    """
-    # Import mqtt here to avoid circular imports
-    from homeassistant.components import mqtt  # noqa: PLC0415
-    from homeassistant.core import callback  # noqa: PLC0415
-
-    if not mqtt_topic:
-        _LOGGER.warning("No MQTT topic provided, cannot query SetOption157")
-        return None
-
-    result: bool | None = None
-    event = asyncio.Event()
-
-    @callback
-    def message_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SO response message."""
-        nonlocal result
-        try:
-            if isinstance(msg.payload, (bytes, bytearray)):
-                payload_str = msg.payload.decode("utf-8")
-            else:
-                payload_str = msg.payload
-
-            payload = json.loads(payload_str)
-            # Response format: {"SetOption157":"ON"} or {"SetOption157":"OFF"}
-            so157_value = payload.get("SetOption157")
-            if so157_value is not None:
-                result = so157_value.upper() == "ON"
-                _LOGGER.debug("SetOption157 query result: %s", so157_value)
-                event.set()
-        except (json.JSONDecodeError, UnicodeDecodeError, AttributeError) as err:
-            _LOGGER.debug("Failed to parse SO response payload: %s", err)
-
-    # Subscribe to stat/{topic}/SO for response
-    so_topic = f"stat/{mqtt_topic}/SO"
-    unsubscribe = await mqtt.async_subscribe(hass, so_topic, message_received, qos=1)
-
-    try:
-        # Send SO157 query command (no payload)
-        command_topic = f"cmnd/{mqtt_topic}/SO157"
-        await mqtt.async_publish(hass, command_topic, "", qos=1, retain=False)
-        _LOGGER.debug("Sent SO157 query to %s", mqtt_topic)
-
-        # Wait for response
-        try:
-            await asyncio.wait_for(event.wait(), timeout=wait_timeout)
-        except TimeoutError:
-            _LOGGER.debug("Timeout waiting for SO157 response from %s", mqtt_topic)
-            return None
-    finally:
-        unsubscribe()
-
-    return result
-
-
-async def async_ensure_setoption157_enabled(
-    hass: HomeAssistant, mqtt_topic: str, max_retries: int = 2
-) -> bool:
-    """Ensure SetOption157 is enabled on the device.
-
-    Checks current status, sends enable command if needed, and verifies result.
-
-    Args:
-        hass: Home Assistant instance
-        mqtt_topic: The MQTT topic prefix for the device
-        max_retries: Maximum attempts to enable SO157
-
-    Returns:
-        True if SO157 is ON (or successfully enabled), False if failed.
-    """
-    for attempt in range(max_retries):
-        # Query current status
-        current_status = await async_query_setoption157(hass, mqtt_topic)
-
-        if current_status is True:
-            _LOGGER.debug("SetOption157 is already ON for %s", mqtt_topic)
-            return True
-
-        if current_status is False:
-            _LOGGER.info("SetOption157 is OFF for %s, enabling it", mqtt_topic)
-        else:
-            _LOGGER.warning(
-                "Could not query SetOption157 for %s (attempt %d/%d)",
-                mqtt_topic,
-                attempt + 1,
-                max_retries,
-            )
-
-        # Send enable command
-        if not await async_set_setoption157(hass, mqtt_topic, enable=True):
-            _LOGGER.error("Failed to send SetOption157 command to %s", mqtt_topic)
-            continue
-
-        # Brief delay for Tasmota to process
-        await asyncio.sleep(0.5)
-
-        # Verify it's now ON
-        verified_status = await async_query_setoption157(hass, mqtt_topic)
-        if verified_status is True:
-            _LOGGER.info("Successfully enabled SetOption157 for %s", mqtt_topic)
-            return True
-
-        _LOGGER.warning(
-            "SetOption157 verification failed for %s (attempt %d/%d)",
-            mqtt_topic,
-            attempt + 1,
-            max_retries,
-        )
-
-    _LOGGER.error("Failed to enable SetOption157 for %s after %d attempts", mqtt_topic, max_retries)
-    return False
-
-
 async def async_set_setoption157(hass: HomeAssistant, mqtt_topic: str, enable: bool) -> bool:
     """Set SetOption157 on Tasmota device via MQTT.
 
+    Used during setup to toggle SO157 for dual NodeID acquisition.
+
     Args:
         hass: Home Assistant instance
         mqtt_topic: The MQTT topic prefix for the device
-        enable: True to enable (show NodeID), False to disable (mask NodeID)
+        enable: True to show real NodeID, False to show hashed/masked NodeID
 
     Returns:
         True if the command was sent successfully, False otherwise.

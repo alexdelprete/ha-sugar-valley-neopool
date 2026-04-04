@@ -358,10 +358,6 @@ class TestAsyncMigrateMaskedUniqueIds:
 
         with (
             patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ),
-            patch(
                 "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
                 new_callable=AsyncMock,
                 return_value="REALNODEID123",
@@ -404,10 +400,6 @@ class TestAsyncMigrateMaskedUniqueIds:
 
         with (
             patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ),
-            patch(
                 "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
                 new_callable=AsyncMock,
                 return_value="REAL123",
@@ -422,40 +414,6 @@ class TestAsyncMigrateMaskedUniqueIds:
         assert updated_entity is not None
         assert "REAL123" in updated_entity.unique_id
         assert "XXXX" not in updated_entity.unique_id
-
-    @pytest.mark.asyncio
-    async def test_setoption157_set_is_called(self, hass: HomeAssistant) -> None:
-        """Test SetOption157 set command is sent during migration."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "XXXX XXXX XXXX XXXX XXXX 3435",
-            },
-        )
-        entry.add_to_hass(hass)
-        entry.runtime_data = NeoPoolData(
-            device_name="Test Pool",
-            mqtt_topic="SmartPool",
-            nodeid="XXXX XXXX XXXX XXXX XXXX 3435",
-        )
-
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ) as mock_set,
-            patch(
-                "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
-                new_callable=AsyncMock,
-                return_value="REALNODEID",
-            ),
-        ):
-            result = await async_migrate_masked_unique_ids(hass, entry)
-
-        assert result is True
-        mock_set.assert_called_once_with(hass, "SmartPool", enable=True)
 
     @pytest.mark.asyncio
     async def test_wait_for_nodeid_fails_returns_false(self, hass: HomeAssistant) -> None:
@@ -476,10 +434,6 @@ class TestAsyncMigrateMaskedUniqueIds:
         )
 
         with (
-            patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ),
             patch(
                 "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
                 new_callable=AsyncMock,
@@ -531,10 +485,6 @@ class TestAsyncMigrateMaskedUniqueIds:
 
         with (
             patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ),
-            patch(
                 "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
                 new_callable=AsyncMock,
                 return_value="REAL123",
@@ -579,10 +529,6 @@ class TestAsyncMigrateMaskedUniqueIds:
         )
 
         with (
-            patch(
-                "custom_components.sugar_valley_neopool.async_set_setoption157",
-                new_callable=AsyncMock,
-            ),
             patch(
                 "custom_components.sugar_valley_neopool._wait_for_real_nodeid",
                 new_callable=AsyncMock,
@@ -784,11 +730,6 @@ class TestSetupEntryWithEntityIdMapping:
                 return_value=True,
             ),
             patch(
-                "custom_components.sugar_valley_neopool._setup_setoption157_enforcement",
-                new_callable=AsyncMock,
-                return_value=None,
-            ),
-            patch(
                 "custom_components.sugar_valley_neopool._apply_entity_id_mapping",
                 new_callable=AsyncMock,
             ) as mock_apply,
@@ -829,11 +770,6 @@ class TestSetupEntryWithEntityIdMapping:
                 "custom_components.sugar_valley_neopool.async_migrate_masked_unique_ids",
                 new_callable=AsyncMock,
                 return_value=False,  # Migration failed
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool._setup_setoption157_enforcement",
-                new_callable=AsyncMock,
-                return_value=None,
             ),
         ):
             result = await async_setup_entry(hass, entry)

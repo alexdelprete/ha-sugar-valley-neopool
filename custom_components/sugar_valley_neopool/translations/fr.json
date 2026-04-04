@@ -96,7 +96,7 @@
       "already_configured": "Cet appareil est déjà configuré",
       "invalid_discovery_info": "Informations de découverte invalides reçues",
       "not_neopool_device": "L'appareil découvert n'est pas un contrôleur NeoPool",
-      "nodeid_configuration_failed": "Échec de la configuration du NodeID. Veuillez définir manuellement SetOption157 1 dans la console Tasmota et réessayer.",
+      "nodeid_configuration_failed": "Échec de la configuration du NodeID. Veuillez définir manuellement que l'appareil est en ligne et accessible via MQTT.",
       "unique_id_mismatch": "Le NodeID de l'appareil ne correspond pas à la configuration d'origine."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "Options NeoPool",
-        "description": "Configurez les options d'exécution pour votre appareil NeoPool.\n\n{setoption157_status}\n\n**Variables du script de récupération :**\nLorsqu'il est configuré, le script de récupération reçoit ces variables :\n\n- `device_name` : Nom de l'appareil\n- `mqtt_topic` : Sujet MQTT\n- `nodeid` : NodeID de l'appareil\n- `failures_count` : Nombre d'échecs consécutifs",
+        "description": "Configurez les options d'exécution pour votre appareil NeoPool.\n\n**Variables du script de récupération :**\nLorsqu'il est configuré, le script de récupération reçoit ces variables :\n\n- `device_name` : Nom de l'appareil\n- `mqtt_topic` : Sujet MQTT\n- `nodeid` : NodeID de l'appareil\n- `failures_count` : Nombre d'échecs consécutifs",
         "data": {
           "recovery_script": "Script de récupération (optionnel)",
           "enable_repair_notification": "Activer les notifications de réparation",
@@ -213,7 +213,7 @@
       "connection_out_of_range": {
         "name": "Connexion hors de portée"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "name": "NodeID de l'unité d'alimentation"
       }
     },

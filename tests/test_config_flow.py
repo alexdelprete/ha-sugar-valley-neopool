@@ -197,13 +197,7 @@ async def test_options_flow_init(hass: HomeAssistant) -> None:
     )
     entry.add_to_hass(hass)
 
-    # Mock the MQTT query for SetOption157 status
-    with patch(
-        "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-        new_callable=AsyncMock,
-        return_value=True,
-    ):
-        result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_init(entry.entry_id)
 
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "init"
@@ -481,15 +475,8 @@ class TestOptionsFlowDirect:
 
         flow = NeoPoolOptionsFlow()
         flow.hass = MagicMock()
-        with (
-            patch.object(
-                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
         ):
             result = await flow.async_step_init(None)
 
@@ -502,8 +489,6 @@ class TestOptionsFlowDirect:
 
         flow = NeoPoolOptionsFlow()
         flow.hass = MagicMock()
-        # Pre-set the setoption157_status so the save path doesn't try to query
-        flow._setoption157_status = True
         with patch.object(
             type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
         ):
@@ -765,88 +750,62 @@ class TestAutoConfigureNodeid:
     """Tests for _auto_configure_nodeid private method."""
 
     async def test_auto_configure_nodeid_success(self, mock_hass: MagicMock) -> None:
-        """Test successful NodeID auto-configuration."""
+        """Test successful NodeID auto-configuration with dual recognition."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
 
-        # Mock _wait_for_nodeid to return valid NodeID
-        flow._wait_for_nodeid = AsyncMock(return_value="ABC123")
+        call_count = 0
 
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_publish",
-                new_callable=AsyncMock,
-            ) as mock_publish,
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
+        async def mock_wait_for_any(topic, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return "4C7525BFB344"  # First: real (SO157=1)
+            return "AA55 1234 5678 9ABC DEF0 1234"  # Second: hashed (SO157=0)
+
+        flow._wait_for_any_nodeid = AsyncMock(side_effect=mock_wait_for_any)
+        flow._trigger_telemetry = AsyncMock()
+
+        with patch(
+            "custom_components.sugar_valley_neopool.config_flow.async_set_setoption157",
+            new_callable=AsyncMock,
+            return_value=True,
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
         assert result["success"] is True
-        assert result["nodeid"] == "ABC123"
-        mock_publish.assert_called_with(
-            mock_hass,
-            "cmnd/SmartPool/TelePeriod",
-            "",
-            qos=1,
-            retain=False,
-        )
+        assert result["nodeid_real"] == "4C7525BFB344"
 
     async def test_auto_configure_nodeid_failure(self, mock_hass: MagicMock) -> None:
-        """Test NodeID auto-configuration failure."""
+        """Test NodeID auto-configuration failure when no NodeID received."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
 
-        # Mock _wait_for_nodeid to return None (failure)
-        flow._wait_for_nodeid = AsyncMock(return_value=None)
+        flow._wait_for_any_nodeid = AsyncMock(return_value=None)
+        flow._trigger_telemetry = AsyncMock()
 
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_publish",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
-        ):
-            result = await flow._auto_configure_nodeid("SmartPool")
+        result = await flow._auto_configure_nodeid("SmartPool")
 
         assert result["success"] is False
         assert "error" in result
 
-    async def test_auto_configure_nodeid_hidden_response(self, mock_hass: MagicMock) -> None:
-        """Test NodeID auto-configuration when still hidden after command."""
+    async def test_auto_configure_nodeid_invalid_response(self, mock_hass: MagicMock) -> None:
+        """Test NodeID auto-configuration when only invalid NodeIDs received."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
 
-        # Mock _wait_for_nodeid to return "hidden"
-        flow._wait_for_nodeid = AsyncMock(return_value="hidden")
+        flow._wait_for_any_nodeid = AsyncMock(return_value="hidden")
+        flow._trigger_telemetry = AsyncMock()
 
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_publish",
-                new_callable=AsyncMock,
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
-        ):
-            result = await flow._auto_configure_nodeid("SmartPool")
+        result = await flow._auto_configure_nodeid("SmartPool")
 
         assert result["success"] is False
 
 
-class TestWaitForNodeid:
-    """Tests for _wait_for_nodeid private method."""
+class TestWaitForAnyNodeid:
+    """Tests for _wait_for_any_nodeid private method."""
 
-    async def test_wait_for_nodeid_success(self, mock_hass: MagicMock) -> None:
+    async def test_wait_for_any_nodeid_success(self, mock_hass: MagicMock) -> None:
         """Test successful waiting for NodeID."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -862,7 +821,9 @@ class TestWaitForNodeid:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=5))
+            wait_task = asyncio.create_task(
+                flow._wait_for_any_nodeid("SmartPool", timeout_seconds=5)
+            )
 
             await asyncio.sleep(0.1)
 
@@ -876,7 +837,7 @@ class TestWaitForNodeid:
 
         assert result == "XYZ789"
 
-    async def test_wait_for_nodeid_timeout(self, mock_hass: MagicMock) -> None:
+    async def test_wait_for_any_nodeid_timeout(self, mock_hass: MagicMock) -> None:
         """Test waiting for NodeID times out."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -886,12 +847,12 @@ class TestWaitForNodeid:
             new_callable=AsyncMock,
             return_value=MagicMock(),
         ):
-            result = await flow._wait_for_nodeid("SmartPool", timeout_seconds=0.1)
+            result = await flow._wait_for_any_nodeid("SmartPool", timeout_seconds=0.1)
 
         assert result is None
 
-    async def test_wait_for_nodeid_ignores_hidden(self, mock_hass: MagicMock) -> None:
-        """Test waiting ignores hidden NodeID values."""
+    async def test_wait_for_any_nodeid_accepts_hashed(self, mock_hass: MagicMock) -> None:
+        """Test waiting accepts hashed NodeID (AA55 prefix)."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
 
@@ -906,19 +867,21 @@ class TestWaitForNodeid:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=0.5))
+            wait_task = asyncio.create_task(
+                flow._wait_for_any_nodeid("SmartPool", timeout_seconds=0.5)
+            )
 
             await asyncio.sleep(0.1)
 
-            # Send message with hidden NodeID
+            # Send hashed NodeID - should be accepted now
             mock_msg = MagicMock()
-            mock_msg.payload = '{"NeoPool": {"Powerunit": {"NodeID": "hidden"}}}'
+            mock_msg.payload = '{"NeoPool": {"Powerunit": {"NodeID": "AA55 1234 5678"}}}'
             if captured_callback:
                 captured_callback(mock_msg)
 
             result = await wait_task
 
-        assert result is None
+        assert result == "AA55 1234 5678"
 
 
 class TestYamlMigrationFlow:

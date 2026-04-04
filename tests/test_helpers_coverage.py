@@ -4,24 +4,24 @@ This file targets specific uncovered code paths:
 - normalize_nodeid
 - is_masked_unique_id
 - extract_entity_key_from_masked_unique_id
-- async_query_setoption157
+- is_nodeid_hashed
+- classify_nodeid
 - async_set_setoption157
 - validate_nodeid masked pattern check
 """
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from custom_components.sugar_valley_neopool.helpers import (
-    async_query_setoption157,
     async_set_setoption157,
+    classify_nodeid,
     extract_entity_key_from_masked_unique_id,
     is_masked_unique_id,
+    is_nodeid_hashed,
     normalize_nodeid,
     parse_json_payload,
     validate_nodeid,
@@ -180,170 +180,52 @@ class TestValidateNodeidMaskedPattern:
         assert result is True
 
 
-class TestAsyncQuerySetoption157:
-    """Tests for async_query_setoption157 function."""
+class TestIsNodeidHashedHelpers:
+    """Tests for is_nodeid_hashed function in helpers."""
 
-    @pytest.mark.asyncio
-    async def test_query_returns_on(self, hass: HomeAssistant) -> None:
-        """Test query returns True when SetOption157 is ON."""
-        received_callback = None
+    def test_aa55_prefix_is_hashed(self) -> None:
+        """Test AA55 prefix NodeID is detected as hashed."""
+        assert is_nodeid_hashed("AA55 1234 5678 9ABC DEF0 1234") is True
 
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
-            return MagicMock()
+    def test_aa55_no_spaces(self) -> None:
+        """Test AA55 prefix without spaces is hashed."""
+        assert is_nodeid_hashed("AA551234567890AB") is True
 
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_subscribe",
-                side_effect=mock_subscribe,
-            ),
-            patch("homeassistant.components.mqtt.async_publish"),
-        ):
-            task = asyncio.create_task(async_query_setoption157(hass, "SmartPool"))
+    def test_real_nodeid_not_hashed(self) -> None:
+        """Test real NodeID is not hashed."""
+        assert is_nodeid_hashed("4C7525BFB344") is False
 
-            await asyncio.sleep(0.1)
+    def test_none_not_hashed(self) -> None:
+        """Test None returns False."""
+        assert is_nodeid_hashed(None) is False
 
-            # Simulate response
-            if received_callback:
-                mock_msg = MagicMock()
-                mock_msg.payload = '{"SetOption157":"ON"}'
-                received_callback(mock_msg)
+    def test_empty_not_hashed(self) -> None:
+        """Test empty string returns False."""
+        assert is_nodeid_hashed("") is False
 
-            result = await task
 
-        assert result is True
+class TestClassifyNodeidHelpers:
+    """Tests for classify_nodeid function in helpers."""
 
-    @pytest.mark.asyncio
-    async def test_query_returns_off(self, hass: HomeAssistant) -> None:
-        """Test query returns False when SetOption157 is OFF."""
-        received_callback = None
+    def test_classify_real(self) -> None:
+        """Test real NodeID classification."""
+        assert classify_nodeid("4C7525BFB344") == "real"
 
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
-            return MagicMock()
+    def test_classify_hashed(self) -> None:
+        """Test hashed NodeID classification."""
+        assert classify_nodeid("AA55 1234 5678 9ABC DEF0 1234") == "hashed"
 
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_subscribe",
-                side_effect=mock_subscribe,
-            ),
-            patch("homeassistant.components.mqtt.async_publish"),
-        ):
-            task = asyncio.create_task(async_query_setoption157(hass, "SmartPool"))
+    def test_classify_masked(self) -> None:
+        """Test masked NodeID classification."""
+        assert classify_nodeid("XXXX XXXX XXXX XXXX XXXX 3435") == "masked"
 
-            await asyncio.sleep(0.1)
+    def test_classify_none(self) -> None:
+        """Test None classification."""
+        assert classify_nodeid(None) == "invalid"
 
-            if received_callback:
-                mock_msg = MagicMock()
-                mock_msg.payload = '{"SetOption157":"OFF"}'
-                received_callback(mock_msg)
-
-            result = await task
-
-        assert result is False
-
-    @pytest.mark.asyncio
-    async def test_query_timeout_returns_none(self, hass: HomeAssistant) -> None:
-        """Test query returns None on timeout."""
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            return MagicMock()
-
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_subscribe",
-                side_effect=mock_subscribe,
-            ),
-            patch("homeassistant.components.mqtt.async_publish"),
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.asyncio.wait_for",
-                side_effect=TimeoutError,
-            ),
-        ):
-            result = await async_query_setoption157(hass, "SmartPool")
-
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_query_empty_topic_returns_none(self, hass: HomeAssistant) -> None:
-        """Test query with empty topic returns None."""
-        result = await async_query_setoption157(hass, "")
-        assert result is None
-
-    @pytest.mark.asyncio
-    async def test_query_invalid_json_ignored(self, hass: HomeAssistant) -> None:
-        """Test invalid JSON response is ignored."""
-        received_callback = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
-            return MagicMock()
-
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_subscribe",
-                side_effect=mock_subscribe,
-            ),
-            patch("homeassistant.components.mqtt.async_publish"),
-        ):
-            # Use real wait_for with short timeout
-            task = asyncio.create_task(async_query_setoption157(hass, "SmartPool"))
-
-            await asyncio.sleep(0.1)
-
-            # Send invalid JSON
-            if received_callback:
-                mock_msg = MagicMock()
-                mock_msg.payload = "not json"
-                received_callback(mock_msg)
-
-            # Wait for timeout
-            with patch(
-                "custom_components.sugar_valley_neopool.helpers.asyncio.wait_for",
-                side_effect=TimeoutError,
-            ):
-                # Force timeout
-                pass
-
-            # Cancel the task to avoid hanging
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-
-    @pytest.mark.asyncio
-    async def test_query_missing_key_ignored(self, hass: HomeAssistant) -> None:
-        """Test response without SetOption157 key is ignored."""
-        received_callback = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
-            return MagicMock()
-
-        with (
-            patch(
-                "homeassistant.components.mqtt.async_subscribe",
-                side_effect=mock_subscribe,
-            ),
-            patch("homeassistant.components.mqtt.async_publish"),
-        ):
-            task = asyncio.create_task(async_query_setoption157(hass, "SmartPool"))
-
-            await asyncio.sleep(0.1)
-
-            # Send JSON without SetOption157 key
-            if received_callback:
-                mock_msg = MagicMock()
-                mock_msg.payload = '{"OtherKey":"value"}'
-                received_callback(mock_msg)
-
-            # Should timeout since key wasn't found
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
+    def test_classify_hidden(self) -> None:
+        """Test hidden classification."""
+        assert classify_nodeid("hidden") == "invalid"
 
 
 class TestAsyncSetSetoption157:

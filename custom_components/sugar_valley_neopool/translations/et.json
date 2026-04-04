@@ -96,7 +96,7 @@
       "already_configured": "See seade on juba seadistatud",
       "invalid_discovery_info": "Saadi vigane avastamisteave",
       "not_neopool_device": "Avastatud seade ei ole NeoPool kontroller",
-      "nodeid_configuration_failed": "NodeID seadistamine ebaõnnestus. Palun määrake käsitsi SetOption157 1 Tasmota konsoolis ja proovige uuesti.",
+      "nodeid_configuration_failed": "NodeID seadistamine ebaõnnestus. Palun määrake käsitsi et seade on võrgus ja MQTT kaudu kättesaadav.",
       "unique_id_mismatch": "Seadme NodeID ei vasta algsele konfiguratsioonile."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "NeoPool valikud",
-        "description": "Seadistage oma NeoPool seadme käitusaja valikud.\n\n{setoption157_status}\n\n**Taastamise skripti muutujad:**\nKui on seadistatud, saab taastamise skript need muutujad:\n\n- `device_name` : Seadme nimi\n- `mqtt_topic` : MQTT teema\n- `nodeid` : Seadme NodeID\n- `failures_count` : Järjestikuste tõrgete arv",
+        "description": "Seadistage oma NeoPool seadme käitusaja valikud.\n\n**Taastamise skripti muutujad:**\nKui on seadistatud, saab taastamise skript need muutujad:\n\n- `device_name` : Seadme nimi\n- `mqtt_topic` : MQTT teema\n- `nodeid` : Seadme NodeID\n- `failures_count` : Järjestikuste tõrgete arv",
         "data": {
           "recovery_script": "Taastamise skript (valikuline)",
           "enable_repair_notification": "Luba paranduse teavitused",
@@ -213,7 +213,7 @@
       "connection_out_of_range": {
         "name": "Ühendus vahemikust väljas"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "name": "Toiteüksuse NodeID"
       }
     },

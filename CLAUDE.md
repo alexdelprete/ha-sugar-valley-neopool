@@ -165,49 +165,19 @@ The integration uses the hardware NodeID from the NeoPool controller (via Tasmot
 - **Multi-device**: Naturally supports multiple NeoPool controllers without conflicts
 - **Unique**: Each NeoPool controller has a unique NodeID
 
-### Automatic Tasmota Configuration
+### Dual NodeID Acquisition
 
-The integration automatically configures Tasmota to expose the NodeID:
+During setup, the integration acquires both hashed and real NodeIDs:
 
-**When NodeID is hidden:**
+1. Read current NodeID from SENSOR telemetry
+1. Classify: hashed (AA55 prefix), real, or masked (XXXX, old Tasmota)
+1. Toggle SO157 once to get the other format
+1. Restore SO157 to original state
+1. Store both values in config entry
 
-1. Integration detects NodeID value is "hidden" or missing
-1. Sends MQTT command: `cmnd/{topic}/SetOption157 1`
-1. Waits 2 seconds for Tasmota to process
-1. Subscribes to `tele/{topic}/SENSOR` and waits up to 10 seconds for NodeID
-1. Validates NodeID is present and not "hidden"
-1. Only proceeds if NodeID is successfully configured
-
-**Implementation details:**
-
-```python
-# In config_flow.py
-async def _auto_configure_nodeid(self, device_topic: str) -> dict[str, Any]:
-    """Auto-configure Tasmota SetOption157 to enable NodeID."""
-    await mqtt.async_publish(
-        self.hass,
-        f"cmnd/{device_topic}/SetOption157",
-        "1",
-        qos=1,
-        retain=False,
-    )
-    await asyncio.sleep(2)
-    nodeid = await self._wait_for_nodeid(device_topic)
-    # Returns {"success": bool, "nodeid": str, "error": str}
-```
-
-**NodeID validation:**
-
-```python
-# In helpers.py
-def validate_nodeid(nodeid: str | None) -> bool:
-    """Validate NodeID is present and not 'hidden'."""
-    if nodeid is None or nodeid == "":
-        return False
-    if isinstance(nodeid, str) and nodeid.lower() in ["hidden", "hidden_by_default"]:
-        return False
-    return True
-```
+The hashed NodeID is the canonical identifier (privacy by default).
+The real NodeID serves as an anchor for device recognition across
+format changes. See `docs/NODEID_DUAL_RECOGNITION.md` for full design.
 
 ### Unique ID Pattern
 
@@ -263,8 +233,8 @@ async_step_yaml_migration (checkbox)
 async_step_yaml_topic (input + validation)
     ↓
 _validate_yaml_topic (MQTT subscribe + wait)
-    ↓ (if NodeID hidden)
-_auto_configure_nodeid (SetOption157 1)
+    ↓
+_acquire_and_store_nodeids (dual NodeID)
     ↓
 async_step_yaml_confirm (show topic + NodeID)
     ↓
@@ -281,8 +251,8 @@ async_step_yaml_migration (checkbox)
 async_step_discover_device (manual input)
     ↓
 _validate_yaml_topic (validates topic)
-    ↓ (if NodeID hidden)
-_auto_configure_nodeid (SetOption157 1)
+    ↓
+_acquire_and_store_nodeids (dual NodeID)
     ↓
 async_create_entry
 ```
@@ -292,9 +262,7 @@ async_create_entry
 ```text
 async_step_mqtt (auto-triggered by MQTT discovery)
     ↓
-Extract NodeID from discovery payload
-    ↓ (if NodeID hidden)
-_auto_configure_nodeid (SetOption157 1)
+_acquire_and_store_nodeids (dual NodeID)
     ↓
 async_step_mqtt_confirm (show discovered device)
     ↓

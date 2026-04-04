@@ -19,7 +19,6 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.sugar_valley_neopool import (
     NeoPoolData,
     _cleanup_orphaned_yaml_entities,
-    _setup_setoption157_enforcement,
     _update_device_registry_metadata,
     async_fetch_device_metadata,
     async_remove_config_entry_device,
@@ -34,10 +33,11 @@ from custom_components.sugar_valley_neopool.const import (
     DOMAIN,
 )
 from custom_components.sugar_valley_neopool.helpers import (
-    async_ensure_setoption157_enabled,
-    async_query_setoption157,
+    classify_nodeid,
     extract_entity_key_from_masked_unique_id,
+    is_nodeid_hashed,
     is_nodeid_masked,
+    validate_nodeid,
 )
 from custom_components.sugar_valley_neopool.select import (
     NeoPoolSelect,
@@ -399,165 +399,6 @@ class TestUpdateDeviceRegistryMetadata:
         assert device.sw_version == "V2.5.0 (Powerunit)"
 
 
-class TestSetupSetoption157Enforcement:
-    """Tests for _setup_setoption157_enforcement - lines 903-963."""
-
-    @pytest.mark.asyncio
-    async def test_enforcement_monitors_sensor_topic(self, hass: HomeAssistant) -> None:
-        """Test enforcement subscribes to SENSOR topic."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-            },
-        )
-        entry.add_to_hass(hass)
-        entry.runtime_data = NeoPoolData(
-            device_name="Test Pool",
-            mqtt_topic="SmartPool",
-            nodeid="ABC123",
-        )
-
-        subscribed_topic = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal subscribed_topic
-            subscribed_topic = topic
-            return MagicMock()
-
-        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe):
-            await _setup_setoption157_enforcement(hass, entry)
-
-        assert subscribed_topic == "tele/SmartPool/SENSOR"
-
-    @pytest.mark.asyncio
-    async def test_enforcement_detects_masked_nodeid(self, hass: HomeAssistant) -> None:
-        """Test enforcement detects masked NodeID and triggers correction."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-            },
-        )
-        entry.add_to_hass(hass)
-        entry.runtime_data = NeoPoolData(
-            device_name="Test Pool",
-            mqtt_topic="SmartPool",
-            nodeid="ABC123",
-        )
-
-        sensor_callback = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal sensor_callback
-            sensor_callback = callback
-            return MagicMock()
-
-        with (
-            patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe),
-            patch(
-                "custom_components.sugar_valley_neopool.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-                return_value=True,
-            ) as mock_ensure,
-        ):
-            await _setup_setoption157_enforcement(hass, entry)
-
-            # Simulate receiving masked NodeID
-            mock_msg = MagicMock()
-            mock_msg.payload = json.dumps(
-                {"NeoPool": {"Powerunit": {"NodeID": "XXXX XXXX XXXX XXXX XXXX 3435"}}}
-            )
-            sensor_callback(mock_msg)
-
-            # Allow async task to run
-            await asyncio.sleep(0.2)
-
-        # Should have called ensure function
-        mock_ensure.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_enforcement_ignores_valid_nodeid(self, hass: HomeAssistant) -> None:
-        """Test enforcement ignores valid unmasked NodeID."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-            },
-        )
-        entry.add_to_hass(hass)
-        entry.runtime_data = NeoPoolData(
-            device_name="Test Pool",
-            mqtt_topic="SmartPool",
-            nodeid="ABC123",
-        )
-
-        sensor_callback = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal sensor_callback
-            sensor_callback = callback
-            return MagicMock()
-
-        with (
-            patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe),
-            patch(
-                "custom_components.sugar_valley_neopool.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-            ) as mock_ensure,
-        ):
-            await _setup_setoption157_enforcement(hass, entry)
-
-            # Simulate receiving valid NodeID
-            mock_msg = MagicMock()
-            mock_msg.payload = json.dumps({"NeoPool": {"Powerunit": {"NodeID": "4C7525BFB344"}}})
-            sensor_callback(mock_msg)
-
-            await asyncio.sleep(0.1)
-
-        # Should NOT have called ensure function
-        mock_ensure.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_enforcement_handles_invalid_json(self, hass: HomeAssistant) -> None:
-        """Test enforcement handles invalid JSON gracefully."""
-        entry = MockConfigEntry(
-            domain=DOMAIN,
-            data={
-                CONF_DEVICE_NAME: "Test Pool",
-                CONF_DISCOVERY_PREFIX: "SmartPool",
-                CONF_NODEID: "ABC123",
-            },
-        )
-        entry.add_to_hass(hass)
-        entry.runtime_data = NeoPoolData(
-            device_name="Test Pool",
-            mqtt_topic="SmartPool",
-            nodeid="ABC123",
-        )
-
-        sensor_callback = None
-
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal sensor_callback
-            sensor_callback = callback
-            return MagicMock()
-
-        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe):
-            await _setup_setoption157_enforcement(hass, entry)
-
-            # Simulate invalid JSON
-            mock_msg = MagicMock()
-            mock_msg.payload = "not valid json"
-            sensor_callback(mock_msg)  # Should not raise
-
-
 class TestGetDeviceInfo:
     """Tests for get_device_info function."""
 
@@ -659,10 +500,6 @@ class TestSetupEntryLogging:
                 return_value=True,
             ),
             patch(
-                "custom_components.sugar_valley_neopool._setup_setoption157_enforcement",
-                new_callable=AsyncMock,
-            ),
-            patch(
                 "custom_components.sugar_valley_neopool._apply_entity_id_mapping",
                 new_callable=AsyncMock,
             ),
@@ -727,135 +564,96 @@ class TestIsNodeidMaskedEdgeCases:
         assert result is True
 
 
-class TestAsyncEnsureSetoption157Enabled:
-    """Tests for async_ensure_setoption157_enabled - lines 362-402."""
+class TestIsNodeidHashed:
+    """Tests for is_nodeid_hashed function."""
 
-    @pytest.mark.asyncio
-    async def test_ensure_already_on(self, hass: HomeAssistant) -> None:
-        """Test returns True immediately when already ON."""
-        with patch(
-            "custom_components.sugar_valley_neopool.helpers.async_query_setoption157",
-            new_callable=AsyncMock,
-            return_value=True,
-        ):
-            result = await async_ensure_setoption157_enabled(hass, "SmartPool")
-
+    def test_hashed_nodeid_with_aa55_prefix(self) -> None:
+        """Test NodeID with AA55 prefix is detected as hashed."""
+        result = is_nodeid_hashed("AA55 1234 5678 9ABC DEF0 1234")
         assert result is True
 
-    @pytest.mark.asyncio
-    async def test_ensure_turns_on_when_off(self, hass: HomeAssistant) -> None:
-        """Test sends command and verifies when OFF."""
-        call_count = 0
-
-        async def mock_query(hass, topic):
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return False  # First query: OFF
-            return True  # Second query: now ON
-
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_query_setoption157",
-                side_effect=mock_query,
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_set_setoption157",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
-        ):
-            result = await async_ensure_setoption157_enabled(hass, "SmartPool")
-
+    def test_hashed_nodeid_lowercase(self) -> None:
+        """Test lowercase aa55 prefix is detected as hashed."""
+        result = is_nodeid_hashed("aa55 1234 5678")
         assert result is True
 
-    @pytest.mark.asyncio
-    async def test_ensure_fails_after_retries(self, hass: HomeAssistant) -> None:
-        """Test returns False after max retries."""
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_query_setoption157",
-                new_callable=AsyncMock,
-                return_value=None,  # Query fails
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_set_setoption157",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
-        ):
-            result = await async_ensure_setoption157_enabled(hass, "SmartPool", max_retries=2)
+    def test_hashed_nodeid_no_spaces(self) -> None:
+        """Test AA55 prefix without spaces is detected as hashed."""
+        result = is_nodeid_hashed("AA551234567890AB")
+        assert result is True
 
+    def test_real_nodeid_not_hashed(self) -> None:
+        """Test real NodeID is not detected as hashed."""
+        result = is_nodeid_hashed("4C7525BFB344")
         assert result is False
 
-    @pytest.mark.asyncio
-    async def test_ensure_set_command_fails(self, hass: HomeAssistant) -> None:
-        """Test handles set command failure."""
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_query_setoption157",
-                new_callable=AsyncMock,
-                return_value=False,  # OFF
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_set_setoption157",
-                new_callable=AsyncMock,
-                return_value=False,  # Set fails
-            ),
-        ):
-            result = await async_ensure_setoption157_enabled(hass, "SmartPool", max_retries=1)
-
+    def test_none_not_hashed(self) -> None:
+        """Test None is not hashed."""
+        result = is_nodeid_hashed(None)
         assert result is False
 
-    @pytest.mark.asyncio
-    async def test_ensure_verification_fails(self, hass: HomeAssistant) -> None:
-        """Test handles verification failure after set."""
-        with (
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_query_setoption157",
-                new_callable=AsyncMock,
-                return_value=False,  # Always OFF
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.helpers.async_set_setoption157",
-                new_callable=AsyncMock,
-                return_value=True,  # Set succeeds
-            ),
-        ):
-            result = await async_ensure_setoption157_enabled(hass, "SmartPool", max_retries=1)
+    def test_empty_not_hashed(self) -> None:
+        """Test empty string is not hashed."""
+        result = is_nodeid_hashed("")
+        assert result is False
 
+    def test_masked_not_hashed(self) -> None:
+        """Test masked NodeID is not hashed."""
+        result = is_nodeid_hashed("XXXX XXXX XXXX XXXX XXXX 3435")
         assert result is False
 
 
-class TestAsyncQuerySetoption157BytesPayload:
-    """Tests for async_query_setoption157 with bytes payload - line 311."""
+class TestClassifyNodeid:
+    """Tests for classify_nodeid function."""
 
-    @pytest.mark.asyncio
-    async def test_query_handles_bytes_payload(self, hass: HomeAssistant) -> None:
-        """Test query handles bytes payload correctly."""
-        received_callback = None
+    def test_classify_real_nodeid(self) -> None:
+        """Test real NodeID is classified as 'real'."""
+        result = classify_nodeid("4C7525BFB344")
+        assert result == "real"
 
-        async def mock_subscribe(hass, topic, callback, **kwargs):
-            nonlocal received_callback
-            received_callback = callback
-            return MagicMock()
+    def test_classify_hashed_nodeid(self) -> None:
+        """Test hashed NodeID with AA55 prefix is classified as 'hashed'."""
+        result = classify_nodeid("AA55 1234 5678 9ABC DEF0 1234")
+        assert result == "hashed"
 
-        with (
-            patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe),
-            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
-        ):
-            task = asyncio.create_task(async_query_setoption157(hass, "SmartPool"))
-            await asyncio.sleep(0.1)
+    def test_classify_masked_nodeid(self) -> None:
+        """Test masked NodeID with XXXX pattern is classified as 'masked'."""
+        result = classify_nodeid("XXXX XXXX XXXX XXXX XXXX 3435")
+        assert result == "masked"
 
-            # Send bytes payload
-            if received_callback:
-                mock_msg = MagicMock()
-                mock_msg.payload = b'{"SetOption157":"ON"}'
-                received_callback(mock_msg)
+    def test_classify_none_is_invalid(self) -> None:
+        """Test None is classified as 'invalid'."""
+        result = classify_nodeid(None)
+        assert result == "invalid"
 
-            result = await task
+    def test_classify_empty_is_invalid(self) -> None:
+        """Test empty string is classified as 'invalid'."""
+        result = classify_nodeid("")
+        assert result == "invalid"
 
+    def test_classify_hidden_is_invalid(self) -> None:
+        """Test 'hidden' is classified as 'invalid'."""
+        result = classify_nodeid("hidden")
+        assert result == "invalid"
+
+    def test_classify_hidden_by_default_is_invalid(self) -> None:
+        """Test 'hidden_by_default' is classified as 'invalid'."""
+        result = classify_nodeid("hidden_by_default")
+        assert result == "invalid"
+
+
+class TestValidateNodeidAcceptsHashed:
+    """Tests for validate_nodeid accepting hashed NodeIDs."""
+
+    def test_hashed_nodeid_is_valid(self) -> None:
+        """Test hashed NodeID (AA55 prefix) is accepted as valid."""
+        result = validate_nodeid("AA55 1234 5678 9ABC DEF0 1234")
         assert result is True
+
+    def test_masked_nodeid_is_invalid(self) -> None:
+        """Test masked NodeID (XXXX pattern) is rejected."""
+        result = validate_nodeid("XXXX XXXX XXXX XXXX XXXX 3435")
+        assert result is False
 
 
 # =============================================================================

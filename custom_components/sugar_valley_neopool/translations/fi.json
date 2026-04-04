@@ -96,7 +96,7 @@
       "already_configured": "Tämä laite on jo määritetty",
       "invalid_discovery_info": "Vastaanotettiin virheellisiä löytötietoja",
       "not_neopool_device": "Löydetty laite ei ole NeoPool-ohjain",
-      "nodeid_configuration_failed": "NodeID:n määritys epäonnistui. Aseta SetOption157 1 manuaalisesti Tasmota-konsolissa ja yritä uudelleen.",
+      "nodeid_configuration_failed": "NodeID:n määritys epäonnistui. Aseta että laite on online ja saavutettavissa MQTT:n kautta.",
       "unique_id_mismatch": "Laitteen NodeID ei vastaa alkuperäistä kokoonpanoa."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "NeoPool-asetukset",
-        "description": "Määritä NeoPool-laitteesi ajonaikaiset asetukset.\n\n{setoption157_status}\n\n**Palautusskriptin muuttujat:**\nKun määritetty, palautusskripti saa nämä muuttujat:\n\n- `device_name` : Laitteen nimi\n- `mqtt_topic` : MQTT-aihe\n- `nodeid` : Laitteen NodeID\n- `failures_count` : Peräkkäisten virheiden määrä",
+        "description": "Määritä NeoPool-laitteesi ajonaikaiset asetukset.\n\n**Palautusskriptin muuttujat:**\nKun määritetty, palautusskripti saa nämä muuttujat:\n\n- `device_name` : Laitteen nimi\n- `mqtt_topic` : MQTT-aihe\n- `nodeid` : Laitteen NodeID\n- `failures_count` : Peräkkäisten virheiden määrä",
         "data": {
           "recovery_script": "Palautusskripti (valinnainen)",
           "enable_repair_notification": "Ota korjausilmoitukset käyttöön",
@@ -213,7 +213,7 @@
       "connection_out_of_range": {
         "name": "Yhteys alueen ulkopuolella"
       },
-      "powerunit_nodeid": {
+      "system_id": {
         "name": "Virtalähteen NodeID"
       }
     },

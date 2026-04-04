@@ -119,14 +119,7 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Mock the MQTT query for SetOption157 status
-        with patch(
-            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-            new_callable=AsyncMock,
-            return_value=True,
-        ):
-            # Use hass.config_entries.options.async_init to properly initialize the flow
-            result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "init"
@@ -144,26 +137,20 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Mock the MQTT query for SetOption157 status
-        with patch(
-            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-            new_callable=AsyncMock,
-            return_value=True,
-        ):
-            # Initialize options flow properly
-            result = await hass.config_entries.options.async_init(entry.entry_id)
-            assert result["type"] == FlowResultType.FORM
+        # Initialize options flow properly
+        result = await hass.config_entries.options.async_init(entry.entry_id)
+        assert result["type"] == FlowResultType.FORM
 
-            # Submit the form - SO157 is no longer in the form (auto-enforced)
-            result = await hass.config_entries.options.async_configure(
-                result["flow_id"],
-                {
-                    CONF_RECOVERY_SCRIPT: "script.test_recovery",
-                    CONF_ENABLE_REPAIR_NOTIFICATION: True,
-                    CONF_FAILURES_THRESHOLD: 5,
-                    CONF_OFFLINE_TIMEOUT: 120,
-                },
-            )
+        # Submit the form
+        result = await hass.config_entries.options.async_configure(
+            result["flow_id"],
+            {
+                CONF_RECOVERY_SCRIPT: "script.test_recovery",
+                CONF_ENABLE_REPAIR_NOTIFICATION: True,
+                CONF_FAILURES_THRESHOLD: 5,
+                CONF_OFFLINE_TIMEOUT: 120,
+            },
+        )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["data"][CONF_RECOVERY_SCRIPT] == "script.test_recovery"
@@ -189,14 +176,7 @@ class TestOptionsFlow:
         )
         entry.add_to_hass(hass)
 
-        # Mock the MQTT query for SetOption157 status
-        with patch(
-            "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-            new_callable=AsyncMock,
-            return_value=True,
-        ):
-            # Initialize options flow properly
-            result = await hass.config_entries.options.async_init(entry.entry_id)
+        result = await hass.config_entries.options.async_init(entry.entry_id)
 
         assert result["type"] == FlowResultType.FORM
         # Form should be shown with existing values as defaults
@@ -670,29 +650,35 @@ class TestMqttDiscoveryEdgeCases:
 class TestAutoConfigureNodeid:
     """Tests for _auto_configure_nodeid method."""
 
-    async def test_auto_configure_publishes_setoption(self, hass: HomeAssistant) -> None:
-        """Test auto-configure publishes TelePeriod command after SO157 enabled."""
+    async def test_auto_configure_acquires_both_nodeids(self, hass: HomeAssistant) -> None:
+        """Test auto-configure acquires both hashed and real NodeIDs."""
         flow = NeoPoolConfigFlow()
         flow.hass = hass
 
+        call_count = 0
+
+        async def mock_wait_for_any(topic, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return "AA55 1234 5678 9ABC DEF0 1234"  # First: hashed
+            return "4C7525BFB344"  # Second: real
+
         with (
-            patch("homeassistant.components.mqtt.async_publish") as mock_publish,
-            patch.object(flow, "_wait_for_nodeid", return_value="NEW123"),
+            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+            patch.object(flow, "_wait_for_any_nodeid", side_effect=mock_wait_for_any),
+            patch.object(flow, "_trigger_telemetry", new_callable=AsyncMock),
             patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
+                "custom_components.sugar_valley_neopool.config_flow.async_set_setoption157",
                 new_callable=AsyncMock,
                 return_value=True,
             ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
-        # _auto_configure_nodeid publishes TelePeriod command (SO157 is mocked)
-        assert mock_publish.call_count == 1
-        # Verify TelePeriod command was published
-        all_calls = str(mock_publish.call_args_list)
-        assert "cmnd/SmartPool/TelePeriod" in all_calls
         assert result["success"] is True
-        assert result["nodeid"] == "NEW123"
+        assert result["nodeid_real"] == "4C7525BFB344"
+        assert result["nodeid_hashed"] is not None
 
     async def test_auto_configure_fails_when_nodeid_not_received(self, hass: HomeAssistant) -> None:
         """Test auto-configure fails when NodeID not received."""
@@ -700,13 +686,9 @@ class TestAutoConfigureNodeid:
         flow.hass = hass
 
         with (
-            patch("homeassistant.components.mqtt.async_publish"),
-            patch.object(flow, "_wait_for_nodeid", return_value=None),
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
+            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+            patch.object(flow, "_wait_for_any_nodeid", return_value=None),
+            patch.object(flow, "_trigger_telemetry", new_callable=AsyncMock),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
@@ -714,11 +696,11 @@ class TestAutoConfigureNodeid:
         assert "error" in result
 
 
-class TestShowOptionsFormStatus:
-    """Tests for _show_options_form status messages."""
+class TestShowOptionsFormSimple:
+    """Tests for _show_options_form (SO157 status removed)."""
 
-    async def test_show_form_setoption157_disabled_status(self, hass: HomeAssistant) -> None:
-        """Test status message when SetOption157 is disabled."""
+    async def test_show_form_displays_options(self, hass: HomeAssistant) -> None:
+        """Test options form displays without SO157 status."""
         mock_entry = MagicMock()
         mock_entry.data = {
             CONF_DEVICE_NAME: "Test Pool",
@@ -730,8 +712,6 @@ class TestShowOptionsFormStatus:
 
         flow = NeoPoolOptionsFlow()
         flow.hass = hass
-        # SetOption157 is disabled
-        flow._setoption157_status = False
 
         with patch.object(
             type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
@@ -739,60 +719,7 @@ class TestShowOptionsFormStatus:
             result = await flow._show_options_form()
 
         assert result["type"] == FlowResultType.FORM
-        # Should have status placeholder
-        assert "setoption157_status" in result["description_placeholders"]
-        assert "disabled" in result["description_placeholders"]["setoption157_status"]
-
-    async def test_show_form_setoption157_none_status(self, hass: HomeAssistant) -> None:
-        """Test status message when SetOption157 status is None (couldn't query)."""
-        mock_entry = MagicMock()
-        mock_entry.data = {
-            CONF_DEVICE_NAME: "Test Pool",
-            CONF_DISCOVERY_PREFIX: "SmartPool",
-            CONF_NODEID: "ABC123",
-        }
-        mock_entry.options = {}
-        mock_entry.entry_id = "test_entry_id"
-
-        flow = NeoPoolOptionsFlow()
-        flow.hass = hass
-        # SetOption157 status is None (couldn't query device)
-        flow._setoption157_status = None
-
-        with patch.object(
-            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
-        ):
-            result = await flow._show_options_form()
-
-        assert result["type"] == FlowResultType.FORM
-        assert "setoption157_status" in result["description_placeholders"]
-        assert "Could not query" in result["description_placeholders"]["setoption157_status"]
-
-    async def test_show_form_setoption157_enabled_status(self, hass: HomeAssistant) -> None:
-        """Test status message when SetOption157 is enabled."""
-        mock_entry = MagicMock()
-        mock_entry.data = {
-            CONF_DEVICE_NAME: "Test Pool",
-            CONF_DISCOVERY_PREFIX: "SmartPool",
-            CONF_NODEID: "ABC123",
-        }
-        mock_entry.options = {}
-        mock_entry.entry_id = "test_entry_id"
-
-        flow = NeoPoolOptionsFlow()
-        flow.hass = hass
-        # SetOption157 is enabled
-        flow._setoption157_status = True
-
-        with patch.object(
-            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
-        ):
-            result = await flow._show_options_form()
-
-        assert result["type"] == FlowResultType.FORM
-        # Should have enabled status placeholder
-        assert "setoption157_status" in result["description_placeholders"]
-        assert "enabled" in result["description_placeholders"]["setoption157_status"]
+        assert result["step_id"] == "init"
 
 
 class TestYamlPrefixWithFoundEntities:
@@ -1001,24 +928,28 @@ class TestReconfigureRegenerateEntityIds:
         flow._regenerate_entity_ids.assert_called_once()
 
 
-class TestAutoConfigureNodeidSetOptionVerificationFailed:
-    """Tests for _auto_configure_nodeid when SetOption157 verification fails."""
+class TestAutoConfigureNodeidNoRealNodeid:
+    """Tests for _auto_configure_nodeid when real NodeID cannot be acquired."""
 
-    async def test_auto_configure_setoption_verification_failed(self, hass: HomeAssistant) -> None:
-        """Test auto-configure fails when SetOption157 verification fails."""
+    async def test_auto_configure_no_real_nodeid(self, hass: HomeAssistant) -> None:
+        """Test auto-configure fails when only masked NodeIDs are received."""
         flow = NeoPoolConfigFlow()
         flow.hass = hass
 
+        async def mock_wait_for_any(topic, **kwargs):
+            return "XXXX XXXX XXXX XXXX XXXX 3435"  # Always masked
+
         with (
             patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+            patch.object(flow, "_wait_for_any_nodeid", side_effect=mock_wait_for_any),
+            patch.object(flow, "_trigger_telemetry", new_callable=AsyncMock),
             patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_ensure_setoption157_enabled",
+                "custom_components.sugar_valley_neopool.config_flow.async_set_setoption157",
                 new_callable=AsyncMock,
-                return_value=False,  # Verification returns False
+                return_value=True,
             ),
         ):
             result = await flow._auto_configure_nodeid("SmartPool")
 
         assert result["success"] is False
         assert "error" in result
-        assert "SetOption157" in result["error"]

@@ -96,7 +96,7 @@
       "already_configured": "Dieses Gerät ist bereits konfiguriert",
       "invalid_discovery_info": "Ungültige Erkennungsinformationen empfangen",
       "not_neopool_device": "Das erkannte Gerät ist kein NeoPool-Controller",
-      "nodeid_configuration_failed": "NodeID konnte nicht konfiguriert werden. Bitte setzen Sie SetOption157 1 manuell in der Tasmota-Konsole und versuchen Sie es erneut.",
+      "nodeid_configuration_failed": "NodeID konnte nicht konfiguriert werden. Bitte setzen Sie das Gerät online und über MQTT erreichbar ist.",
       "unique_id_mismatch": "Die Geräte-NodeID stimmt nicht mit der ursprünglichen Konfiguration überein."
     }
   },
@@ -104,7 +104,7 @@
     "step": {
       "init": {
         "title": "NeoPool Optionen",
-        "description": "Konfigurieren Sie Laufzeitoptionen für Ihr NeoPool-Gerät.\n\n{setoption157_status}\n\n**Wiederherstellungsskript-Variablen:**\nWenn konfiguriert, erhält das Wiederherstellungsskript diese Variablen:\n\n- `device_name` : Gerätename\n- `mqtt_topic` : MQTT-Topic\n- `nodeid` : Geräte-NodeID\n- `failures_count` : Anzahl aufeinanderfolgender Fehler",
+        "description": "Konfigurieren Sie Laufzeitoptionen für Ihr NeoPool-Gerät.\n\n**Wiederherstellungsskript-Variablen:**\nWenn konfiguriert, erhält das Wiederherstellungsskript diese Variablen:\n\n- `device_name` : Gerätename\n- `mqtt_topic` : MQTT-Topic\n- `nodeid` : Geräte-NodeID\n- `failures_count` : Anzahl aufeinanderfolgender Fehler",
         "data": {
           "recovery_script": "Wiederherstellungsskript (optional)",
           "enable_repair_notification": "Reparaturbenachrichtigungen aktivieren",
@@ -213,8 +213,8 @@
       "connection_out_of_range": {
         "name": "Verbindung außerhalb des Bereichs"
       },
-      "powerunit_nodeid": {
-        "name": "Powerunit NodeID"
+      "system_id": {
+        "name": "System ID"
       }
     },
     "binary_sensor": {

@@ -589,10 +589,10 @@ class TestValidateYamlTopicExtended:
         assert result["nodeid"] is None
 
 
-class TestWaitForNodeidExtended:
-    """Extended tests for _wait_for_nodeid."""
+class TestWaitForAnyNodeidExtended:
+    """Extended tests for _wait_for_any_nodeid."""
 
-    async def test_wait_for_nodeid_bytes_payload(self, mock_hass: MagicMock) -> None:
+    async def test_wait_for_any_nodeid_bytes_payload(self, mock_hass: MagicMock) -> None:
         """Test waiting for NodeID with bytes payload."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -608,7 +608,9 @@ class TestWaitForNodeidExtended:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=5))
+            wait_task = asyncio.create_task(
+                flow._wait_for_any_nodeid("SmartPool", timeout_seconds=5)
+            )
 
             await asyncio.sleep(0.1)
 
@@ -621,7 +623,7 @@ class TestWaitForNodeidExtended:
 
         assert result == "BYTES123"
 
-    async def test_wait_for_nodeid_ignores_invalid_json(self, mock_hass: MagicMock) -> None:
+    async def test_wait_for_any_nodeid_ignores_invalid_json(self, mock_hass: MagicMock) -> None:
         """Test waiting ignores invalid JSON and continues waiting."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
@@ -637,7 +639,9 @@ class TestWaitForNodeidExtended:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=mock_subscribe,
         ):
-            wait_task = asyncio.create_task(flow._wait_for_nodeid("SmartPool", timeout_seconds=1))
+            wait_task = asyncio.create_task(
+                flow._wait_for_any_nodeid("SmartPool", timeout_seconds=1)
+            )
 
             await asyncio.sleep(0.1)
 
@@ -1083,15 +1087,8 @@ class TestOptionsFlowExtended:
 
         flow = NeoPoolOptionsFlow()
         flow.hass = MagicMock()
-        with (
-            patch.object(
-                type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
-            ),
-            patch(
-                "custom_components.sugar_valley_neopool.config_flow.async_query_setoption157",
-                new_callable=AsyncMock,
-                return_value=True,
-            ),
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
         ):
             result = await flow.async_step_init(None)
 

@@ -295,9 +295,9 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
     ),
     # Diagnostic sensors
     NeoPoolSensorEntityDescription(
-        key="powerunit_nodeid",
-        translation_key="powerunit_nodeid",
-        name="Powerunit NodeID",
+        key="system_id",
+        translation_key="system_id",
+        name="System ID",
         json_path="NeoPool.Powerunit.NodeID",
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
