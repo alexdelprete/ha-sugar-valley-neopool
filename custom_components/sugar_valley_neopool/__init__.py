@@ -1043,6 +1043,7 @@ async def async_fetch_device_metadata(
     def status5_received(msg: mqtt.ReceiveMessage) -> None:
         """Handle Status 5 (network) response."""
         nonlocal device_ip
+        _LOGGER.debug("Received Status 5 response on %s", msg.topic)
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -1071,10 +1072,12 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Trigger all requests
+        # Trigger all requests with small delays to avoid command overlap
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "2", qos=1, retain=False)
+        await asyncio.sleep(0.5)
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "5", qos=1, retain=False)
+        _LOGGER.debug("Sent TelePeriod, Status 2, Status 5 to %s", mqtt_topic)
 
         # Wait for responses
         try:
