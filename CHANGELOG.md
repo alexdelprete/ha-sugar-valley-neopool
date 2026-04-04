@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18-beta.15] - 2026-04-04
+
+### Fixed
+
+- **Status 5 fetch**: Simplified fix — send `Backlog Status 2; Status 5` first,
+  then `TelePeriod` after. TelePeriod triggers a large SENSOR response that keeps
+  Tasmota busy and drops subsequent commands, so it must be sent last. Removed
+  unnecessary 1s delay between separate Status commands.
+
 ## [0.2.18-beta.14] - 2026-04-04
 
 ### Fixed

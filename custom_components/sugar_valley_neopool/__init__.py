@@ -1078,16 +1078,18 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Send Status 2 and Status 5 as separate commands with a delay.
-        # Tasmota's NeoPool module is busy with Modbus polling and drops
-        # commands when they arrive too close together or via Backlog
-        # while processing other responses (e.g., SENSOR telemetry).
-        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "2", qos=1, retain=False)
-        await asyncio.sleep(1)
-        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "5", qos=1, retain=False)
-        # Trigger telemetry for SENSOR data (manufacturer, relays)
+        # Send Status 2 and 5 first, then TelePeriod. TelePeriod triggers
+        # a large SENSOR response that keeps Tasmota busy and drops subsequent
+        # commands, so it must be sent last.
+        await mqtt.async_publish(
+            hass,
+            f"cmnd/{mqtt_topic}/Backlog",
+            "Status 2; Status 5",
+            qos=1,
+            retain=False,
+        )
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
-        _LOGGER.debug("Sent Status 2, Status 5, and TelePeriod to %s", mqtt_topic)
+        _LOGGER.debug("Sent Backlog Status 2/5 and TelePeriod to %s", mqtt_topic)
 
         # Wait for responses independently - collect whatever arrives
         # within the timeout window. Each event is waited on separately
