@@ -102,20 +102,24 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         entity_id_mapping=entity_id_mapping,
     )
 
-    # Register device in device registry and store device_id for triggers
-    await async_register_device(hass, entry)
-
-    # Fetch device metadata (manufacturer, firmware version) from MQTT
-    # This updates the device registry with actual device info
-    await async_fetch_device_metadata(hass, entry)
-
     # Auto-acquire dual NodeIDs if not yet stored (upgrade from older version)
+    # Must run BEFORE device registration to avoid creating a duplicate device
     if not entry.data.get(CONF_NODEID_HASHED):
         _LOGGER.info(
             "Dual NodeID not yet acquired — triggering auto-acquisition for %s",
             mqtt_topic,
         )
         await _auto_acquire_dual_nodeids(hass, entry)
+        # Re-read nodeid since it may have changed to hashed canonical
+        nodeid = entry.data.get(CONF_NODEID, "")
+        entry.runtime_data.nodeid = nodeid
+
+    # Register device in device registry and store device_id for triggers
+    await async_register_device(hass, entry)
+
+    # Fetch device metadata (manufacturer, firmware version) from MQTT
+    # This updates the device registry with actual device info
+    await async_fetch_device_metadata(hass, entry)
 
     # Run sanity check for masked unique_ids and migrate if needed
     # This must happen before platform setup to fix NodeID before entities are created
