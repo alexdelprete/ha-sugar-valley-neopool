@@ -606,34 +606,6 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
                 new_unique_id,
             )
 
-    # Disable named relay entities that were enabled by previous versions
-    # These are now entity_registry_enabled_default=False for new installs,
-    # but existing entities need to be disabled on upgrade
-    relay_entity_keys = [
-        "relay_acid_state",
-        "relay_base_state",
-        "relay_redox_state",
-        "relay_chlorine_state",
-        "relay_conductivity_state",
-        "relay_heating_state",
-        "relay_uv_state",
-        "relay_valve_state",
-    ]
-    for entity_key in relay_entity_keys:
-        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
-        entity_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
-        if entity_id:
-            entry_entity = entity_registry.async_get(entity_id)
-            if entry_entity and entry_entity.disabled_by is None:
-                entity_registry.async_update_entity(
-                    entity_id,
-                    disabled_by=er.RegistryEntryDisabler.INTEGRATION,
-                )
-                _LOGGER.info(
-                    "Disabled named relay entity %s (not assigned on controller)",
-                    entity_id,
-                )
-
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
     """Register the NeoPool device in the device registry.
