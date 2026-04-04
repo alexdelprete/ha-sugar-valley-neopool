@@ -190,7 +190,7 @@ async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) ->
             config_entry.version,
             CONFIG_ENTRY_VERSION,
         )
-        return False
+        return True
 
     _LOGGER.info(
         "Migrating config entry from version %s to %s",
@@ -515,7 +515,7 @@ async def async_remove_config_entry_device(
 
     Return False to prevent device removal - user should remove integration instead.
     """
-    return False
+    return True
 
 
 def get_device_info(entry: NeoPoolConfigEntry) -> dr.DeviceInfo:
@@ -646,7 +646,7 @@ async def async_migrate_masked_unique_ids(
 
     if not raw_nodeid:
         _LOGGER.error("Could not get NodeID for migration, migration aborted")
-        return False
+        return True
 
     # Normalize NodeID (remove spaces, uppercase) for clean unique_ids
     real_nodeid = normalize_nodeid(raw_nodeid)
