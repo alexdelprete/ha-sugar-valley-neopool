@@ -7,209 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.18-beta.17] - 2026-04-04
-
-### Fixed
-
-- **Status 5 fetch**: Replaced Backlog with sequential commands — send Status 2,
-  wait for response, then send Status 5, wait for response. Backlog queue is
-  interrupted by regular SENSOR telemetry, causing Tasmota to drop Status 5.
-  Sequential send-and-wait avoids all queue competition.
-
-## [0.2.18-beta.16] - 2026-04-04
-
-### Fixed
-
-- **Status 5 still dropped**: Removed TelePeriod command from metadata fetch.
-  Any MQTT command sent after Backlog interrupts its queue, causing Tasmota to
-  drop Status 5. SENSOR data now arrives naturally from the regular telemetry
-  cycle instead.
-
-## [0.2.18-beta.15] - 2026-04-04
-
-### Fixed
-
-- **Status 5 fetch**: Simplified fix — send `Backlog Status 2; Status 5` first,
-  then `TelePeriod` after. TelePeriod triggers a large SENSOR response that keeps
-  Tasmota busy and drops subsequent commands, so it must be sent last. Removed
-  unnecessary 1s delay between separate Status commands.
-
-## [0.2.18-beta.14] - 2026-04-04
-
-### Fixed
-
-- **Status 5 dropped by Tasmota**: Replaced `Backlog Status 2; Status 5` with
-  separate commands and 1s delay. Tasmota's NeoPool module drops Status 5 when
-  busy with Modbus polling and SENSOR telemetry processing. TelePeriod now sent
-  after Status commands to avoid interference.
-- **Device configuration URL**: Now points to the actual Tasmota device web UI
-  (`http://{ip}`) instead of Tasmota docs. Applied to both `get_device_info()`
-  (used by entities) and `_update_device_registry_metadata()` (device registry).
-  Falls back to Tasmota docs URL when device IP is unavailable.
-
-## [0.2.18-beta.13] - 2026-04-04
-
-### Fixed
-
-- **Device metadata fetch**: Fixed `asyncio.gather` blocking all results when
-  SENSOR telemetry is slow. Status 2/5 responses were lost even though they
-  arrived in ~200ms, because the gather waited for all three events and timed
-  out on SENSOR. Now waits for each event independently with a shared deadline.
-
-## [0.2.18-beta.12] - 2026-04-04
-
-### Fixed
-
-- **Status 5 IP fetch**: Tasmota was dropping second `Status` command; now uses
-  `Backlog Status 2; Status 5` to send both in a single command.
-
-## [0.2.18-beta.11] - 2026-04-04
-
-### Fixed
-
-- **Status 5 IP fetch timing**: Added 0.5s delay between Status 2 and Status 5
-  commands to prevent Tasmota from dropping the second command.
-- **Debug logging**: Added trace logging for `status5_received` callback.
-
-## [0.2.18-beta.10] - 2026-04-04
-
-### Added
-
-- **Smart relay entity disable**: Detects which named relays are present in
-  SENSOR payload; only disables absent ones.
-- **Serial number**: Device info shows hashed System ID as serial number.
-- **Tasmota firmware version**: Fetched via `Status 2` command, shows
-  `"Tasmota X.Y.Z / Powerunit VX.Y"`.
-- **Dynamic configuration URL**: Points to actual Tasmota device web UI
-  (`http://{ip}`).
-
-### Changed
-
-- Named relay entities disabled by default for new installs.
-- Device removal allowed from UI.
-
-### Fixed
-
-- **Status 2/5 topic subscription**: Separate callbacks for reliable IP fetch.
-- **Device migration**: Preserves original device.
-- Removed blind relay disable that was disabling all 8 relay entities.
-
-## [0.2.18-beta.9] - 2026-04-04
-
-### Fixed
-
-- **Separate Status 2/5 callbacks**: Split single callback into
-  `status2_received` and `status5_received` with independent events.
-- **Removed blind relay disable**: Removed auto-disable that was disabling
-  all 8 relay entities including available ones.
-
-## [0.2.18-beta.8] - 2026-04-04
-
-### Fixed
-
-- **Status 2/5 MQTT subscription**: Fixed wildcard `STATUS+` not matching
-  Tasmota response topics; now subscribes to specific `stat/{topic}/STATUS2`
-  and `stat/{topic}/STATUS5`.
-
-### Changed
-
-- Disable relay entities on upgrade for existing installations.
-
-## [0.2.18-beta.7] - 2026-04-04
-
-### Added
-
-- **Serial number**: Device info shows hashed System ID as serial number.
-- **Tasmota firmware version**: Fetched via `Status 2` command, shows
-  `"Tasmota X.Y.Z / Powerunit VX.Y"`.
-- **Dynamic configuration URL**: Points to actual Tasmota device web UI
-  (`http://{ip}`).
-
-### Changed
-
-- Named relay entities disabled by default (all 8: Acid, Base, Redox,
-  Chlorine, Conductivity, Heating, UV, Valve).
-- Device removal allowed from UI.
-
-### Fixed
-
-- Device migration preserves original device.
-
-## [0.2.18-beta.6] - 2026-04-04
-
-### Fixed
-
-- **Device migration**: Now correctly removes the duplicate device and updates
-  the original's identifier to canonical hashed value.
-
-## [0.2.18-beta.5] - 2026-04-04
-
-### Fixed
-
-- **Complete migration fix**: Added standalone `_migrate_to_canonical_nodeid()`
-  that runs on every startup, independent of acquisition. Handles all edge
-  cases: entities with real NodeID unique_ids, duplicate entities from failed
-  migrations, device registry updates.
-
-## [0.2.18-beta.4] - 2026-04-04
-
-### Fixed
-
-- **Duplicate device on upgrade (root cause)**: Dual NodeID acquisition now
-  runs before device registration in `async_setup_entry`.
-
-## [0.2.18-beta.3] - 2026-04-04
-
-### Fixed
-
-- **Duplicate device on upgrade**: Properly migrates device registry identifier
-  and entity unique_ids from real NodeID to hashed canonical.
-- **Device removal blocked**: Fixed `async_remove_config_entry_device`
-  incorrectly blocking all device removal from UI.
-
-## [0.2.18-beta.2] - 2026-04-04
+## [0.2.18] - 2026-04-04
 
 ### Added
 
 - **Dual NodeID recognition**: Acquires both hashed (AA55 prefix) and real
-  NodeIDs during setup.
-- **Auto-acquisition on startup**: Existing installations get dual NodeIDs
-  automatically.
-
-### Changed
-
-- **SO157 no longer required**: SetOption157 is no longer a prerequisite.
-- **Canonical ID is hashed**: Entity unique_ids use hashed NodeID (AA55 prefix)
-  for privacy.
-- **Renamed sensor**: `powerunit_nodeid` → `system_id` (per @curzon01).
-
-### Removed
-
-- SO157 runtime enforcement.
-- SO157 status display in Options flow.
-- Helper functions: `async_query_setoption157()` and
-  `async_ensure_setoption157_enabled()`.
-
-## [0.2.18-beta.1] - 2026-04-04
-
-### Added
-
-- **Dual NodeID recognition**: Integration acquires both hashed (AA55) and
-  real NodeIDs during setup. Device is recognized regardless of SO157 state.
-- **Design document**: `docs/NODEID_DUAL_RECOGNITION.md` with full technical
-  design for review.
+  NodeIDs during setup by briefly toggling SO157. Both values are stored, so
+  the device is recognized regardless of how SO157 is set afterward. Existing
+  installations automatically acquire dual NodeIDs on first startup.
+- **Tasmota firmware version**: Device info shows `"Tasmota X.Y.Z / Powerunit
+  VX.Y"`, fetched via `Status 2` command at startup.
+- **Dynamic configuration URL**: Device "Visit" link points to the actual
+  Tasmota device web UI (`http://{ip}`), fetched via `Status 5` command.
+  Falls back to Tasmota docs URL when device IP is unavailable.
+- **Serial number**: Device info shows hashed System ID as serial number.
+- **Smart relay entity disable**: Detects which named relays are present in
+  SENSOR payload; only disables absent ones. Re-enables them automatically
+  when they appear.
 
 ### Changed
 
 - **SO157 no longer required**: SetOption157 is no longer a prerequisite.
   The integration works with any SO157 setting and any Tasmota version.
-- **Canonical ID is hashed**: Entity unique_ids now use the hashed NodeID
-  (AA55 prefix) for privacy. Real NodeID used as anchor for recognition.
+- **Canonical ID is hashed**: Entity unique_ids use hashed NodeID (AA55
+  prefix) for privacy. Real NodeID stored as anchor for recognition.
 - **Renamed sensor**: `powerunit_nodeid` → `system_id` (per @curzon01).
+- Named relay entities disabled by default for new installs.
+- Device removal allowed from UI.
+
+### Fixed
+
+- **Reliable device metadata fetch**: Status 2/5 fetched using sequential
+  send-and-wait commands instead of Backlog to avoid Tasmota dropping
+  commands when busy with Modbus polling and SENSOR telemetry.
+- **Device migration preserves original**: Original device (with history
+  and area assignments) is kept; duplicate removed during NodeID migration.
+- **Canonical NodeID migration**: Standalone migration runs on every startup,
+  handling entities with real NodeID unique_ids, duplicates from failed
+  migrations, and device registry updates.
 
 ### Removed
 
-- SO157 runtime enforcement (no longer needed).
+- SO157 runtime enforcement.
 - SO157 status display in Options flow.
 - `async_query_setoption157()` and `async_ensure_setoption157_enabled()`
   helper functions.

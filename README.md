@@ -49,8 +49,10 @@ of your pool system through Home Assistant.
   MQTT telemetry:
   - **Manufacturer**: Actual brand from `NeoPool.Type` (e.g., "Bayrol",
     "Hidrolife", "Aquascenic") instead of generic "Sugar Valley"
-  - **Firmware version**: Actual firmware from `NeoPool.Powerunit.Version`
-    (e.g., "V3.45 (Powerunit)")
+  - **Firmware version**: Combined Tasmota and Powerunit versions
+    (e.g., "Tasmota 14.4.1 / Powerunit V3.45")
+  - **Configuration URL**: Links directly to the Tasmota device web UI
+  - **Serial number**: Hashed System ID for device identification
 - **Translated sensor names**: Sensor names displayed in your Home Assistant
   language (supports German, English, Spanish, Estonian, Finnish, French,
   Italian, Norwegian, Portuguese, and Swedish)
@@ -201,7 +203,7 @@ If you're currently using the YAML package
    ask you to remove the YAML package first
 1. **Custom prefix support**: If your YAML used a custom `unique_id` prefix:
    - Smart detection will find entities using NeoPool-specific signatures
-     (hydrolysis_runtime, powerunit_nodeid, etc.)
+     (hydrolysis_runtime, system_id, etc.)
    - You'll be asked to confirm the detected prefix
    - Or you can manually enter your custom prefix
    - If no entities are found at all, you can skip migration and proceed
@@ -332,7 +334,7 @@ at startup.
 - Verify entities with the `neopool_mqtt_` prefix exist in your entity registry
 - Entities already owned by this integration cannot be migrated again
 - The integration uses smart detection with NeoPool-specific signatures
-  (hydrolysis_runtime, powerunit_nodeid, etc.) to find entities
+  (hydrolysis_runtime, system_id, etc.) to find entities
 - If smart detection finds your entities, you'll be asked to confirm the
   detected prefix and confidence level
 - If automatic detection fails, you can manually enter your custom prefix
