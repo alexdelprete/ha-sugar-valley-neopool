@@ -73,6 +73,7 @@ class NeoPoolData:
     manufacturer: str | None = None  # From NeoPool.Type
     fw_version: str | None = None  # From NeoPool.Powerunit.Version
     tasmota_version: str | None = None  # From StatusFWR.Version
+    available_relays: set[str] = field(default_factory=set)  # Relay keys present in SENSOR
     device_ip: str | None = None  # From Status 5 network info
 
 
@@ -138,6 +139,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Clean up removed entities (runs for all users, not just YAML migration)
     _cleanup_removed_entities(hass, entry)
+
+    # Disable relay entities that aren't assigned on the controller
+    _disable_unavailable_relay_entities(hass, entry)
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -607,6 +611,72 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
             )
 
 
+@callback
+def _disable_unavailable_relay_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Disable relay entities that aren't assigned on the controller.
+
+    Uses available_relays from SENSOR payload to determine which relays
+    are actually present. Only disables relays that are confirmed absent.
+    Re-enables relays that are present but were previously disabled by
+    the integration.
+    """
+    available = entry.runtime_data.available_relays
+    if not available and not entry.runtime_data.available:
+        # No SENSOR data received yet — can't determine relay availability
+        _LOGGER.debug("No relay data available, skipping relay entity management")
+        return
+
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    # Map entity key → relay name in JSON
+    relay_key_map = {
+        "relay_acid_state": "Acid",
+        "relay_base_state": "Base",
+        "relay_redox_state": "Redox",
+        "relay_chlorine_state": "Chlorine",
+        "relay_conductivity_state": "Conductivity",
+        "relay_heating_state": "Heating",
+        "relay_uv_state": "UV",
+        "relay_valve_state": "Valve",
+    }
+
+    for entity_key, relay_name in relay_key_map.items():
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_id = entity_registry.async_get_entity_id("binary_sensor", DOMAIN, unique_id)
+        if not entity_id:
+            continue
+
+        entity_entry = entity_registry.async_get(entity_id)
+        if not entity_entry:
+            continue
+
+        is_present = relay_name in available
+
+        if not is_present and entity_entry.disabled_by is None:
+            # Relay not assigned → disable
+            entity_registry.async_update_entity(
+                entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+            _LOGGER.info(
+                "Disabled relay entity %s (%s not assigned on controller)",
+                entity_id,
+                relay_name,
+            )
+        elif is_present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            # Relay IS assigned but was disabled by us → re-enable
+            entity_registry.async_update_entity(
+                entity_id,
+                disabled_by=None,
+            )
+            _LOGGER.info(
+                "Re-enabled relay entity %s (%s is assigned on controller)",
+                entity_id,
+                relay_name,
+            )
+
+
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
     """Register the NeoPool device in the device registry.
 
@@ -906,14 +976,15 @@ async def async_fetch_device_metadata(
     fw_version: str | None = None
     tasmota_version: str | None = None
     device_ip: str | None = None
+    available_relays: set[str] = set()
     sensor_event = asyncio.Event()
     status2_event = asyncio.Event()
     status5_event = asyncio.Event()
 
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SENSOR telemetry for manufacturer and powerunit version."""
-        nonlocal manufacturer, fw_version
+        """Handle SENSOR telemetry for manufacturer, version, and relay detection."""
+        nonlocal manufacturer, fw_version, available_relays
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -928,6 +999,21 @@ async def async_fetch_device_metadata(
             if version:
                 fw_version = str(version)
                 _LOGGER.debug("Extracted powerunit version: %s", fw_version)
+            # Detect which named relays are present in the payload
+            relay_data = get_nested_value(payload, "NeoPool.Relay")
+            if isinstance(relay_data, dict):
+                relay_names = {
+                    "Acid",
+                    "Base",
+                    "Redox",
+                    "Chlorine",
+                    "Conductivity",
+                    "Heating",
+                    "UV",
+                    "Valve",
+                }
+                available_relays = {k for k in relay_data if k in relay_names}
+                _LOGGER.debug("Detected available relays: %s", available_relays)
             if manufacturer or fw_version:
                 sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
@@ -1024,6 +1110,10 @@ async def async_fetch_device_metadata(
         entry.runtime_data.tasmota_version = tasmota_version
     if device_ip:
         entry.runtime_data.device_ip = device_ip
+
+    # Store available relays
+    if available_relays:
+        entry.runtime_data.available_relays = available_relays
 
     # Update device registry if we got any metadata
     if manufacturer or fw_version or tasmota_version or device_ip:
