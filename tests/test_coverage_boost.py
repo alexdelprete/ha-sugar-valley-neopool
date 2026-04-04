@@ -387,8 +387,8 @@ class TestAsyncRemoveConfigEntryDevice:
     """Tests for async_remove_config_entry_device."""
 
     @pytest.mark.asyncio
-    async def test_always_returns_false(self, hass: HomeAssistant) -> None:
-        """Test function always returns False to prevent device removal."""
+    async def test_always_returns_true(self, hass: HomeAssistant) -> None:
+        """Test function always returns True to allow device removal."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
@@ -408,7 +408,7 @@ class TestAsyncRemoveConfigEntryDevice:
 
         result = await async_remove_config_entry_device(hass, entry, mock_device)
 
-        assert result is False
+        assert result is True
 
 
 class TestGetDeviceInfo:

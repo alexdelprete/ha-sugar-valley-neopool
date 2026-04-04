@@ -60,6 +60,11 @@ class TestAsyncSetupEntry:
             ),
             patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
             patch(
+                "custom_components.sugar_valley_neopool._auto_acquire_dual_nodeids",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 new_callable=AsyncMock,
                 return_value=None,
@@ -118,6 +123,11 @@ class TestAsyncSetupEntry:
                 return_value=True,
             ),
             patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
+            patch(
+                "custom_components.sugar_valley_neopool._auto_acquire_dual_nodeids",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
             patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 new_callable=AsyncMock,
@@ -246,7 +256,7 @@ class TestAsyncMigrateEntry:
 
     @pytest.mark.asyncio
     async def test_no_downgrade(self, hass: HomeAssistant) -> None:
-        """Test migration fails for future version."""
+        """Test migration returns True for future version (no downgrade attempted)."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             version=CONFIG_ENTRY_VERSION + 1,
@@ -256,7 +266,7 @@ class TestAsyncMigrateEntry:
 
         result = await async_migrate_entry(hass, entry)
 
-        assert result is False
+        assert result is True
 
 
 class TestAsyncRegisterDevice:
