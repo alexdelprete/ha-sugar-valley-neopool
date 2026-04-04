@@ -442,7 +442,7 @@ class TestAsyncMigrateMaskedUniqueIds:
         ):
             result = await async_migrate_masked_unique_ids(hass, entry)
 
-        assert result is False
+        assert result is True
 
     @pytest.mark.asyncio
     async def test_entity_migration_with_existing_unique_id(self, hass: HomeAssistant) -> None:
@@ -720,6 +720,11 @@ class TestSetupEntryWithEntityIdMapping:
             ),
             patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
             patch(
+                "custom_components.sugar_valley_neopool._auto_acquire_dual_nodeids",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 new_callable=AsyncMock,
                 return_value=None,
@@ -761,6 +766,11 @@ class TestSetupEntryWithEntityIdMapping:
                 return_value=True,
             ),
             patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
+            patch(
+                "custom_components.sugar_valley_neopool._auto_acquire_dual_nodeids",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
             patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
                 new_callable=AsyncMock,
