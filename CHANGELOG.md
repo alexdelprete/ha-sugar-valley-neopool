@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18-beta.1] - 2026-04-04
+
+### Added
+
+- **Dual NodeID recognition**: Integration acquires both hashed (AA55) and
+  real NodeIDs during setup. Device is recognized regardless of SO157 state.
+- **Design document**: `docs/NODEID_DUAL_RECOGNITION.md` with full technical
+  design for review.
+
+### Changed
+
+- **SO157 no longer required**: SetOption157 is no longer a prerequisite.
+  The integration works with any SO157 setting and any Tasmota version.
+- **Canonical ID is hashed**: Entity unique_ids now use the hashed NodeID
+  (AA55 prefix) for privacy. Real NodeID used as anchor for recognition.
+- **Renamed sensor**: `powerunit_nodeid` → `system_id` (per @curzon01).
+
+### Removed
+
+- SO157 runtime enforcement (no longer needed).
+- SO157 status display in Options flow.
+- `async_query_setoption157()` and `async_ensure_setoption157_enabled()`
+  helper functions.
+
 ## [0.2.17] - 2026-04-03
 
 ### Added
