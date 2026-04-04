@@ -1072,12 +1072,17 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Trigger all requests with small delays to avoid command overlap
+        # Trigger telemetry
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
-        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "2", qos=1, retain=False)
-        await asyncio.sleep(0.5)
-        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "5", qos=1, retain=False)
-        _LOGGER.debug("Sent TelePeriod, Status 2, Status 5 to %s", mqtt_topic)
+        # Use Backlog to send Status 2 and 5 in one command (avoids dropped commands)
+        await mqtt.async_publish(
+            hass,
+            f"cmnd/{mqtt_topic}/Backlog",
+            "Status 2; Status 5",
+            qos=1,
+            retain=False,
+        )
+        _LOGGER.debug("Sent TelePeriod and Backlog Status 2/5 to %s", mqtt_topic)
 
         # Wait for responses
         try:
