@@ -956,6 +956,7 @@ async def _auto_acquire_dual_nodeids(
     )
 
     # Step 5: Update config entry with dual NodeIDs
+    old_nodeid = entry.data.get(CONF_NODEID, "")
     new_data = {
         **entry.data,
         CONF_NODEID: canonical,
@@ -968,6 +969,49 @@ async def _auto_acquire_dual_nodeids(
     # Update runtime data
     entry.runtime_data.nodeid = canonical
     _LOGGER.info("Config entry updated with dual NodeIDs")
+
+    # Step 6: Migrate device registry identifier if canonical changed
+    if old_nodeid and old_nodeid != canonical:
+        device_registry = dr.async_get(hass)
+        old_device = device_registry.async_get_device(identifiers={(DOMAIN, old_nodeid)})
+        if old_device:
+            device_registry.async_update_device(
+                old_device.id,
+                new_identifiers={(DOMAIN, canonical)},
+            )
+            _LOGGER.info(
+                "Migrated device identifier: %s -> %s",
+                old_nodeid,
+                canonical,
+            )
+
+    # Step 7: Migrate entity unique_ids from old NodeID to canonical
+    if old_nodeid and old_nodeid != canonical:
+        entity_registry = er.async_get(hass)
+        migrated = 0
+        for entity in entity_registry.entities.values():
+            if entity.config_entry_id != entry.entry_id:
+                continue
+            if not entity.unique_id or old_nodeid not in entity.unique_id:
+                continue
+            new_unique_id = entity.unique_id.replace(old_nodeid, canonical)
+            existing = entity_registry.async_get_entity_id(entity.domain, DOMAIN, new_unique_id)
+            if existing and existing != entity.entity_id:
+                _LOGGER.warning(
+                    "Cannot migrate %s: unique_id %s already exists",
+                    entity.entity_id,
+                    new_unique_id,
+                )
+                continue
+            entity_registry.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+            migrated += 1
+        if migrated:
+            _LOGGER.info(
+                "Migrated %d entity unique_ids: %s -> %s",
+                migrated,
+                old_nodeid,
+                canonical,
+            )
 
 
 async def _wait_for_any_nodeid(
