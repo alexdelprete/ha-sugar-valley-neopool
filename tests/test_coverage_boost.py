@@ -866,6 +866,22 @@ class TestReconfigureRegenerateEntityIds:
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
 
+        # Mock _acquire_and_store_nodeids to avoid MQTT operations
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
+
         async def mock_set_unique_id(uid):
             flow._unique_id = uid
 
@@ -905,6 +921,22 @@ class TestReconfigureRegenerateEntityIds:
         flow._validate_yaml_topic = AsyncMock(
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
+
+        # Mock _acquire_and_store_nodeids to avoid MQTT operations
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
 
         async def mock_set_unique_id(uid):
             flow._unique_id = uid

@@ -234,6 +234,22 @@ class TestReconfigureFlowExtended:
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
 
+        # Mock _acquire_and_store_nodeids to avoid MQTT operations
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
+
         # Mock async_set_unique_id to set the unique_id
         async def mock_set_unique_id(unique_id):
             flow._unique_id = unique_id
@@ -330,6 +346,22 @@ class TestReconfigureFlowExtended:
         flow._validate_yaml_topic = AsyncMock(
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
+
+        # Mock _acquire_and_store_nodeids to avoid MQTT operations
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
 
         flow.async_set_unique_id = AsyncMock()
         flow._abort_if_unique_id_mismatch = MagicMock()
@@ -878,6 +910,23 @@ class TestDiscoverDeviceFlow:
         flow._validate_yaml_topic = AsyncMock(
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
+
+        # Mock _acquire_and_store_nodeids to avoid MQTT operations
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
+
         flow.async_set_unique_id = AsyncMock()
         flow._abort_if_unique_id_configured = MagicMock()
 
@@ -890,7 +939,7 @@ class TestDiscoverDeviceFlow:
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "My Pool"
-        assert result["data"][CONF_NODEID] == "ABC123"
+        assert result["data"][CONF_NODEID] == "AA55ABC123DEF456"
 
     async def test_discover_device_validation_failure(self, mock_hass: MagicMock) -> None:
         """Test discover device with validation failure."""

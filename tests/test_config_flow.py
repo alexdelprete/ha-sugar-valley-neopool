@@ -34,6 +34,35 @@ from homeassistant.data_entry_flow import FlowResultType
 
 from .conftest import SAMPLE_NEOPOOL_PAYLOAD, create_mqtt_message
 
+MOCK_ACQUIRE_NODEIDS_PATH = (
+    "custom_components.sugar_valley_neopool.config_flow."
+    "NeoPoolConfigFlow._acquire_and_store_nodeids"
+)
+
+
+def _make_acquire_side_effect(
+    nodeid: str = "ABC123",
+    nodeid_hashed: str = "AA55ABC123DEF456",
+    nodeid_real: str = "ABC123",
+    nodeid_masked: str | None = None,
+):
+    """Create a side_effect for _acquire_and_store_nodeids that sets flow attrs."""
+
+    async def _side_effect(self, device_topic: str):
+        self._nodeid = nodeid_hashed
+        self._nodeid_hashed = nodeid_hashed
+        self._nodeid_real = nodeid_real
+        self._nodeid_masked = nodeid_masked
+        return {
+            "success": True,
+            "nodeid": nodeid_hashed,
+            "nodeid_hashed": nodeid_hashed,
+            "nodeid_real": nodeid_real,
+            "nodeid_masked": nodeid_masked,
+        }
+
+    return _side_effect
+
 
 @pytest.fixture(name="neopool_setup", autouse=True)
 def neopool_setup_fixture():
@@ -58,23 +87,27 @@ async def test_mqtt_discovery(hass: HomeAssistant) -> None:
     """Test MQTT discovery with valid NeoPool payload."""
     message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_MQTT},
-        data=message,
-    )
+    with patch(
+        MOCK_ACQUIRE_NODEIDS_PATH,
+        _make_acquire_side_effect(),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_MQTT},
+            data=message,
+        )
 
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "mqtt_confirm"
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "mqtt_confirm"
 
-    # Confirm discovery
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {
-            CONF_DEVICE_NAME: "NeoPool SmartPool",
-        },
-    )
-    await hass.async_block_till_done()
+        # Confirm discovery
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_DEVICE_NAME: "NeoPool SmartPool",
+            },
+        )
+        await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "NeoPool SmartPool"
@@ -136,24 +169,28 @@ async def test_mqtt_discovery_duplicate(hass: HomeAssistant) -> None:
     """Test MQTT discovery with already configured device."""
     # First discovery
     message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_MQTT},
-        data=message,
-    )
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {CONF_DEVICE_NAME: "NeoPool SmartPool"},
-    )
-    await hass.async_block_till_done()
-    assert result["type"] is FlowResultType.CREATE_ENTRY
+    with patch(
+        MOCK_ACQUIRE_NODEIDS_PATH,
+        _make_acquire_side_effect(),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_MQTT},
+            data=message,
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_DEVICE_NAME: "NeoPool SmartPool"},
+        )
+        await hass.async_block_till_done()
+        assert result["type"] is FlowResultType.CREATE_ENTRY
 
-    # Second discovery with same device
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_MQTT},
-        data=message,
-    )
+        # Second discovery with same device
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_MQTT},
+            data=message,
+        )
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
@@ -163,21 +200,25 @@ async def test_mqtt_confirm_default_name(hass: HomeAssistant) -> None:
     """Test MQTT confirmation uses default device name."""
     message = create_mqtt_message("tele/TestPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
 
-    result = await hass.config_entries.flow.async_init(
-        DOMAIN,
-        context={"source": config_entries.SOURCE_MQTT},
-        data=message,
-    )
+    with patch(
+        MOCK_ACQUIRE_NODEIDS_PATH,
+        _make_acquire_side_effect(),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_MQTT},
+            data=message,
+        )
 
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "mqtt_confirm"
+        assert result["type"] is FlowResultType.FORM
+        assert result["step_id"] == "mqtt_confirm"
 
-    # Confirm without changing name (use default)
-    result = await hass.config_entries.flow.async_configure(
-        result["flow_id"],
-        {},  # Empty to use default
-    )
-    await hass.async_block_till_done()
+        # Confirm without changing name (use default)
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {},  # Empty to use default
+        )
+        await hass.async_block_till_done()
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert result["title"] == "NeoPool TestPool"  # Default name
@@ -304,6 +345,21 @@ class TestAsyncStepMqttDirect:
         flow.context = {"source": config_entries.SOURCE_MQTT}
         flow.async_set_unique_id = AsyncMock()
         flow._abort_if_unique_id_configured = MagicMock()
+
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
 
         message = create_mqtt_message("tele/SmartPool/SENSOR", SAMPLE_NEOPOOL_PAYLOAD)
 
@@ -438,6 +494,21 @@ class TestAsyncStepReconfigureDirect:
         flow._validate_yaml_topic = AsyncMock(
             return_value={"valid": True, "nodeid": "ABC123", "payload": {}}
         )
+
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
 
         await flow.async_step_reconfigure(
             {
@@ -934,10 +1005,25 @@ class TestYamlMigrationFlow:
             return_value={"type": FlowResultType.FORM, "step_id": "yaml_confirm"}
         )
 
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
+
         await flow.async_step_yaml_detect()
 
         assert flow._yaml_topic == "SmartPool"
-        assert flow._nodeid == "ABC123"
+        assert flow._nodeid == "AA55ABC123DEF456"
         flow._check_migratable_entities.assert_called_once()
 
     async def test_yaml_detect_auto_detection_fails(self, mock_hass: MagicMock) -> None:
@@ -968,10 +1054,25 @@ class TestYamlMigrationFlow:
             return_value={"type": FlowResultType.FORM, "step_id": "yaml_confirm"}
         )
 
+        async def _mock_acquire(device_topic):
+            flow._nodeid = "AA55ABC123DEF456"
+            flow._nodeid_hashed = "AA55ABC123DEF456"
+            flow._nodeid_real = "ABC123"
+            flow._nodeid_masked = None
+            return {
+                "success": True,
+                "nodeid": "AA55ABC123DEF456",
+                "nodeid_hashed": "AA55ABC123DEF456",
+                "nodeid_real": "ABC123",
+                "nodeid_masked": None,
+            }
+
+        flow._acquire_and_store_nodeids = _mock_acquire
+
         await flow.async_step_yaml_topic({"yaml_topic": "TestPool"})
 
         assert flow._yaml_topic == "TestPool"
-        assert flow._nodeid == "ABC123"
+        assert flow._nodeid == "AA55ABC123DEF456"
 
     async def test_yaml_topic_validation_failure(self, mock_hass: MagicMock) -> None:
         """Test YAML topic step with validation failure."""
