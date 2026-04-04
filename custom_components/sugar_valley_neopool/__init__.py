@@ -995,12 +995,15 @@ async def async_fetch_device_metadata(
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
             _LOGGER.debug("Failed to parse Status response: %s", err)
 
-    # Subscribe to SENSOR and stat topics
+    # Subscribe to SENSOR and specific Status response topics
     unsub_sensor = await mqtt.async_subscribe(
         hass, f"tele/{mqtt_topic}/SENSOR", sensor_received, qos=1
     )
-    unsub_status = await mqtt.async_subscribe(
-        hass, f"stat/{mqtt_topic}/STATUS+", status_received, qos=1
+    unsub_status2 = await mqtt.async_subscribe(
+        hass, f"stat/{mqtt_topic}/STATUS2", status_received, qos=1
+    )
+    unsub_status5 = await mqtt.async_subscribe(
+        hass, f"stat/{mqtt_topic}/STATUS5", status_received, qos=1
     )
 
     try:
@@ -1027,7 +1030,8 @@ async def async_fetch_device_metadata(
             )
     finally:
         unsub_sensor()
-        unsub_status()
+        unsub_status2()
+        unsub_status5()
 
     # Update runtime_data
     if manufacturer:
