@@ -20,6 +20,8 @@ from .const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
     CONF_NODEID,
+    CONF_NODEID_HASHED,
+    CONF_NODEID_MASKED,
     CONF_NODEID_REAL,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
@@ -38,6 +40,8 @@ from .const import (
     YAML_TO_INTEGRATION_KEY_MAP,
 )
 from .helpers import (
+    async_set_setoption157,
+    classify_nodeid,
     extract_entity_key_from_masked_unique_id,
     get_nested_value,
     is_masked_unique_id,
@@ -104,6 +108,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Fetch device metadata (manufacturer, firmware version) from MQTT
     # This updates the device registry with actual device info
     await async_fetch_device_metadata(hass, entry)
+
+    # Auto-acquire dual NodeIDs if not yet stored (upgrade from older version)
+    if not entry.data.get(CONF_NODEID_HASHED):
+        _LOGGER.info(
+            "Dual NodeID not yet acquired — triggering auto-acquisition for %s",
+            mqtt_topic,
+        )
+        await _auto_acquire_dual_nodeids(hass, entry)
 
     # Run sanity check for masked unique_ids and migrate if needed
     # This must happen before platform setup to fix NodeID before entities are created
@@ -864,6 +876,136 @@ async def _update_device_registry_metadata(
         entry.runtime_data.manufacturer or MANUFACTURER,
         sw_version,
     )
+
+
+async def _auto_acquire_dual_nodeids(
+    hass: HomeAssistant,
+    entry: NeoPoolConfigEntry,
+) -> None:
+    """Auto-acquire dual NodeIDs on startup for existing installations.
+
+    Called when config entry is missing nodeid_hashed (upgrade from older version).
+    Reads the current NodeID from SENSOR, classifies it, toggles SO157 once
+    to get the other format, restores SO157, and updates config entry.
+    """
+    mqtt_topic = entry.data.get(CONF_DISCOVERY_PREFIX, "")
+    if not mqtt_topic:
+        _LOGGER.warning("No MQTT topic, cannot acquire dual NodeIDs")
+        return
+
+    # Step 1: Read current NodeID from telemetry
+    _LOGGER.debug("Step 1: Reading current NodeID from SENSOR on %s", mqtt_topic)
+    await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
+    first_nodeid = await _wait_for_any_nodeid(hass, mqtt_topic)
+
+    if not first_nodeid:
+        _LOGGER.warning("Could not read NodeID from device, dual acquisition skipped")
+        return
+
+    first_type = classify_nodeid(first_nodeid)
+    _LOGGER.info("Current NodeID: %s (type: %s)", first_nodeid, first_type)
+
+    if first_type == "invalid":
+        _LOGGER.warning("Invalid NodeID received: %s, dual acquisition skipped", first_nodeid)
+        return
+
+    # Step 2: Toggle SO157 to get the other format
+    toggle_to = first_type in ("hashed", "masked")
+    _LOGGER.debug(
+        "Step 2: Toggling SetOption157 to %s to acquire second NodeID",
+        "1" if toggle_to else "0",
+    )
+    await async_set_setoption157(hass, mqtt_topic, enable=toggle_to)
+    await asyncio.sleep(1)
+    await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
+    second_nodeid = await _wait_for_any_nodeid(hass, mqtt_topic)
+
+    # Step 3: Restore SO157
+    _LOGGER.debug("Step 3: Restoring SetOption157 to %s", "0" if toggle_to else "1")
+    await async_set_setoption157(hass, mqtt_topic, enable=not toggle_to)
+
+    second_type = classify_nodeid(second_nodeid) if second_nodeid else "invalid"
+    _LOGGER.debug("Second NodeID: %s (type: %s)", second_nodeid, second_type)
+
+    # Step 4: Classify and store
+    nodeid_hashed = None
+    nodeid_real = None
+    nodeid_masked = None
+
+    for nodeid, ntype in [(first_nodeid, first_type), (second_nodeid, second_type)]:
+        if ntype == "hashed":
+            nodeid_hashed = normalize_nodeid(nodeid)
+        elif ntype == "real":
+            nodeid_real = normalize_nodeid(nodeid)
+        elif ntype == "masked":
+            nodeid_masked = normalize_nodeid(nodeid)
+
+    if not nodeid_real:
+        _LOGGER.warning("Could not acquire real NodeID, dual acquisition incomplete")
+        return
+
+    # Canonical: prefer hashed, fall back to real
+    canonical = nodeid_hashed or nodeid_real
+
+    _LOGGER.info(
+        "Dual NodeID acquisition complete. Canonical: %s, Real: %s, Hashed: %s, Masked: %s",
+        canonical,
+        nodeid_real,
+        nodeid_hashed or "N/A",
+        nodeid_masked or "N/A",
+    )
+
+    # Step 5: Update config entry with dual NodeIDs
+    new_data = {
+        **entry.data,
+        CONF_NODEID: canonical,
+        CONF_NODEID_HASHED: nodeid_hashed,
+        CONF_NODEID_REAL: nodeid_real,
+        CONF_NODEID_MASKED: nodeid_masked,
+    }
+    hass.config_entries.async_update_entry(entry, data=new_data)
+
+    # Update runtime data
+    entry.runtime_data.nodeid = canonical
+    _LOGGER.info("Config entry updated with dual NodeIDs")
+
+
+async def _wait_for_any_nodeid(
+    hass: HomeAssistant,
+    mqtt_topic: str,
+    wait_timeout: float = 10.0,
+) -> str | None:
+    """Wait for any NodeID from telemetry (accepts all formats)."""
+    received_nodeid: str | None = None
+    event = asyncio.Event()
+
+    @callback
+    def message_received(msg: mqtt.ReceiveMessage) -> None:
+        nonlocal received_nodeid
+        try:
+            if isinstance(msg.payload, (bytes, bytearray)):
+                payload_str = msg.payload.decode("utf-8")
+            else:
+                payload_str = msg.payload
+            payload = json.loads(payload_str)
+            nodeid = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
+            if nodeid and str(nodeid).strip():
+                received_nodeid = str(nodeid)
+                event.set()
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+
+    sensor_topic = f"tele/{mqtt_topic}/SENSOR"
+    unsubscribe = await mqtt.async_subscribe(hass, sensor_topic, message_received, qos=1)
+
+    try:
+        await asyncio.wait_for(event.wait(), timeout=wait_timeout)
+    except TimeoutError:
+        _LOGGER.debug("Timeout waiting for NodeID from %s", mqtt_topic)
+    finally:
+        unsubscribe()
+
+    return received_nodeid
 
 
 async def _wait_for_real_nodeid(
