@@ -291,5 +291,5 @@ class TestValidateNodeidExtended:
     def test_non_string_input(self) -> None:
         """Test with non-string input."""
         # validate_nodeid expects str | None
-        # If given an int, it should handle it
-        assert validate_nodeid(123) is True  # type: ignore[arg-type]
+        # Non-string input should be treated as invalid
+        assert validate_nodeid(123) is False  # type: ignore[arg-type]
