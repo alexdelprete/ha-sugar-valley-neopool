@@ -171,9 +171,11 @@ def classify_nodeid(nodeid: str | None) -> str:
         "masked" if old Tasmota XXXX format,
         "hashed" if new Tasmota AA55 format,
         "real" if actual hardware NodeID,
-        "invalid" if None/empty/hidden.
+        "invalid" if None/empty/hidden/non-string.
     """
-    if not nodeid or nodeid.lower() in ("hidden", "hidden_by_default"):
+    if not nodeid or not isinstance(nodeid, str):
+        return "invalid"
+    if nodeid.lower() in ("hidden", "hidden_by_default"):
         return "invalid"
     if is_nodeid_masked(nodeid):
         return "masked"
