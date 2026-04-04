@@ -471,27 +471,32 @@ def _migrate_to_canonical_nodeid(hass: HomeAssistant, entry: NeoPoolConfigEntry)
     # Step 1: Migrate device registry identifiers
     for old_nodeid in old_nodeids:
         old_device = device_registry.async_get_device(identifiers={(DOMAIN, old_nodeid)})
-        if old_device:
-            # Check if canonical device already exists
-            canonical_device = device_registry.async_get_device(identifiers={(DOMAIN, canonical)})
-            if canonical_device and canonical_device.id != old_device.id:
-                # Both exist — remove the old one (duplicate)
-                device_registry.async_remove_device(old_device.id)
-                _LOGGER.info(
-                    "Removed duplicate device with old NodeID: %s",
-                    old_nodeid,
-                )
-            else:
-                # Only old exists — update its identifier
-                device_registry.async_update_device(
-                    old_device.id,
-                    new_identifiers={(DOMAIN, canonical)},
-                )
-                _LOGGER.info(
-                    "Migrated device identifier: %s -> %s",
-                    old_nodeid,
-                    canonical,
-                )
+        canonical_device = device_registry.async_get_device(identifiers={(DOMAIN, canonical)})
+
+        if old_device and canonical_device and old_device.id != canonical_device.id:
+            # Both exist — remove the NEW duplicate (empty), keep the
+            # ORIGINAL (has history, area, automations), update its identifier
+            device_registry.async_remove_device(canonical_device.id)
+            device_registry.async_update_device(
+                old_device.id,
+                new_identifiers={(DOMAIN, canonical)},
+            )
+            _LOGGER.info(
+                "Removed duplicate device, migrated original: %s -> %s",
+                old_nodeid,
+                canonical,
+            )
+        elif old_device and not canonical_device:
+            # Only old exists — update its identifier
+            device_registry.async_update_device(
+                old_device.id,
+                new_identifiers={(DOMAIN, canonical)},
+            )
+            _LOGGER.info(
+                "Migrated device identifier: %s -> %s",
+                old_nodeid,
+                canonical,
+            )
 
     # Step 2: Migrate entity unique_ids
     migrated = 0
