@@ -1078,9 +1078,10 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Send Status 2 and 5 first, then TelePeriod. TelePeriod triggers
-        # a large SENSOR response that keeps Tasmota busy and drops subsequent
-        # commands, so it must be sent last.
+        # Send Status 2 and 5 via Backlog. Do NOT send TelePeriod here —
+        # any MQTT command sent after the Backlog interrupts its queue and
+        # causes Tasmota to drop Status 5. SENSOR data arrives naturally
+        # from the regular telemetry cycle.
         await mqtt.async_publish(
             hass,
             f"cmnd/{mqtt_topic}/Backlog",
@@ -1088,8 +1089,7 @@ async def async_fetch_device_metadata(
             qos=1,
             retain=False,
         )
-        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
-        _LOGGER.debug("Sent Backlog Status 2/5 and TelePeriod to %s", mqtt_topic)
+        _LOGGER.debug("Sent Backlog Status 2/5 to %s", mqtt_topic)
 
         # Wait for responses independently - collect whatever arrives
         # within the timeout window. Each event is waited on separately
