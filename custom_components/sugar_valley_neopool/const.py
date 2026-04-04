@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 # Integration identity
 DOMAIN: Final = "sugar_valley_neopool"
 NAME: Final = "Sugar Valley NeoPool"
-VERSION: Final = "0.2.18"
+VERSION: Final = "0.2.18-beta.10"
 MANUFACTURER: Final = "Sugar Valley"
 MODEL: Final = "NeoPool Controller"
 ATTRIBUTION: Final = "by @alexdelprete"
