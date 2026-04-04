@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.18-beta.14] - 2026-04-04
+
+### Fixed
+
+- **Status 5 dropped by Tasmota**: Replaced `Backlog Status 2; Status 5` with
+  separate commands and 1s delay. Tasmota's NeoPool module drops Status 5 when
+  busy with Modbus polling and SENSOR telemetry processing. TelePeriod now sent
+  after Status commands to avoid interference.
+- **Device configuration URL**: Now points to the actual Tasmota device web UI
+  (`http://{ip}`) instead of Tasmota docs. Applied to both `get_device_info()`
+  (used by entities) and `_update_device_registry_metadata()` (device registry).
+  Falls back to Tasmota docs URL when device IP is unavailable.
+
 ## [0.2.18-beta.13] - 2026-04-04
 
 ### Fixed

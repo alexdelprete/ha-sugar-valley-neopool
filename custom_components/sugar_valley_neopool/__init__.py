@@ -743,13 +743,19 @@ def get_device_info(entry: NeoPoolConfigEntry) -> dr.DeviceInfo:
         if entry.runtime_data.fw_version:
             sw_version = f"{entry.runtime_data.fw_version} (Powerunit)"
 
+    # Use device IP for configuration URL if available, otherwise Tasmota docs
+    config_url = "https://tasmota.github.io/docs/NeoPool/"
+    if hasattr(entry, "runtime_data") and entry.runtime_data:
+        if entry.runtime_data.device_ip:
+            config_url = f"http://{entry.runtime_data.device_ip}"
+
     return dr.DeviceInfo(
         identifiers={(DOMAIN, nodeid)},
         manufacturer=manufacturer,
         name=device_name,
         model=MODEL,
         sw_version=sw_version,
-        configuration_url="https://tasmota.github.io/docs/NeoPool/",
+        configuration_url=config_url,
     )
 
 
@@ -1072,26 +1078,25 @@ async def async_fetch_device_metadata(
     )
 
     try:
-        # Trigger telemetry
+        # Send Status 2 and Status 5 as separate commands with a delay.
+        # Tasmota's NeoPool module is busy with Modbus polling and drops
+        # commands when they arrive too close together or via Backlog
+        # while processing other responses (e.g., SENSOR telemetry).
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "2", qos=1, retain=False)
+        await asyncio.sleep(1)
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "5", qos=1, retain=False)
+        # Trigger telemetry for SENSOR data (manufacturer, relays)
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
-        # Use Backlog to send Status 2 and 5 in one command (avoids dropped commands)
-        await mqtt.async_publish(
-            hass,
-            f"cmnd/{mqtt_topic}/Backlog",
-            "Status 2; Status 5",
-            qos=1,
-            retain=False,
-        )
-        _LOGGER.debug("Sent TelePeriod and Backlog Status 2/5 to %s", mqtt_topic)
+        _LOGGER.debug("Sent Status 2, Status 5, and TelePeriod to %s", mqtt_topic)
 
         # Wait for responses independently - collect whatever arrives
         # within the timeout window. Each event is waited on separately
-        # so a slow/missing SENSOR doesn't block Status 2/5 results.
+        # so a slow/missing response doesn't block the others.
         deadline = hass.loop.time() + wait_timeout
         for event_name, event in [
-            ("SENSOR", sensor_event),
             ("Status2", status2_event),
             ("Status5", status5_event),
+            ("SENSOR", sensor_event),
         ]:
             remaining = deadline - hass.loop.time()
             if remaining <= 0:
@@ -1171,9 +1176,11 @@ async def _update_device_registry_metadata(
     sw_version = " / ".join(sw_parts) if sw_parts else None
 
     # Build configuration_url from device IP
-    config_url: str | None = None
-    if entry.runtime_data.device_ip:
-        config_url = f"http://{entry.runtime_data.device_ip}"
+    config_url = (
+        f"http://{entry.runtime_data.device_ip}"
+        if entry.runtime_data.device_ip
+        else "https://tasmota.github.io/docs/NeoPool/"
+    )
 
     # Update device with new metadata
     device_registry.async_update_device(
