@@ -72,6 +72,8 @@ class NeoPoolData:
     # Device metadata from MQTT (updated dynamically)
     manufacturer: str | None = None  # From NeoPool.Type
     fw_version: str | None = None  # From NeoPool.Powerunit.Version
+    tasmota_version: str | None = None  # From StatusFWR.Version
+    device_ip: str | None = None  # From Status 5 network info
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -617,12 +619,16 @@ async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) 
     device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
     nodeid = entry.data.get(CONF_NODEID, "")
 
+    # Use hashed NodeID as serial_number for privacy
+    serial_number = entry.data.get(CONF_NODEID_HASHED)
+
     device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, nodeid)},
         manufacturer=MANUFACTURER,
         name=device_name,
         model=MODEL,
+        serial_number=serial_number,
         configuration_url="https://tasmota.github.io/docs/NeoPool/",
     )
 
@@ -883,92 +889,137 @@ async def async_fetch_device_metadata(
     entry: NeoPoolConfigEntry,
     wait_timeout: float = 10.0,
 ) -> None:
-    """Fetch device metadata (manufacturer, firmware version) from MQTT telemetry.
+    """Fetch device metadata from MQTT.
 
-    Triggers TelePeriod command to get immediate telemetry response,
-    then extracts Type (manufacturer) and Powerunit.Version (firmware).
-    Updates runtime_data and device registry with the fetched values.
+    Fetches from three sources:
+    - SENSOR topic: manufacturer (NeoPool.Type), powerunit firmware (Powerunit.Version)
+    - Status 2: Tasmota firmware version (StatusFWR.Version)
+    - Status 5: Device IP address (StatusNET.IPAddress)
 
     Args:
         hass: Home Assistant instance
         entry: Config entry with runtime_data
-        wait_timeout: Maximum time to wait for telemetry (seconds)
+        wait_timeout: Maximum time to wait for responses (seconds)
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
     manufacturer: str | None = None
     fw_version: str | None = None
-    event = asyncio.Event()
+    tasmota_version: str | None = None
+    device_ip: str | None = None
+    sensor_event = asyncio.Event()
+    status_event = asyncio.Event()
+    status_count = 0
 
     @callback
-    def message_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle telemetry message and extract device metadata."""
+    def sensor_received(msg: mqtt.ReceiveMessage) -> None:
+        """Handle SENSOR telemetry for manufacturer and powerunit version."""
         nonlocal manufacturer, fw_version
         try:
-            if isinstance(msg.payload, (bytes, bytearray)):
-                payload_str = msg.payload.decode("utf-8")
-            else:
-                payload_str = msg.payload
-
-            payload = json.loads(payload_str)
-
-            # Extract manufacturer from NeoPool.Type
+            payload = json.loads(
+                msg.payload.decode("utf-8")
+                if isinstance(msg.payload, (bytes, bytearray))
+                else msg.payload
+            )
             device_type = get_nested_value(payload, JSON_PATH_TYPE)
             if device_type:
                 manufacturer = str(device_type)
-                _LOGGER.debug("Extracted manufacturer from telemetry: %s", manufacturer)
-
-            # Extract firmware version from NeoPool.Powerunit.Version
+                _LOGGER.debug("Extracted manufacturer: %s", manufacturer)
             version = get_nested_value(payload, JSON_PATH_POWERUNIT_VERSION)
             if version:
                 fw_version = str(version)
-                _LOGGER.debug("Extracted firmware version from telemetry: %s", fw_version)
-
-            # Signal completion if we got at least one value
+                _LOGGER.debug("Extracted powerunit version: %s", fw_version)
             if manufacturer or fw_version:
-                event.set()
-
+                sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
-            _LOGGER.debug("Failed to parse telemetry payload for metadata: %s", err)
+            _LOGGER.debug("Failed to parse SENSOR for metadata: %s", err)
 
-    # Subscribe to sensor topic
-    sensor_topic = f"tele/{mqtt_topic}/SENSOR"
-    unsubscribe = await mqtt.async_subscribe(hass, sensor_topic, message_received, qos=1)
+    @callback
+    def status_received(msg: mqtt.ReceiveMessage) -> None:
+        """Handle Status 2 (firmware) and Status 5 (network) responses."""
+        nonlocal tasmota_version, device_ip, status_count
+        try:
+            payload = json.loads(
+                msg.payload.decode("utf-8")
+                if isinstance(msg.payload, (bytes, bytearray))
+                else msg.payload
+            )
+            # Status 2: {"StatusFWR":{"Version":"15.3.0(...)",...}}
+            status_fwr = payload.get("StatusFWR", {})
+            if status_fwr:
+                ver = status_fwr.get("Version", "")
+                if ver:
+                    # Strip build info in parentheses: "15.3.0(release-...)" → "15.3.0"
+                    tasmota_version = ver.split("(")[0].strip()
+                    _LOGGER.debug("Extracted Tasmota version: %s", tasmota_version)
+                    status_count += 1
+
+            # Status 5: {"StatusNET":{"IPAddress":"10.1.10.158",...}}
+            status_net = payload.get("StatusNET", {})
+            if status_net:
+                ip = status_net.get("IPAddress", "")
+                if ip:
+                    device_ip = str(ip)
+                    _LOGGER.debug("Extracted device IP: %s", device_ip)
+                    status_count += 1
+
+            if status_count >= 2:
+                status_event.set()
+        except (json.JSONDecodeError, UnicodeDecodeError) as err:
+            _LOGGER.debug("Failed to parse Status response: %s", err)
+
+    # Subscribe to SENSOR and stat topics
+    unsub_sensor = await mqtt.async_subscribe(
+        hass, f"tele/{mqtt_topic}/SENSOR", sensor_received, qos=1
+    )
+    unsub_status = await mqtt.async_subscribe(
+        hass, f"stat/{mqtt_topic}/STATUS+", status_received, qos=1
+    )
 
     try:
-        # Trigger immediate telemetry by sending TelePeriod command
-        await mqtt.async_publish(
-            hass,
-            f"cmnd/{mqtt_topic}/TelePeriod",
-            "",  # Empty payload queries current period and triggers immediate telemetry
-            qos=1,
-            retain=False,
-        )
+        # Trigger all requests
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/TelePeriod", "", qos=1, retain=False)
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "2", qos=1, retain=False)
+        await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/Status", "5", qos=1, retain=False)
 
-        # Wait for telemetry with timeout
+        # Wait for responses
         try:
-            await asyncio.wait_for(event.wait(), timeout=wait_timeout)
+            await asyncio.wait_for(
+                asyncio.gather(sensor_event.wait(), status_event.wait()),
+                timeout=wait_timeout,
+            )
         except TimeoutError:
             _LOGGER.debug(
-                "Timeout waiting for device metadata from %s after %.1f seconds",
+                "Timeout waiting for device metadata from %s (got: manufacturer=%s, "
+                "fw=%s, tasmota=%s, ip=%s)",
                 mqtt_topic,
-                wait_timeout,
+                manufacturer,
+                fw_version,
+                tasmota_version,
+                device_ip,
             )
     finally:
-        unsubscribe()
+        unsub_sensor()
+        unsub_status()
 
-    # Update runtime_data with fetched metadata
+    # Update runtime_data
     if manufacturer:
         entry.runtime_data.manufacturer = manufacturer
     if fw_version:
         entry.runtime_data.fw_version = fw_version
+    if tasmota_version:
+        entry.runtime_data.tasmota_version = tasmota_version
+    if device_ip:
+        entry.runtime_data.device_ip = device_ip
 
     # Update device registry if we got any metadata
-    if manufacturer or fw_version:
+    if manufacturer or fw_version or tasmota_version or device_ip:
         await _update_device_registry_metadata(hass, entry)
         _LOGGER.info(
-            "Device metadata updated - Manufacturer: %s, Firmware: %s",
+            "Device metadata updated - Manufacturer: %s, Powerunit: %s, Tasmota: %s, IP: %s",
             manufacturer or "unknown",
             fw_version or "unknown",
+            tasmota_version or "unknown",
+            device_ip or "unknown",
         )
 
 
@@ -990,16 +1041,25 @@ async def _update_device_registry_metadata(
         _LOGGER.debug("Device not found in registry for NodeID: %s", nodeid)
         return
 
-    # Build sw_version string: "Vx.y.z (Powerunit)" if we have firmware version
-    sw_version: str | None = None
+    # Build sw_version: "Tasmota X.Y.Z / Powerunit VX.Y"
+    sw_parts = []
+    if entry.runtime_data.tasmota_version:
+        sw_parts.append(f"Tasmota {entry.runtime_data.tasmota_version}")
     if entry.runtime_data.fw_version:
-        sw_version = f"{entry.runtime_data.fw_version} (Powerunit)"
+        sw_parts.append(f"Powerunit {entry.runtime_data.fw_version}")
+    sw_version = " / ".join(sw_parts) if sw_parts else None
+
+    # Build configuration_url from device IP
+    config_url: str | None = None
+    if entry.runtime_data.device_ip:
+        config_url = f"http://{entry.runtime_data.device_ip}"
 
     # Update device with new metadata
     device_registry.async_update_device(
         device.id,
         manufacturer=entry.runtime_data.manufacturer or MANUFACTURER,
         sw_version=sw_version,
+        configuration_url=config_url,
     )
     _LOGGER.debug(
         "Updated device registry - manufacturer: %s, sw_version: %s",

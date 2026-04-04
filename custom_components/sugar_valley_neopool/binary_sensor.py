@@ -75,53 +75,62 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         json_path="NeoPool.Modules.Ionization",
     ),
     # Named relay state sensors (functional state regardless of physical relay assignment)
+    # Disabled by default — only appear when the function is assigned to a relay
     NeoPoolBinarySensorEntityDescription(
         key="relay_acid_state",
         translation_key="relay_acid_state",
         name="Relay Acid State",
         json_path="NeoPool.Relay.Acid",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_base_state",
         translation_key="relay_base_state",
         name="Relay Base State",
         json_path="NeoPool.Relay.Base",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_redox_state",
         translation_key="relay_redox_state",
         name="Relay Redox State",
         json_path="NeoPool.Relay.Redox",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_chlorine_state",
         translation_key="relay_chlorine_state",
         name="Relay Chlorine State",
         json_path="NeoPool.Relay.Chlorine",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_conductivity_state",
         translation_key="relay_conductivity_state",
         name="Relay Conductivity State",
         json_path="NeoPool.Relay.Conductivity",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_heating_state",
         translation_key="relay_heating_state",
         name="Relay Heating State",
         json_path="NeoPool.Relay.Heating",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_uv_state",
         translation_key="relay_uv_state",
         name="Relay UV State",
         json_path="NeoPool.Relay.UV",
+        entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_valve_state",
         translation_key="relay_valve_state",
         name="Relay Valve State",
         json_path="NeoPool.Relay.Valve",
+        entity_registry_enabled_default=False,
     ),
     # Flow and tank level sensors
     NeoPoolBinarySensorEntityDescription(
