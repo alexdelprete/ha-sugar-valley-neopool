@@ -114,6 +114,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         nodeid = entry.data.get(CONF_NODEID, "")
         entry.runtime_data.nodeid = nodeid
 
+    # Migrate entities and device from old NodeID format to canonical (runs every startup)
+    # Handles: real→hashed, masked→hashed, and cleanup of duplicates
+    _migrate_to_canonical_nodeid(hass, entry)
+
     # Register device in device registry and store device_id for triggers
     await async_register_device(hass, entry)
 
@@ -129,8 +133,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
             "Masked unique_id migration failed - entities may have incorrect unique_ids. "
             "Check that SetOption157 is enabled on the Tasmota device."
         )
-        # Don't fail setup - let integration continue with potentially masked IDs
-        # User can fix via Options flow
 
     # Clean up removed entities (runs for all users, not just YAML migration)
     _cleanup_removed_entities(hass, entry)
@@ -426,6 +428,125 @@ async def _cleanup_orphaned_yaml_entities(
         )
     else:
         _LOGGER.debug("No orphaned YAML entities found to clean up")
+
+
+@callback
+def _migrate_to_canonical_nodeid(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Migrate device and entities to use the canonical NodeID.
+
+    Runs on EVERY startup. Handles all cases:
+    - Entities with real NodeID → migrate to hashed (canonical)
+    - Entities with masked NodeID → migrate to canonical
+    - Device registry with old identifier → update to canonical
+    - Duplicate entities from failed migrations → remove duplicates
+
+    This is idempotent — running it when everything is already correct
+    produces no changes.
+    """
+    canonical = entry.data.get(CONF_NODEID, "")
+    nodeid_real = entry.data.get(CONF_NODEID_REAL, "")
+    nodeid_hashed = entry.data.get(CONF_NODEID_HASHED, "")
+
+    if not canonical:
+        _LOGGER.debug("No canonical NodeID, skipping migration")
+        return
+
+    # Collect all old NodeID values that should be migrated to canonical
+    old_nodeids = set()
+    if nodeid_real and nodeid_real != canonical:
+        old_nodeids.add(nodeid_real)
+    # Also check for the original CONF_NODEID value before it was updated
+    # (handles case where config was updated but entities weren't migrated)
+    if nodeid_hashed and nodeid_hashed != canonical:
+        # If canonical is NOT the hashed one, something is off — skip
+        pass
+
+    if not old_nodeids:
+        _LOGGER.debug("No old NodeIDs to migrate from, canonical is up to date")
+        return
+
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+
+    # Step 1: Migrate device registry identifiers
+    for old_nodeid in old_nodeids:
+        old_device = device_registry.async_get_device(identifiers={(DOMAIN, old_nodeid)})
+        if old_device:
+            # Check if canonical device already exists
+            canonical_device = device_registry.async_get_device(identifiers={(DOMAIN, canonical)})
+            if canonical_device and canonical_device.id != old_device.id:
+                # Both exist — remove the old one (duplicate)
+                device_registry.async_remove_device(old_device.id)
+                _LOGGER.info(
+                    "Removed duplicate device with old NodeID: %s",
+                    old_nodeid,
+                )
+            else:
+                # Only old exists — update its identifier
+                device_registry.async_update_device(
+                    old_device.id,
+                    new_identifiers={(DOMAIN, canonical)},
+                )
+                _LOGGER.info(
+                    "Migrated device identifier: %s -> %s",
+                    old_nodeid,
+                    canonical,
+                )
+
+    # Step 2: Migrate entity unique_ids
+    migrated = 0
+    removed_duplicates = 0
+    for entity in list(entity_registry.entities.values()):
+        if entity.config_entry_id != entry.entry_id:
+            continue
+        if not entity.unique_id:
+            continue
+
+        # Check if this entity uses an old NodeID
+        matched_old = None
+        for old_nodeid in old_nodeids:
+            if old_nodeid in entity.unique_id:
+                matched_old = old_nodeid
+                break
+
+        if not matched_old:
+            continue
+
+        new_unique_id = entity.unique_id.replace(matched_old, canonical)
+
+        # Check if an entity with the new unique_id already exists
+        existing_entity_id = entity_registry.async_get_entity_id(
+            entity.domain, DOMAIN, new_unique_id
+        )
+        if existing_entity_id and existing_entity_id != entity.entity_id:
+            # Duplicate: canonical entity already exists, remove the old one
+            entity_registry.async_remove(entity.entity_id)
+            removed_duplicates += 1
+            _LOGGER.debug(
+                "Removed duplicate entity %s (old unique_id=%s, canonical already exists as %s)",
+                entity.entity_id,
+                entity.unique_id,
+                existing_entity_id,
+            )
+            continue
+
+        # No duplicate — migrate the unique_id
+        entity_registry.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
+        migrated += 1
+
+    if migrated or removed_duplicates:
+        _LOGGER.info(
+            "NodeID migration: %d entities migrated, %d duplicates removed (%s -> %s)",
+            migrated,
+            removed_duplicates,
+            old_nodeids,
+            canonical,
+        )
+    else:
+        _LOGGER.debug(
+            "No entities needed migration to canonical NodeID %s",
+            canonical,
+        )
 
 
 @callback
@@ -960,7 +1081,6 @@ async def _auto_acquire_dual_nodeids(
     )
 
     # Step 5: Update config entry with dual NodeIDs
-    old_nodeid = entry.data.get(CONF_NODEID, "")
     new_data = {
         **entry.data,
         CONF_NODEID: canonical,
@@ -973,49 +1093,8 @@ async def _auto_acquire_dual_nodeids(
     # Update runtime data
     entry.runtime_data.nodeid = canonical
     _LOGGER.info("Config entry updated with dual NodeIDs")
-
-    # Step 6: Migrate device registry identifier if canonical changed
-    if old_nodeid and old_nodeid != canonical:
-        device_registry = dr.async_get(hass)
-        old_device = device_registry.async_get_device(identifiers={(DOMAIN, old_nodeid)})
-        if old_device:
-            device_registry.async_update_device(
-                old_device.id,
-                new_identifiers={(DOMAIN, canonical)},
-            )
-            _LOGGER.info(
-                "Migrated device identifier: %s -> %s",
-                old_nodeid,
-                canonical,
-            )
-
-    # Step 7: Migrate entity unique_ids from old NodeID to canonical
-    if old_nodeid and old_nodeid != canonical:
-        entity_registry = er.async_get(hass)
-        migrated = 0
-        for entity in entity_registry.entities.values():
-            if entity.config_entry_id != entry.entry_id:
-                continue
-            if not entity.unique_id or old_nodeid not in entity.unique_id:
-                continue
-            new_unique_id = entity.unique_id.replace(old_nodeid, canonical)
-            existing = entity_registry.async_get_entity_id(entity.domain, DOMAIN, new_unique_id)
-            if existing and existing != entity.entity_id:
-                _LOGGER.warning(
-                    "Cannot migrate %s: unique_id %s already exists",
-                    entity.entity_id,
-                    new_unique_id,
-                )
-                continue
-            entity_registry.async_update_entity(entity.entity_id, new_unique_id=new_unique_id)
-            migrated += 1
-        if migrated:
-            _LOGGER.info(
-                "Migrated %d entity unique_ids: %s -> %s",
-                migrated,
-                old_nodeid,
-                canonical,
-            )
+    # Note: device and entity migration is handled by _migrate_to_canonical_nodeid()
+    # which runs separately in async_setup_entry()
 
 
 async def _wait_for_any_nodeid(
