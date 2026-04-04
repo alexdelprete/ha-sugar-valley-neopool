@@ -119,7 +119,7 @@ Published to: `tele/%topic%/SENSOR`
   "NeoPool": {
     "Time": "2025-01-15T14:30:00",
     "Type": "HIDROLIFE model",
-    "Module": {
+    "Modules": {
       "pH": 0,
       "Redox": 1,
       "Hydrolysis": 1,
@@ -209,12 +209,12 @@ Published to: `tele/%topic%/SENSOR`
 }
 ```
 
-### Module Object
+### Modules Object
 
 Indicates which hardware modules are installed:
 
 ```json
-"Module": {
+"Modules": {
   "pH": 0,              // 0 = not installed, 1 = installed
   "Redox": 1,
   "Hydrolysis": 1,
@@ -1550,12 +1550,12 @@ NPIONRes 3  →  5.000
 
 ______________________________________________________________________
 
-### Module Detection
+### Modules Detection
 
-The `Module` object shows installed hardware:
+The `Modules` object shows installed hardware:
 
 ```json
-"Module": {
+"Modules": {
   "pH": 0,              // 0 = not installed, 1 = installed
   "Redox": 1,
   "Hydrolysis": 1,
@@ -1700,7 +1700,7 @@ Based on the data structure, here are recommended Home Assistant entity types:
 - pH.State (`sensor` with state mapping)
 - pH.Pump (`sensor` with state mapping)
 - Hydrolysis.State (`sensor`, values: OFF/FLOW/POL1/POL2)
-- Module.\* (`binary_sensor` - installed modules)
+- Modules.\* (`binary_sensor` - installed modules)
 - Type (`sensor` - device model)
 - Powerunit.Version (`sensor` - firmware version)
 
@@ -1738,7 +1738,7 @@ ______________________________________________________________________
 
 ### JSON Parsing Strategy
 
-1. **Check Module object first** - Only create entities for installed modules
+1. **Check Modules object first** - Only create entities for installed modules
 1. **Parse nested objects** - pH, Redox, Chlorine, etc. are sub-objects
 1. **Handle optional fields** - Not all fields present in all configurations
 1. **State mapping** - Convert numeric states to friendly names
@@ -1758,7 +1758,7 @@ def parse_neopool_sensor(payload):
     neopool = data.get("NeoPool", {})
 
     # Check installed modules
-    modules = neopool.get("Module", {})
+    modules = neopool.get("Modules", {})
 
     entities = {}
 
@@ -1828,7 +1828,7 @@ Home Assistant via MQTT. Key points:
 
 For Home Assistant integration development:
 
-- Parse the `Module` object to detect available features
+- Parse the `Modules` object to detect available features
 - Create appropriate entity types (sensor/number/select/switch/binary_sensor)
 - Map numeric states to friendly names
 - Handle optional fields gracefully

@@ -118,9 +118,9 @@ hydrolysis_boost = data["NeoPool"]["Hydrolysis"]["Boost"]  # 0/1/2
 light_on = data["NeoPool"]["Light"]  # 0/1
 
 # Module detection
-has_ph = data["NeoPool"]["Module"]["pH"]  # 0/1
-has_redox = data["NeoPool"]["Module"]["Redox"]  # 0/1
-has_hydrolysis = data["NeoPool"]["Module"]["Hydrolysis"]  # 0/1
+has_ph = data["NeoPool"]["Modules"]["pH"]  # 0/1
+has_redox = data["NeoPool"]["Modules"]["Redox"]  # 0/1
+has_hydrolysis = data["NeoPool"]["Modules"]["Hydrolysis"]  # 0/1
 ```
 
 ______________________________________________________________________

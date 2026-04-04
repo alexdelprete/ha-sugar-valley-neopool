@@ -28,7 +28,7 @@ ______________________________________________________________________
 
 ### Dynamic Entity Creation
 
-Entities should be created based on the `Module` object in telemetry:
+Entities should be created based on the `Modules` object in telemetry:
 
 ```python
 def should_create_ph_entities(module_data):
@@ -67,7 +67,7 @@ ______________________________________________________________________
 }
 ```
 
-### pH Sensor (if Module.pH == 1)
+### pH Sensor (if Modules.pH == 1)
 
 ```python
 {
@@ -104,7 +104,7 @@ ______________________________________________________________________
 }
 ```
 
-### Redox Sensor (if Module.Redox == 1)
+### Redox Sensor (if Modules.Redox == 1)
 
 ```python
 {
@@ -118,7 +118,7 @@ ______________________________________________________________________
 }
 ```
 
-### Chlorine Sensor (if Module.Chlorine == 1)
+### Chlorine Sensor (if Modules.Chlorine == 1)
 
 ```python
 {
@@ -132,7 +132,7 @@ ______________________________________________________________________
 }
 ```
 
-### Hydrolysis Production Sensor (if Module.Hydrolysis == 1)
+### Hydrolysis Production Sensor (if Modules.Hydrolysis == 1)
 
 ```python
 {
@@ -394,7 +394,7 @@ ______________________________________________________________________
     "name": "pH Module Installed",
     "unique_id": "neopool_{device_id}_module_ph",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ value_json.NeoPool.Module.pH }}",
+    "value_template": "{{ value_json.NeoPool.Modules.pH }}",
     "payload_on": 1,
     "payload_off": 0,
     "entity_category": "diagnostic",
@@ -406,7 +406,7 @@ ______________________________________________________________________
     "name": "Redox Module Installed",
     "unique_id": "neopool_{device_id}_module_redox",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ value_json.NeoPool.Module.Redox }}",
+    "value_template": "{{ value_json.NeoPool.Modules.Redox }}",
     "payload_on": 1,
     "payload_off": 0,
     "entity_category": "diagnostic",
@@ -418,7 +418,7 @@ ______________________________________________________________________
     "name": "Hydrolysis Module Installed",
     "unique_id": "neopool_{device_id}_module_hydrolysis",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ value_json.NeoPool.Module.Hydrolysis }}",
+    "value_template": "{{ value_json.NeoPool.Modules.Hydrolysis }}",
     "payload_on": 1,
     "payload_off": 0,
     "entity_category": "diagnostic",
@@ -430,7 +430,7 @@ ______________________________________________________________________
     "name": "Chlorine Module Installed",
     "unique_id": "neopool_{device_id}_module_chlorine",
     "state_topic": "tele/{topic}/SENSOR",
-    "value_template": "{{ value_json.NeoPool.Module.Chlorine }}",
+    "value_template": "{{ value_json.NeoPool.Modules.Chlorine }}",
     "payload_on": 1,
     "payload_off": 0,
     "entity_category": "diagnostic",
@@ -530,7 +530,7 @@ ______________________________________________________________________
 }
 ```
 
-### Ionization Setpoint (if Module.Ionization == 1)
+### Ionization Setpoint (if Modules.Ionization == 1)
 
 ```python
 {
@@ -895,7 +895,7 @@ def get_installed_modules(neopool_data: dict) -> dict:
 
     Returns dict with module names as keys and boolean values.
     """
-    module_data = neopool_data.get("Module", {})
+    module_data = neopool_data.get("Modules", {})
 
     return {
         "ph": module_data.get("pH", 0) == 1,

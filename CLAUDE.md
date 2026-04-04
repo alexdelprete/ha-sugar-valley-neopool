@@ -429,7 +429,7 @@ async def _validate_yaml_topic(
       "UV": 0,
       "Valve": 0
     },
-    "Module": {
+    "Modules": {
       "pH": 1,
       "Redox": 1,
       "Hydrolysis": 1
