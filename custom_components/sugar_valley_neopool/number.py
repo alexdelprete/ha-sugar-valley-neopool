@@ -49,6 +49,7 @@ class NeoPoolNumberEntityDescription(NumberEntityDescription):
     command: str
     command_template: str | None = None
     value_fn: Callable[[Any], float | None] = safe_float
+    max_json_path: str | None = None
 
 
 NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
@@ -106,11 +107,12 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         translation_key="ionization_setpoint",
         name="Ionization Setpoint",
         native_min_value=0,
-        native_max_value=10,
-        native_step=1,
+        native_max_value=0,
+        native_step=0.1,
         mode=NumberMode.SLIDER,
         json_path=JSON_PATH_IONIZATION_SETPOINT,
         command=CMD_IONIZATION,
+        max_json_path="NeoPool.Ionization.Max",
     ),
 )
 
@@ -157,6 +159,18 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
             payload = parse_json_payload(msg.payload)
             if payload is None:
                 return
+
+            # Update dynamic max value from payload if configured
+            if self.entity_description.max_json_path:
+                raw_max = get_nested_value(payload, self.entity_description.max_json_path)
+                max_value = safe_float(raw_max) if raw_max is not None else None
+                if max_value is not None:
+                    self._attr_native_max_value = max_value
+                elif self._attr_native_max_value == 0:
+                    # Max not yet received, entity stays unavailable
+                    self._attr_available = False
+                    self.async_write_ha_state()
+                    return
 
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:

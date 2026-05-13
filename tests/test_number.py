@@ -75,11 +75,12 @@ class TestNumberDescriptions:
         """Test ionization setpoint number description."""
         desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
         assert desc.native_min_value == 0
-        assert desc.native_max_value == 10
-        assert desc.native_step == 1
+        assert desc.native_max_value == 0
+        assert desc.native_step == 0.1
         assert desc.json_path == "NeoPool.Ionization.Setpoint"
         assert desc.command == CMD_IONIZATION
         assert desc.command_template is None
+        assert desc.max_json_path == "NeoPool.Ionization.Max"
 
     def test_all_descriptions_have_command(self) -> None:
         """Test all descriptions have command field."""
@@ -318,7 +319,7 @@ class TestNeoPoolNumber:
         mock_hass: MagicMock,
         sample_payload: dict[str, Any],
     ) -> None:
-        """Test ionization setpoint updates from MQTT."""
+        """Test ionization setpoint updates from MQTT with dynamic max."""
         desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
 
         number = NeoPoolNumber(mock_config_entry, desc)
@@ -344,8 +345,53 @@ class TestNeoPoolNumber:
         mock_msg.payload = json.dumps(sample_payload)
         sensor_callback(mock_msg)
 
-        # Ionization.Setpoint = 3 in sample payload
+        # Ionization.Setpoint = 3, Max = 10 in sample payload
         assert number._attr_native_value == 3.0
+        assert number._attr_native_max_value == 10.0
+        assert number._attr_available is True
+
+    @pytest.mark.asyncio
+    async def test_number_ionization_unavailable_without_max(
+        self,
+        mock_config_entry: MagicMock,
+        mock_hass: MagicMock,
+    ) -> None:
+        """Test ionization setpoint stays unavailable when max is missing."""
+        desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
+
+        number = NeoPoolNumber(mock_config_entry, desc)
+        number.hass = mock_hass
+        number.entity_id = "number.ionization_setpoint"
+        number.async_write_ha_state = MagicMock()
+
+        sensor_callback = None
+
+        async def capture_callback(hass, topic, callback, **kwargs):
+            nonlocal sensor_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=capture_callback,
+        ):
+            await number.async_added_to_hass()
+
+        # Send payload without Ionization.Max
+        payload_no_max = {
+            "NeoPool": {
+                "Ionization": {
+                    "Data": 5,
+                    "Setpoint": 3,
+                },
+            },
+        }
+        mock_msg = MagicMock()
+        mock_msg.payload = json.dumps(payload_no_max)
+        sensor_callback(mock_msg)
+
+        assert number._attr_available is False
 
     @pytest.mark.asyncio
     async def test_number_handles_missing_path(
