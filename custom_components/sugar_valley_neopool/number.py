@@ -17,10 +17,12 @@ from homeassistant.core import HomeAssistant, callback
 
 from .const import (
     CMD_HYDROLYSIS,
+    CMD_IONIZATION,
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
     JSON_PATH_HYDROLYSIS_SETPOINT,
+    JSON_PATH_IONIZATION_SETPOINT,
     JSON_PATH_PH_MAX,
     JSON_PATH_PH_MIN,
     JSON_PATH_REDOX_SETPOINT,
@@ -98,6 +100,17 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         json_path=JSON_PATH_HYDROLYSIS_SETPOINT,
         command=CMD_HYDROLYSIS,
         command_template="{value} %",  # NeoPool expects "50 %" format
+    ),
+    NeoPoolNumberEntityDescription(
+        key="ionization_setpoint",
+        translation_key="ionization_setpoint",
+        name="Ionization Setpoint",
+        native_min_value=0,
+        native_max_value=10,
+        native_step=1,
+        mode=NumberMode.SLIDER,
+        json_path=JSON_PATH_IONIZATION_SETPOINT,
+        command=CMD_IONIZATION,
     ),
 )
 

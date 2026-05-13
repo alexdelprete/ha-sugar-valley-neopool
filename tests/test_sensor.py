@@ -58,6 +58,13 @@ class TestSensorDescriptions:
         assert desc.state_class == SensorStateClass.TOTAL_INCREASING
         assert desc.json_path == "NeoPool.Hydrolysis.Runtime.Total"
 
+    def test_ionization_data_description(self) -> None:
+        """Test ionization sensor description."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "ionization_data")
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.json_path == "NeoPool.Ionization.Data"
+        assert desc.value_fn is not None
+
     def test_all_descriptions_have_required_fields(self) -> None:
         """Test all descriptions have required fields."""
         for desc in SENSOR_DESCRIPTIONS:

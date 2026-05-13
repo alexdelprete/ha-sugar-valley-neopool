@@ -10,6 +10,7 @@ import pytest
 
 from custom_components.sugar_valley_neopool.const import (
     CMD_HYDROLYSIS,
+    CMD_IONIZATION,
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
@@ -69,6 +70,16 @@ class TestNumberDescriptions:
         assert desc.json_path == "NeoPool.Hydrolysis.Percent.Setpoint"
         assert desc.command == CMD_HYDROLYSIS
         assert desc.command_template == "{value} %"
+
+    def test_ionization_setpoint_description(self) -> None:
+        """Test ionization setpoint number description."""
+        desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
+        assert desc.native_min_value == 0
+        assert desc.native_max_value == 10
+        assert desc.native_step == 1
+        assert desc.json_path == "NeoPool.Ionization.Setpoint"
+        assert desc.command == CMD_IONIZATION
+        assert desc.command_template is None
 
     def test_all_descriptions_have_command(self) -> None:
         """Test all descriptions have command field."""
@@ -299,6 +310,42 @@ class TestNeoPoolNumber:
 
         # Hydrolysis.Percent.Setpoint = 60 in sample payload
         assert number._attr_native_value == 60.0
+
+    @pytest.mark.asyncio
+    async def test_number_ionization_setpoint_from_mqtt(
+        self,
+        mock_config_entry: MagicMock,
+        mock_hass: MagicMock,
+        sample_payload: dict[str, Any],
+    ) -> None:
+        """Test ionization setpoint updates from MQTT."""
+        desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
+
+        number = NeoPoolNumber(mock_config_entry, desc)
+        number.hass = mock_hass
+        number.entity_id = "number.ionization_setpoint"
+        number.async_write_ha_state = MagicMock()
+
+        sensor_callback = None
+
+        async def capture_callback(hass, topic, callback, **kwargs):
+            nonlocal sensor_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=capture_callback,
+        ):
+            await number.async_added_to_hass()
+
+        mock_msg = MagicMock()
+        mock_msg.payload = json.dumps(sample_payload)
+        sensor_callback(mock_msg)
+
+        # Ionization.Setpoint = 3 in sample payload
+        assert number._attr_native_value == 3.0
 
     @pytest.mark.asyncio
     async def test_number_handles_missing_path(
