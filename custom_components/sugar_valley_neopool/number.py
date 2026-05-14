@@ -145,6 +145,8 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
         super().__init__(config_entry, description.key)
         self.entity_description = description
         self._attr_native_value: float | None = None
+        if description.max_json_path:
+            self._attr_native_max_value = description.native_max_value
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""

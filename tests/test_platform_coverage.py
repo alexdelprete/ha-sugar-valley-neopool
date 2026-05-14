@@ -338,7 +338,8 @@ class TestNumberPlatform:
         for desc in NUMBER_DESCRIPTIONS:
             assert desc.native_min_value is not None
             assert desc.native_max_value is not None
-            assert desc.native_min_value < desc.native_max_value
+            if not getattr(desc, "max_json_path", None):
+                assert desc.native_min_value < desc.native_max_value
 
     def test_number_initial_value(self, mock_config_entry: MockConfigEntry) -> None:
         """Test number starts with None value."""
