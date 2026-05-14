@@ -255,6 +255,16 @@ mqtt:
       payload_available: "Online"
       payload_not_available: "Offline"
 
+    - unique_id: "neopool_mqtt_ionization_data"
+      name: "NeoPool MQTT Ionization"
+      icon: mdi:atom
+      state_class: measurement
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Ionization.Data }}"
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
     # Connection diagnostic sensors
     - unique_id: "neopool_mqtt_conndiag_system_requests"
       name: "NeoPool MQTT Connection System Requests"
@@ -827,6 +837,22 @@ mqtt:
       value_template: "{{ value_json.NeoPool.Hydrolysis.Percent.Setpoint }}"
       command_topic: "cmnd/SmartPool/NPHydrolysis"
       command_template: "{{ value|string + ' %' }}"
+      optimistic: false
+      retain: false
+      availability_topic: "tele/SmartPool/LWT"
+      payload_available: "Online"
+      payload_not_available: "Offline"
+
+    - unique_id: "neopool_mqtt_ionization_setpoint"
+      name: "NeoPool MQTT Ionization Setpoint"
+      icon: mdi:atom
+      min: 0
+      max: 10
+      step: 0.1
+      mode: "slider"
+      state_topic: "tele/SmartPool/SENSOR"
+      value_template: "{{ value_json.NeoPool.Ionization.Setpoint }}"
+      command_topic: "cmnd/SmartPool/NPIonization"
       optimistic: false
       retain: false
       availability_topic: "tele/SmartPool/LWT"

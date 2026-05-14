@@ -215,6 +215,9 @@
       },
       "system_id": {
         "name": "NodeID de l'unité d'alimentation"
+      },
+      "ionization_data": {
+        "name": "Ionisation"
       }
     },
     "binary_sensor": {
@@ -325,6 +328,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Point de consigne d'hydrolyse"
+      },
+      "ionization_setpoint": {
+        "name": "Point de consigne d'ionisation"
       }
     },
     "button": {

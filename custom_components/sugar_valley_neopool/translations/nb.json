@@ -215,6 +215,9 @@
       },
       "system_id": {
         "name": "Kraftenhet NodeID"
+      },
+      "ionization_data": {
+        "name": "Ionisering"
       }
     },
     "binary_sensor": {
@@ -325,6 +328,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Hydrolyse settpunkt"
+      },
+      "ionization_setpoint": {
+        "name": "Ionisering settpunkt"
       }
     },
     "button": {

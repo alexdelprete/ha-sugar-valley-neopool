@@ -215,6 +215,9 @@
       },
       "system_id": {
         "name": "Toiteüksuse NodeID"
+      },
+      "ionization_data": {
+        "name": "Ionisatsioon"
       }
     },
     "binary_sensor": {
@@ -325,6 +328,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Hüdrolüüsi seadepunkt"
+      },
+      "ionization_setpoint": {
+        "name": "Ionisatsiooni seadepunkt"
       }
     },
     "button": {
