@@ -9,7 +9,17 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.core import HomeAssistant, callback
 
-from .const import CMD_AUX1, CMD_AUX2, CMD_AUX3, CMD_AUX4, CMD_FILTRATION, CMD_LIGHT
+from .const import (
+    CMD_AUX1,
+    CMD_AUX2,
+    CMD_AUX3,
+    CMD_AUX4,
+    CMD_FILTRATION,
+    CMD_LIGHT,
+    JSON_PATH_FILTRATION_STATE,
+    JSON_PATH_LIGHT,
+    JSON_PATH_RELAY_AUX,
+)
 from .entity import NeoPoolMQTTEntity
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
@@ -40,42 +50,42 @@ SWITCH_DESCRIPTIONS: tuple[NeoPoolSwitchEntityDescription, ...] = (
         key="filtration",
         translation_key="filtration",
         name="Filtration",
-        json_path="NeoPool.Filtration.State",
+        json_path=JSON_PATH_FILTRATION_STATE,
         command=CMD_FILTRATION,
     ),
     NeoPoolSwitchEntityDescription(
         key="light",
         translation_key="light",
         name="Light",
-        json_path="NeoPool.Light",
+        json_path=JSON_PATH_LIGHT,
         command=CMD_LIGHT,
     ),
     NeoPoolSwitchEntityDescription(
         key="aux1",
         translation_key="aux1",
         name="AUX1",
-        json_path="NeoPool.Relay.Aux.0",
+        json_path=f"{JSON_PATH_RELAY_AUX}.0",
         command=CMD_AUX1,
     ),
     NeoPoolSwitchEntityDescription(
         key="aux2",
         translation_key="aux2",
         name="AUX2",
-        json_path="NeoPool.Relay.Aux.1",
+        json_path=f"{JSON_PATH_RELAY_AUX}.1",
         command=CMD_AUX2,
     ),
     NeoPoolSwitchEntityDescription(
         key="aux3",
         translation_key="aux3",
         name="AUX3",
-        json_path="NeoPool.Relay.Aux.2",
+        json_path=f"{JSON_PATH_RELAY_AUX}.2",
         command=CMD_AUX3,
     ),
     NeoPoolSwitchEntityDescription(
         key="aux4",
         translation_key="aux4",
         name="AUX4",
-        json_path="NeoPool.Relay.Aux.3",
+        json_path=f"{JSON_PATH_RELAY_AUX}.3",
         command=CMD_AUX4,
     ),
 )

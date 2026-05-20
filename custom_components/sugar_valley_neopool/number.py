@@ -15,7 +15,16 @@ from homeassistant.components.number import (
 from homeassistant.const import PERCENTAGE, UnitOfElectricPotential
 from homeassistant.core import HomeAssistant, callback
 
-from .const import CMD_HYDROLYSIS, CMD_PH_MAX, CMD_PH_MIN, CMD_REDOX
+from .const import (
+    CMD_HYDROLYSIS,
+    CMD_PH_MAX,
+    CMD_PH_MIN,
+    CMD_REDOX,
+    JSON_PATH_HYDROLYSIS_SETPOINT,
+    JSON_PATH_PH_MAX,
+    JSON_PATH_PH_MIN,
+    JSON_PATH_REDOX_SETPOINT,
+)
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, parse_json_payload, safe_float
 
@@ -50,7 +59,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         native_max_value=14.0,
         native_step=0.1,
         mode=NumberMode.SLIDER,
-        json_path="NeoPool.pH.Min",
+        json_path=JSON_PATH_PH_MIN,
         command=CMD_PH_MIN,
     ),
     NeoPoolNumberEntityDescription(
@@ -62,7 +71,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         native_max_value=14.0,
         native_step=0.1,
         mode=NumberMode.SLIDER,
-        json_path="NeoPool.pH.Max",
+        json_path=JSON_PATH_PH_MAX,
         command=CMD_PH_MAX,
     ),
     NeoPoolNumberEntityDescription(
@@ -74,7 +83,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         native_max_value=1000,
         native_step=1,
         mode=NumberMode.SLIDER,
-        json_path="NeoPool.Redox.Setpoint",
+        json_path=JSON_PATH_REDOX_SETPOINT,
         command=CMD_REDOX,
     ),
     NeoPoolNumberEntityDescription(
@@ -86,7 +95,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         native_max_value=100,
         native_step=1,
         mode=NumberMode.SLIDER,
-        json_path="NeoPool.Hydrolysis.Percent.Setpoint",
+        json_path=JSON_PATH_HYDROLYSIS_SETPOINT,
         command=CMD_HYDROLYSIS,
         command_template="{value} %",  # NeoPool expects "50 %" format
     ),

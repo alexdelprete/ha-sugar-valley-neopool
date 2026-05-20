@@ -13,6 +13,28 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.core import HomeAssistant, callback
 
+from .const import (
+    JSON_PATH_HYDROLYSIS_COVER,
+    JSON_PATH_HYDROLYSIS_FL1,
+    JSON_PATH_HYDROLYSIS_LOW,
+    JSON_PATH_MODULES_CHLORINE,
+    JSON_PATH_MODULES_CONDUCTIVITY,
+    JSON_PATH_MODULES_HYDROLYSIS,
+    JSON_PATH_MODULES_IONIZATION,
+    JSON_PATH_MODULES_PH,
+    JSON_PATH_MODULES_REDOX,
+    JSON_PATH_PH_FL1,
+    JSON_PATH_PH_TANK,
+    JSON_PATH_REDOX_TANK,
+    JSON_PATH_RELAY_ACID,
+    JSON_PATH_RELAY_BASE,
+    JSON_PATH_RELAY_CHLORINE,
+    JSON_PATH_RELAY_CONDUCTIVITY,
+    JSON_PATH_RELAY_HEATING,
+    JSON_PATH_RELAY_REDOX,
+    JSON_PATH_RELAY_UV,
+    JSON_PATH_RELAY_VALVE,
+)
 from .entity import NeoPoolMQTTEntity
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
@@ -42,37 +64,37 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="modules_ph",
         translation_key="modules_ph",
         name="pH Module",
-        json_path="NeoPool.Modules.pH",
+        json_path=JSON_PATH_MODULES_PH,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_redox",
         translation_key="modules_redox",
         name="Redox Module",
-        json_path="NeoPool.Modules.Redox",
+        json_path=JSON_PATH_MODULES_REDOX,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_hydrolysis",
         translation_key="modules_hydrolysis",
         name="Hydrolysis Module",
-        json_path="NeoPool.Modules.Hydrolysis",
+        json_path=JSON_PATH_MODULES_HYDROLYSIS,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_chlorine",
         translation_key="modules_chlorine",
         name="Chlorine Module",
-        json_path="NeoPool.Modules.Chlorine",
+        json_path=JSON_PATH_MODULES_CHLORINE,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_conductivity",
         translation_key="modules_conductivity",
         name="Conductivity Module",
-        json_path="NeoPool.Modules.Conductivity",
+        json_path=JSON_PATH_MODULES_CONDUCTIVITY,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="modules_ionization",
         translation_key="modules_ionization",
         name="Ionization Module",
-        json_path="NeoPool.Modules.Ionization",
+        json_path=JSON_PATH_MODULES_IONIZATION,
     ),
     # Named relay state sensors (functional state regardless of physical relay assignment)
     # Disabled by default — only appear when the function is assigned to a relay
@@ -80,56 +102,56 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="relay_acid_state",
         translation_key="relay_acid_state",
         name="Relay Acid State",
-        json_path="NeoPool.Relay.Acid",
+        json_path=JSON_PATH_RELAY_ACID,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_base_state",
         translation_key="relay_base_state",
         name="Relay Base State",
-        json_path="NeoPool.Relay.Base",
+        json_path=JSON_PATH_RELAY_BASE,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_redox_state",
         translation_key="relay_redox_state",
         name="Relay Redox State",
-        json_path="NeoPool.Relay.Redox",
+        json_path=JSON_PATH_RELAY_REDOX,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_chlorine_state",
         translation_key="relay_chlorine_state",
         name="Relay Chlorine State",
-        json_path="NeoPool.Relay.Chlorine",
+        json_path=JSON_PATH_RELAY_CHLORINE,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_conductivity_state",
         translation_key="relay_conductivity_state",
         name="Relay Conductivity State",
-        json_path="NeoPool.Relay.Conductivity",
+        json_path=JSON_PATH_RELAY_CONDUCTIVITY,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_heating_state",
         translation_key="relay_heating_state",
         name="Relay Heating State",
-        json_path="NeoPool.Relay.Heating",
+        json_path=JSON_PATH_RELAY_HEATING,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_uv_state",
         translation_key="relay_uv_state",
         name="Relay UV State",
-        json_path="NeoPool.Relay.UV",
+        json_path=JSON_PATH_RELAY_UV,
         entity_registry_enabled_default=False,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="relay_valve_state",
         translation_key="relay_valve_state",
         name="Relay Valve State",
-        json_path="NeoPool.Relay.Valve",
+        json_path=JSON_PATH_RELAY_VALVE,
         entity_registry_enabled_default=False,
     ),
     # Flow and tank level sensors
@@ -137,20 +159,20 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         key="ph_fl1",
         translation_key="ph_fl1",
         name="pH FL1",
-        json_path="NeoPool.pH.FL1",
+        json_path=JSON_PATH_PH_FL1,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="hydrolysis_fl1",
         translation_key="hydrolysis_fl1",
         name="Hydrolysis FL1",
-        json_path="NeoPool.Hydrolysis.FL1",
+        json_path=JSON_PATH_HYDROLYSIS_FL1,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="hydrolysis_water_flow",
         translation_key="hydrolysis_water_flow",
         name="Water Flow",
         device_class=BinarySensorDeviceClass.RUNNING,
-        json_path="NeoPool.Hydrolysis.FL1",
+        json_path=JSON_PATH_HYDROLYSIS_FL1,
         invert=True,  # FL1=0 means flow is OK, FL1=1 means no flow
     ),
     NeoPoolBinarySensorEntityDescription(
@@ -158,7 +180,7 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         translation_key="ph_tank_level",
         name="pH Tank Level Low",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        json_path="NeoPool.pH.Tank",
+        json_path=JSON_PATH_PH_TANK,
         invert=True,  # Tank=0 means low, Tank=1 means OK
     ),
     NeoPoolBinarySensorEntityDescription(
@@ -166,21 +188,21 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         translation_key="redox_tank_level",
         name="Redox Tank Level Low",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        json_path="NeoPool.Redox.Tank",
+        json_path=JSON_PATH_REDOX_TANK,
         invert=True,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="hydrolysis_cover",
         translation_key="hydrolysis_cover",
         name="Hydrolysis Cover",
-        json_path="NeoPool.Hydrolysis.Cover",
+        json_path=JSON_PATH_HYDROLYSIS_COVER,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="hydrolysis_low_production",
         translation_key="hydrolysis_low_production",
         name="Hydrolysis Low Production",
         device_class=BinarySensorDeviceClass.PROBLEM,
-        json_path="NeoPool.Hydrolysis.Low",
+        json_path=JSON_PATH_HYDROLYSIS_LOW,
     ),
 )
 

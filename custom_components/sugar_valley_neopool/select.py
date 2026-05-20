@@ -16,6 +16,9 @@ from .const import (
     CMD_FILTRATION_SPEED,
     FILTRATION_MODE_MAP,
     FILTRATION_SPEED_MAP,
+    JSON_PATH_FILTRATION_MODE,
+    JSON_PATH_FILTRATION_SPEED,
+    JSON_PATH_HYDROLYSIS_BOOST,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, lookup_by_value, parse_json_payload, safe_int
@@ -58,7 +61,7 @@ SELECT_DESCRIPTIONS: tuple[NeoPoolSelectEntityDescription, ...] = (
         key="filtration_mode",
         translation_key="filtration_mode",
         name="Filtration Mode",
-        json_path="NeoPool.Filtration.Mode",
+        json_path=JSON_PATH_FILTRATION_MODE,
         command=CMD_FILTRATION_MODE,
         options_map=FILTRATION_MODE_MAP,
         options=list(FILTRATION_MODE_MAP.values()),
@@ -67,7 +70,7 @@ SELECT_DESCRIPTIONS: tuple[NeoPoolSelectEntityDescription, ...] = (
         key="filtration_speed",
         translation_key="filtration_speed",
         name="Filtration Speed",
-        json_path="NeoPool.Filtration.Speed",
+        json_path=JSON_PATH_FILTRATION_SPEED,
         command=CMD_FILTRATION_SPEED,
         options_map=FILTRATION_SPEED_MAP,
         options=list(FILTRATION_SPEED_MAP.values()),
@@ -76,7 +79,7 @@ SELECT_DESCRIPTIONS: tuple[NeoPoolSelectEntityDescription, ...] = (
         key="boost_mode",
         translation_key="boost_mode",
         name="Boost Mode",
-        json_path="NeoPool.Hydrolysis.Boost",
+        json_path=JSON_PATH_HYDROLYSIS_BOOST,
         command=CMD_BOOST,
         options_map=BOOST_MODE_MAP,
         options=list(BOOST_MODE_MAP.values()),
