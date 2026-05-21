@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.19] - 2026-05-21
+
+### Added
+
+- **Ionization sensor and setpoint**: New `ionization_data` sensor and
+  `ionization_setpoint` number entity for NeoPool controllers with copper-silver
+  ionization module. Setpoint max is dynamic, read from `NeoPool.Ionization.Max`.
+  Contributed by @netbasebe in #13.
+
+### Changed
+
+- **JSON path constants**: All entity descriptions now use `JSON_PATH_*` constants
+  from `const.py` instead of hardcoded strings. Added missing constants for relay
+  and redox entities.
+
+### Fixed
+
+- **Device info sw_version**: Tasmota firmware version now included in
+  `get_device_info` sw_version field.
+
+### Updated
+
+- **Tasmota NeoPool Firmware**: Bundled firmware updated to v15.4.0 Sybil.
+
 ## [0.2.18] - 2026-04-04
 
 ### Added
