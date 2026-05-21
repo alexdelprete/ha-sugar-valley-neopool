@@ -107,6 +107,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         key="ionization_setpoint",
         translation_key="ionization_setpoint",
         name="Ionization Setpoint",
+        native_unit_of_measurement=PERCENTAGE,
         native_min_value=0,
         native_step=0.1,
         mode=NumberMode.SLIDER,

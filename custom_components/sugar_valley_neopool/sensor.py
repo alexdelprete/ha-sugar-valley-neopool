@@ -220,6 +220,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         key="ionization_data",
         translation_key="ionization_data",
         name="Ionization",
+        native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_IONIZATION_DATA,
         value_fn=safe_float,
