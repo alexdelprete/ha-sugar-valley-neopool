@@ -337,8 +337,11 @@ class TestNumberPlatform:
         """Test all number descriptions have min/max values."""
         for desc in NUMBER_DESCRIPTIONS:
             assert desc.native_min_value is not None
-            assert desc.native_max_value is not None
-            if not getattr(desc, "max_json_path", None):
+            if desc.max_json_path:
+                # Dynamic max: native_max_value is None until device reports it
+                pass
+            else:
+                assert desc.native_max_value is not None
                 assert desc.native_min_value < desc.native_max_value
 
     def test_number_initial_value(self, mock_config_entry: MockConfigEntry) -> None:
