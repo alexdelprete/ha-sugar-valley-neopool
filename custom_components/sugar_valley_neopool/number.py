@@ -22,6 +22,7 @@ from .const import (
     CMD_PH_MIN,
     CMD_REDOX,
     JSON_PATH_HYDROLYSIS_SETPOINT,
+    JSON_PATH_IONIZATION_MAX,
     JSON_PATH_IONIZATION_SETPOINT,
     JSON_PATH_PH_MAX,
     JSON_PATH_PH_MIN,
@@ -107,12 +108,11 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         translation_key="ionization_setpoint",
         name="Ionization Setpoint",
         native_min_value=0,
-        native_max_value=0,
         native_step=0.1,
         mode=NumberMode.SLIDER,
         json_path=JSON_PATH_IONIZATION_SETPOINT,
         command=CMD_IONIZATION,
-        max_json_path="NeoPool.Ionization.Max",
+        max_json_path=JSON_PATH_IONIZATION_MAX,
     ),
 )
 
@@ -145,8 +145,7 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
         super().__init__(config_entry, description.key)
         self.entity_description = description
         self._attr_native_value: float | None = None
-        if description.max_json_path:
-            self._attr_native_max_value = description.native_max_value
+        self._dynamic_max_received: bool = not bool(description.max_json_path)
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
@@ -168,7 +167,8 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
                 max_value = safe_float(raw_max) if raw_max is not None else None
                 if max_value is not None:
                     self._attr_native_max_value = max_value
-                elif self._attr_native_max_value == 0:
+                    self._dynamic_max_received = True
+                elif not self._dynamic_max_received:
                     # Max not yet received, entity stays unavailable
                     self._attr_available = False
                     self.async_write_ha_state()

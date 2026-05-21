@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from custom_components.sugar_valley_neopool.const import JSON_PATH_IONIZATION_DATA
 from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
     NeoPoolSensor,
@@ -62,7 +63,7 @@ class TestSensorDescriptions:
         """Test ionization sensor description."""
         desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "ionization_data")
         assert desc.state_class == SensorStateClass.MEASUREMENT
-        assert desc.json_path == "NeoPool.Ionization.Data"
+        assert desc.json_path == JSON_PATH_IONIZATION_DATA
         assert desc.value_fn is not None
 
     def test_all_descriptions_have_required_fields(self) -> None:

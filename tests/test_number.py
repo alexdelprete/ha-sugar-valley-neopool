@@ -14,6 +14,8 @@ from custom_components.sugar_valley_neopool.const import (
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
+    JSON_PATH_IONIZATION_MAX,
+    JSON_PATH_IONIZATION_SETPOINT,
 )
 from custom_components.sugar_valley_neopool.number import (
     NUMBER_DESCRIPTIONS,
@@ -75,12 +77,11 @@ class TestNumberDescriptions:
         """Test ionization setpoint number description."""
         desc = next(d for d in NUMBER_DESCRIPTIONS if d.key == "ionization_setpoint")
         assert desc.native_min_value == 0
-        assert desc.native_max_value == 0
         assert desc.native_step == 0.1
-        assert desc.json_path == "NeoPool.Ionization.Setpoint"
+        assert desc.json_path == JSON_PATH_IONIZATION_SETPOINT
         assert desc.command == CMD_IONIZATION
         assert desc.command_template is None
-        assert desc.max_json_path == "NeoPool.Ionization.Max"
+        assert desc.max_json_path == JSON_PATH_IONIZATION_MAX
 
     def test_all_descriptions_have_command(self) -> None:
         """Test all descriptions have command field."""
