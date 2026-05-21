@@ -222,6 +222,9 @@
       },
       "system_id": {
         "name": "System ID"
+      },
+      "ionization_data": {
+        "name": "Ionization"
       }
     },
     "binary_sensor": {
@@ -332,6 +335,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Hydrolysis Setpoint"
+      },
+      "ionization_setpoint": {
+        "name": "Ionization Setpoint"
       }
     },
     "button": {

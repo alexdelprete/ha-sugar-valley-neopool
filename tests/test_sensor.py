@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from custom_components.sugar_valley_neopool.const import JSON_PATH_IONIZATION_DATA
 from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
     NeoPoolSensor,
@@ -15,7 +16,7 @@ from custom_components.sugar_valley_neopool.sensor import (
     async_setup_entry,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 
 
 class TestSensorDescriptions:
@@ -57,6 +58,14 @@ class TestSensorDescriptions:
         assert desc.device_class == SensorDeviceClass.DURATION
         assert desc.state_class == SensorStateClass.TOTAL_INCREASING
         assert desc.json_path == "NeoPool.Hydrolysis.Runtime.Total"
+
+    def test_ionization_data_description(self) -> None:
+        """Test ionization sensor description."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "ionization_data")
+        assert desc.native_unit_of_measurement == PERCENTAGE
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.json_path == JSON_PATH_IONIZATION_DATA
+        assert desc.value_fn is not None
 
     def test_all_descriptions_have_required_fields(self) -> None:
         """Test all descriptions have required fields."""

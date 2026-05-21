@@ -215,6 +215,9 @@
       },
       "system_id": {
         "name": "Virtalähteen NodeID"
+      },
+      "ionization_data": {
+        "name": "Ionisaatio"
       }
     },
     "binary_sensor": {
@@ -325,6 +328,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Hydrolyysin asetusarvo"
+      },
+      "ionization_setpoint": {
+        "name": "Ionisaation asetusarvo"
       }
     },
     "button": {

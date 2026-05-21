@@ -112,6 +112,11 @@ SAMPLE_NEOPOOL_PAYLOAD: dict[str, Any] = {
             "UV": 0,
             "Valve": 0,
         },
+        "Ionization": {
+            "Data": 5,
+            "Setpoint": 3,
+            "Max": 10,
+        },
         "Modules": {
             "pH": 1,
             "Redox": 1,

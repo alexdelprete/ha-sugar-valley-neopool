@@ -81,6 +81,9 @@
       },
       "boost_mode": {
         "default": "mdi:rocket-launch"
+      },
+      "ionization_data": {
+        "default": "mdi:atom"
       }
     },
     "binary_sensor": {
@@ -191,6 +194,9 @@
       },
       "hydrolysis_setpoint": {
         "default": "mdi:water-percent"
+      },
+      "ionization_setpoint": {
+        "default": "mdi:atom"
       }
     },
     "button": {

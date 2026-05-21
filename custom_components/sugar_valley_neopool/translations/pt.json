@@ -214,6 +214,9 @@
       },
       "system_id": {
         "name": "NodeID da Unidade de Potência"
+      },
+      "ionization_data": {
+        "name": "Ionização"
       }
     },
     "binary_sensor": {
@@ -324,6 +327,9 @@
       },
       "hydrolysis_setpoint": {
         "name": "Setpoint de Hidrólise"
+      },
+      "ionization_setpoint": {
+        "name": "Setpoint de Ionização"
       }
     },
     "button": {

@@ -42,6 +42,7 @@ from .const import (
     JSON_PATH_HYDROLYSIS_RUNTIME_POL2,
     JSON_PATH_HYDROLYSIS_RUNTIME_TOTAL,
     JSON_PATH_HYDROLYSIS_STATE,
+    JSON_PATH_IONIZATION_DATA,
     JSON_PATH_PH_DATA,
     JSON_PATH_PH_PUMP,
     JSON_PATH_PH_STATE,
@@ -213,6 +214,16 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_HYDROLYSIS_RUNTIME_CHANGES,
         value_fn=safe_int,
+    ),
+    # Ionization sensor
+    NeoPoolSensorEntityDescription(
+        key="ionization_data",
+        translation_key="ionization_data",
+        name="Ionization",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        json_path=JSON_PATH_IONIZATION_DATA,
+        value_fn=safe_float,
     ),
     # Filtration sensors
     NeoPoolSensorEntityDescription(

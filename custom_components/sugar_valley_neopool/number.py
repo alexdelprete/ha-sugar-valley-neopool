@@ -17,10 +17,13 @@ from homeassistant.core import HomeAssistant, callback
 
 from .const import (
     CMD_HYDROLYSIS,
+    CMD_IONIZATION,
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
     JSON_PATH_HYDROLYSIS_SETPOINT,
+    JSON_PATH_IONIZATION_MAX,
+    JSON_PATH_IONIZATION_SETPOINT,
     JSON_PATH_PH_MAX,
     JSON_PATH_PH_MIN,
     JSON_PATH_REDOX_SETPOINT,
@@ -47,6 +50,7 @@ class NeoPoolNumberEntityDescription(NumberEntityDescription):
     command: str
     command_template: str | None = None
     value_fn: Callable[[Any], float | None] = safe_float
+    max_json_path: str | None = None
 
 
 NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
@@ -99,6 +103,18 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         command=CMD_HYDROLYSIS,
         command_template="{value} %",  # NeoPool expects "50 %" format
     ),
+    NeoPoolNumberEntityDescription(
+        key="ionization_setpoint",
+        translation_key="ionization_setpoint",
+        name="Ionization Setpoint",
+        native_unit_of_measurement=PERCENTAGE,
+        native_min_value=0,
+        native_step=0.1,
+        mode=NumberMode.SLIDER,
+        json_path=JSON_PATH_IONIZATION_SETPOINT,
+        command=CMD_IONIZATION,
+        max_json_path=JSON_PATH_IONIZATION_MAX,
+    ),
 )
 
 
@@ -130,6 +146,7 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
         super().__init__(config_entry, description.key)
         self.entity_description = description
         self._attr_native_value: float | None = None
+        self._dynamic_max_received: bool = not bool(description.max_json_path)
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
@@ -144,6 +161,19 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
             payload = parse_json_payload(msg.payload)
             if payload is None:
                 return
+
+            # Update dynamic max value from payload if configured
+            if self.entity_description.max_json_path:
+                raw_max = get_nested_value(payload, self.entity_description.max_json_path)
+                max_value = safe_float(raw_max) if raw_max is not None else None
+                if max_value is not None:
+                    self._attr_native_max_value = max_value
+                    self._dynamic_max_received = True
+                elif not self._dynamic_max_received:
+                    # Max not yet received, entity stays unavailable
+                    self._attr_available = False
+                    self.async_write_ha_state()
+                    return
 
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
