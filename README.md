@@ -41,8 +41,7 @@ of your pool system through Home Assistant.
 
 - **Switches** - Filtration, Light, AUX1-AUX4 relays
 - **Selects** - Filtration mode/speed, Boost mode
-- **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Ionization
-  setpoint (dynamic max from device)
+- **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Ionization setpoint
 - **Buttons** - Clear error state
 
 ### Additional Features
