@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.const import EntityCategory
 
-from .const import CMD_ESCAPE
+from .const import CMD_ESCAPE, CMD_TIME
 from .entity import NeoPoolMQTTEntity
 
 if TYPE_CHECKING:
@@ -37,6 +37,15 @@ BUTTON_DESCRIPTIONS: tuple[NeoPoolButtonEntityDescription, ...] = (
         icon="mdi:alert-remove",
         entity_category=EntityCategory.CONFIG,
         command=CMD_ESCAPE,
+    ),
+    NeoPoolButtonEntityDescription(
+        key="sync_controller_time",
+        translation_key="sync_controller_time",
+        name="Sync Controller Time",
+        icon="mdi:clock-check-outline",
+        entity_category=EntityCategory.CONFIG,
+        command=CMD_TIME,
+        payload="0",  # NPTime 0 = sync controller clock to Tasmota's current time
     ),
 )
 

@@ -216,8 +216,26 @@
       "system_id": {
         "name": "Kraftenhet NodeID"
       },
+      "conductivity_data": {
+        "name": "Konduktivitet"
+      },
       "ionization_data": {
         "name": "Jonisering"
+      },
+      "chlorine_data": {
+        "name": "Klor"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Hydrolys börvärde (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hydrolys max"
+      },
+      "hydrolysis_unit": {
+        "name": "Hydrolysenhet"
+      },
+      "controller_time": {
+        "name": "Styrenhetens tid"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Hydrolys låg produktion"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hydrolys Redox-styrd"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Jonisering börvärde"
+      },
+      "chlorine_setpoint": {
+        "name": "Klorbörvärde"
       }
     },
     "button": {
       "clear_error": {
         "name": "Rensa felstatus"
+      },
+      "sync_controller_time": {
+        "name": "Synkronisera styrenhetens tid"
       }
     }
   }

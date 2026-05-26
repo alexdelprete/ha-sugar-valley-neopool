@@ -216,8 +216,26 @@
       "system_id": {
         "name": "Toiteüksuse NodeID"
       },
+      "conductivity_data": {
+        "name": "Juhtivus"
+      },
       "ionization_data": {
         "name": "Ionisatsioon"
+      },
+      "chlorine_data": {
+        "name": "Kloor"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Hüdrolüüsi sihtväärtus (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hüdrolüüsi maks"
+      },
+      "hydrolysis_unit": {
+        "name": "Hüdrolüüsi ühik"
+      },
+      "controller_time": {
+        "name": "Kontrolleri aeg"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Hüdrolüüsi madal tootlikkus"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hüdrolüüsi Redox-juhitud"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Ionisatsiooni seadepunkt"
+      },
+      "chlorine_setpoint": {
+        "name": "Kloori sihtväärtus"
       }
     },
     "button": {
       "clear_error": {
         "name": "Tühjenda vea olek"
+      },
+      "sync_controller_time": {
+        "name": "Sünkroniseeri kontrolleri aeg"
       }
     }
   }

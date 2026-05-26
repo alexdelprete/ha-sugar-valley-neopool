@@ -16,11 +16,13 @@ from homeassistant.const import PERCENTAGE, UnitOfElectricPotential
 from homeassistant.core import HomeAssistant, callback
 
 from .const import (
+    CMD_CHLORINE,
     CMD_HYDROLYSIS,
     CMD_IONIZATION,
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
+    JSON_PATH_CHLORINE_SETPOINT,
     JSON_PATH_HYDROLYSIS_SETPOINT,
     JSON_PATH_IONIZATION_MAX,
     JSON_PATH_IONIZATION_SETPOINT,
@@ -89,6 +91,18 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         mode=NumberMode.SLIDER,
         json_path=JSON_PATH_REDOX_SETPOINT,
         command=CMD_REDOX,
+    ),
+    NeoPoolNumberEntityDescription(
+        key="chlorine_setpoint",
+        translation_key="chlorine_setpoint",
+        name="Chlorine Setpoint",
+        native_unit_of_measurement="ppm",
+        native_min_value=0,
+        native_max_value=10,
+        native_step=0.1,
+        mode=NumberMode.SLIDER,
+        json_path=JSON_PATH_CHLORINE_SETPOINT,
+        command=CMD_CHLORINE,
     ),
     NeoPoolNumberEntityDescription(
         key="hydrolysis_setpoint",

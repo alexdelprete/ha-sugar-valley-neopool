@@ -82,18 +82,27 @@ SAMPLE_NEOPOOL_PAYLOAD: dict[str, Any] = {
         },
         "Hydrolysis": {
             "Data": 50,
+            "Unit": "g/h",
+            "Setpoint": 55,
+            "Max": 100,
             "Percent": {"Data": 50, "Setpoint": 60},
             "State": "POL1",
             "FL1": 0,
             "Cover": 0,
             "Low": 0,
             "Boost": 0,
+            "Redox": 1,
             "Runtime": {
                 "Total": "123T04:30:00",
                 "Part": "10T02:15:00",
                 "Changes": 456,
             },
         },
+        "Chlorine": {
+            "Data": 1.2,
+            "Setpoint": 1.5,
+        },
+        "Time": "2026-05-26T14:30:00",
         "Filtration": {
             "State": 1,
             "Speed": 2,
@@ -117,6 +126,7 @@ SAMPLE_NEOPOOL_PAYLOAD: dict[str, Any] = {
             "Setpoint": 3,
             "Max": 10,
         },
+        "Conductivity": 42,
         "Modules": {
             "pH": 1,
             "Redox": 1,

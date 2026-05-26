@@ -216,8 +216,26 @@
       "system_id": {
         "name": "Kraftenhet NodeID"
       },
+      "conductivity_data": {
+        "name": "Konduktivitet"
+      },
       "ionization_data": {
         "name": "Ionisering"
+      },
+      "chlorine_data": {
+        "name": "Klor"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Hydrolyse settpunkt (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hydrolyse maks"
+      },
+      "hydrolysis_unit": {
+        "name": "Hydrolyse enhet"
+      },
+      "controller_time": {
+        "name": "Kontrollerens tid"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Hydrolyse lav produksjon"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hydrolyse Redox-styrt"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Ionisering settpunkt"
+      },
+      "chlorine_setpoint": {
+        "name": "Klor settpunkt"
       }
     },
     "button": {
       "clear_error": {
         "name": "Fjern feiltilstand"
+      },
+      "sync_controller_time": {
+        "name": "Synkroniser kontrollerens tid"
       }
     }
   }

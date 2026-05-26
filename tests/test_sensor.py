@@ -8,7 +8,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from custom_components.sugar_valley_neopool.const import JSON_PATH_IONIZATION_DATA
+from custom_components.sugar_valley_neopool.const import (
+    JSON_PATH_CHLORINE_DATA,
+    JSON_PATH_CONDUCTIVITY_DATA,
+    JSON_PATH_HYDROLYSIS_MAX,
+    JSON_PATH_HYDROLYSIS_SETPOINT_GH,
+    JSON_PATH_HYDROLYSIS_UNIT,
+    JSON_PATH_IONIZATION_DATA,
+    JSON_PATH_TIME,
+)
 from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
     NeoPoolSensor,
@@ -66,6 +74,60 @@ class TestSensorDescriptions:
         assert desc.state_class == SensorStateClass.MEASUREMENT
         assert desc.json_path == JSON_PATH_IONIZATION_DATA
         assert desc.value_fn is not None
+
+    def test_conductivity_data_description(self) -> None:
+        """Test conductivity sensor description.
+
+        Firmware emits NeoPool.Conductivity as a flat scalar (not an object).
+        See docs/TASMOTA_NEOPOOL_DRIVER_REFERENCE.md, "Conductivity deep dive".
+        """
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "conductivity_data")
+        assert desc.native_unit_of_measurement == PERCENTAGE
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.json_path == JSON_PATH_CONDUCTIVITY_DATA
+        assert desc.json_path == "NeoPool.Conductivity"
+        assert desc.value_fn is not None
+        # No device_class — HA's SensorDeviceClass.CONDUCTIVITY expects µS/cm
+        assert desc.device_class is None
+
+    def test_chlorine_data_description(self) -> None:
+        """Test chlorine sensor description."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "chlorine_data")
+        assert desc.native_unit_of_measurement == "ppm"
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.json_path == JSON_PATH_CHLORINE_DATA
+        assert desc.value_fn is not None
+
+    def test_hydrolysis_max_description(self) -> None:
+        """Test hydrolysis_max sensor description."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_max")
+        assert desc.native_unit_of_measurement == "g/h"
+        # No state_class - this is a device capability constant, not a measurement
+        assert desc.state_class is None
+        assert desc.json_path == JSON_PATH_HYDROLYSIS_MAX
+
+    def test_hydrolysis_unit_description(self) -> None:
+        """Test hydrolysis_unit sensor description (string sensor)."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_unit")
+        assert desc.json_path == JSON_PATH_HYDROLYSIS_UNIT
+        assert desc.device_class is None
+        assert desc.native_unit_of_measurement is None
+
+    def test_hydrolysis_setpoint_gh_description(self) -> None:
+        """Test hydrolysis_setpoint_gh sensor (read-only g/h companion)."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_setpoint_gh")
+        assert desc.native_unit_of_measurement == "g/h"
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.json_path == JSON_PATH_HYDROLYSIS_SETPOINT_GH
+
+    def test_controller_time_description(self) -> None:
+        """Test controller_time sensor description.
+
+        Firmware emits ISO string without timezone, so no TIMESTAMP device_class.
+        """
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "controller_time")
+        assert desc.json_path == JSON_PATH_TIME
+        assert desc.device_class is None  # No TZ in firmware string
 
     def test_all_descriptions_have_required_fields(self) -> None:
         """Test all descriptions have required fields."""

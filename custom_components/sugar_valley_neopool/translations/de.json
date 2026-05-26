@@ -216,8 +216,26 @@
       "system_id": {
         "name": "System ID"
       },
+      "conductivity_data": {
+        "name": "Leitfähigkeit"
+      },
       "ionization_data": {
         "name": "Ionisierung"
+      },
+      "chlorine_data": {
+        "name": "Chlor"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Hydrolyse-Sollwert (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hydrolyse-Maximum"
+      },
+      "hydrolysis_unit": {
+        "name": "Hydrolyse-Einheit"
+      },
+      "controller_time": {
+        "name": "Controller-Zeit"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Hydrolyse niedrige Produktion"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hydrolyse Redox-gesteuert"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Ionisierungs-Sollwert"
+      },
+      "chlorine_setpoint": {
+        "name": "Chlor-Sollwert"
       }
     },
     "button": {
       "clear_error": {
         "name": "Fehlerzustand löschen"
+      },
+      "sync_controller_time": {
+        "name": "Controller-Zeit synchronisieren"
       }
     }
   }

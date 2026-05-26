@@ -17,6 +17,7 @@ from .const import (
     JSON_PATH_HYDROLYSIS_COVER,
     JSON_PATH_HYDROLYSIS_FL1,
     JSON_PATH_HYDROLYSIS_LOW,
+    JSON_PATH_HYDROLYSIS_REDOX,
     JSON_PATH_MODULES_CHLORINE,
     JSON_PATH_MODULES_CONDUCTIVITY,
     JSON_PATH_MODULES_HYDROLYSIS,
@@ -203,6 +204,12 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         name="Hydrolysis Low Production",
         device_class=BinarySensorDeviceClass.PROBLEM,
         json_path=JSON_PATH_HYDROLYSIS_LOW,
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="hydrolysis_redox_controlled",
+        translation_key="hydrolysis_redox_controlled",
+        name="Hydrolysis Redox Controlled",
+        json_path=JSON_PATH_HYDROLYSIS_REDOX,
     ),
 )
 

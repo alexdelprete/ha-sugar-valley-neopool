@@ -84,6 +84,24 @@
       },
       "ionization_data": {
         "default": "mdi:atom"
+      },
+      "conductivity_data": {
+        "default": "mdi:water-percent"
+      },
+      "chlorine_data": {
+        "default": "mdi:water-outline"
+      },
+      "hydrolysis_setpoint_gh": {
+        "default": "mdi:water-opacity"
+      },
+      "hydrolysis_max": {
+        "default": "mdi:water-opacity"
+      },
+      "hydrolysis_unit": {
+        "default": "mdi:water-opacity"
+      },
+      "controller_time": {
+        "default": "mdi:clock-outline"
       }
     },
     "binary_sensor": {
@@ -149,6 +167,9 @@
       },
       "hydrolysis_low_production": {
         "default": "mdi:alert-circle"
+      },
+      "hydrolysis_redox_controlled": {
+        "default": "mdi:flash-auto"
       }
     },
     "switch": {
@@ -197,11 +218,17 @@
       },
       "ionization_setpoint": {
         "default": "mdi:atom"
+      },
+      "chlorine_setpoint": {
+        "default": "mdi:water-outline"
       }
     },
     "button": {
       "clear_error": {
         "default": "mdi:alert-remove"
+      },
+      "sync_controller_time": {
+        "default": "mdi:clock-check-outline"
       }
     }
   }

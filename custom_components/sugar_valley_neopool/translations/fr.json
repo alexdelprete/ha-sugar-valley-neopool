@@ -216,8 +216,26 @@
       "system_id": {
         "name": "NodeID de l'unité d'alimentation"
       },
+      "conductivity_data": {
+        "name": "Conductivité"
+      },
       "ionization_data": {
         "name": "Ionisation"
+      },
+      "chlorine_data": {
+        "name": "Chlore"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Consigne d'hydrolyse (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hydrolyse max"
+      },
+      "hydrolysis_unit": {
+        "name": "Unité d'hydrolyse"
+      },
+      "controller_time": {
+        "name": "Heure du contrôleur"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Production d'hydrolyse faible"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hydrolyse contrôlée par Redox"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Point de consigne d'ionisation"
+      },
+      "chlorine_setpoint": {
+        "name": "Consigne de chlore"
       }
     },
     "button": {
       "clear_error": {
         "name": "Effacer l'état d'erreur"
+      },
+      "sync_controller_time": {
+        "name": "Synchroniser l'heure du contrôleur"
       }
     }
   }

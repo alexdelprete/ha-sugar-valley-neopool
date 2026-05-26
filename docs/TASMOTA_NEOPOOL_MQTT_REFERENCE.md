@@ -1,5 +1,11 @@
 # Tasmota NeoPool MQTT Complete Reference
 
+> **See also:** [`TASMOTA_NEOPOOL_DRIVER_REFERENCE.md`](./TASMOTA_NEOPOOL_DRIVER_REFERENCE.md)
+> for the driver-internals view — verbatim `ResponseAppend_P` lines, the
+> `kNPCommands` table, Modbus register addresses, MBMSK bit definitions, and
+> firmware quirks (including why `NeoPool.Conductivity` is a flat scalar and
+> why `NPAux<n>` writes silently fail).
+
 ## Table of Contents
 
 1. [Overview](#overview)

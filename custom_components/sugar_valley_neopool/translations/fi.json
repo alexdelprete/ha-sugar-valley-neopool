@@ -216,8 +216,26 @@
       "system_id": {
         "name": "Virtalähteen NodeID"
       },
+      "conductivity_data": {
+        "name": "Johtokyky"
+      },
       "ionization_data": {
         "name": "Ionisaatio"
+      },
+      "chlorine_data": {
+        "name": "Kloori"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Hydrolyysin asetusarvo (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Hydrolyysin maksimi"
+      },
+      "hydrolysis_unit": {
+        "name": "Hydrolyysin yksikkö"
+      },
+      "controller_time": {
+        "name": "Ohjaimen aika"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Hydrolyysin alhainen tuotanto"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Hydrolyysin Redox-ohjattu"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Ionisaation asetusarvo"
+      },
+      "chlorine_setpoint": {
+        "name": "Kloorin asetusarvo"
       }
     },
     "button": {
       "clear_error": {
         "name": "Tyhjennä virhetila"
+      },
+      "sync_controller_time": {
+        "name": "Synkronoi ohjaimen aika"
       }
     }
   }

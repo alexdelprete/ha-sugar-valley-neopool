@@ -216,8 +216,26 @@
       "system_id": {
         "name": "NodeID Powerunit"
       },
+      "conductivity_data": {
+        "name": "Conducibilità"
+      },
       "ionization_data": {
         "name": "Ionizzazione"
+      },
+      "chlorine_data": {
+        "name": "Cloro"
+      },
+      "hydrolysis_setpoint_gh": {
+        "name": "Setpoint idrolisi (g/h)"
+      },
+      "hydrolysis_max": {
+        "name": "Idrolisi max"
+      },
+      "hydrolysis_unit": {
+        "name": "Unità idrolisi"
+      },
+      "controller_time": {
+        "name": "Ora del controller"
       }
     },
     "binary_sensor": {
@@ -283,6 +301,9 @@
       },
       "hydrolysis_low_production": {
         "name": "Bassa produzione idrolisi"
+      },
+      "hydrolysis_redox_controlled": {
+        "name": "Idrolisi controllata da Redox"
       }
     },
     "switch": {
@@ -331,11 +352,17 @@
       },
       "ionization_setpoint": {
         "name": "Setpoint ionizzazione"
+      },
+      "chlorine_setpoint": {
+        "name": "Setpoint cloro"
       }
     },
     "button": {
       "clear_error": {
         "name": "Cancella stato errore"
+      },
+      "sync_controller_time": {
+        "name": "Sincronizza ora del controller"
       }
     }
   }

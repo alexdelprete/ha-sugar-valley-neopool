@@ -27,6 +27,8 @@ from .const import (
     FILTRATION_MODE_MAP,
     FILTRATION_SPEED_MAP,
     HYDROLYSIS_STATE_MAP,
+    JSON_PATH_CHLORINE_DATA,
+    JSON_PATH_CONDUCTIVITY_DATA,
     JSON_PATH_CONNECTION_NOERROR,
     JSON_PATH_CONNECTION_NORESPONSE,
     JSON_PATH_CONNECTION_OUTOFRANGE,
@@ -35,13 +37,16 @@ from .const import (
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
     JSON_PATH_HYDROLYSIS_DATA,
+    JSON_PATH_HYDROLYSIS_MAX,
     JSON_PATH_HYDROLYSIS_PERCENT,
     JSON_PATH_HYDROLYSIS_RUNTIME_CHANGES,
     JSON_PATH_HYDROLYSIS_RUNTIME_PART,
     JSON_PATH_HYDROLYSIS_RUNTIME_POL1,
     JSON_PATH_HYDROLYSIS_RUNTIME_POL2,
     JSON_PATH_HYDROLYSIS_RUNTIME_TOTAL,
+    JSON_PATH_HYDROLYSIS_SETPOINT_GH,
     JSON_PATH_HYDROLYSIS_STATE,
+    JSON_PATH_HYDROLYSIS_UNIT,
     JSON_PATH_IONIZATION_DATA,
     JSON_PATH_PH_DATA,
     JSON_PATH_PH_PUMP,
@@ -54,6 +59,7 @@ from .const import (
     JSON_PATH_POWERUNIT_VERSION,
     JSON_PATH_REDOX_DATA,
     JSON_PATH_TEMPERATURE,
+    JSON_PATH_TIME,
     JSON_PATH_TYPE,
     PH_PUMP_MAP,
     PH_STATE_MAP,
@@ -93,6 +99,16 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         translation_key="system_model",
         name="System Model",
         json_path=JSON_PATH_TYPE,
+    ),
+    NeoPoolSensorEntityDescription(
+        key="controller_time",
+        translation_key="controller_time",
+        name="Controller Time",
+        json_path=JSON_PATH_TIME,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        # Raw string from firmware GetDT() (e.g. "2026-05-26T14:30:00"); no
+        # device_class=TIMESTAMP because the firmware string has no timezone
+        # info, which would make HA reject it.
     ),
     # Temperature
     NeoPoolSensorEntityDescription(
@@ -140,6 +156,16 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         json_path=JSON_PATH_REDOX_DATA,
         value_fn=safe_float,
     ),
+    # Chlorine sensor
+    NeoPoolSensorEntityDescription(
+        key="chlorine_data",
+        translation_key="chlorine_data",
+        name="Chlorine",
+        native_unit_of_measurement="ppm",
+        state_class=SensorStateClass.MEASUREMENT,
+        json_path=JSON_PATH_CHLORINE_DATA,
+        value_fn=safe_float,
+    ),
     # Hydrolysis sensors
     NeoPoolSensorEntityDescription(
         key="hydrolysis_percent",
@@ -158,6 +184,30 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_HYDROLYSIS_DATA,
         value_fn=lambda x: round(safe_float(x, 0), 1),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="hydrolysis_setpoint_gh",
+        translation_key="hydrolysis_setpoint_gh",
+        name="Hydrolysis Setpoint (g/h)",
+        native_unit_of_measurement="g/h",
+        state_class=SensorStateClass.MEASUREMENT,
+        json_path=JSON_PATH_HYDROLYSIS_SETPOINT_GH,
+        value_fn=lambda x: round(safe_float(x, 0), 1),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="hydrolysis_max",
+        translation_key="hydrolysis_max",
+        name="Hydrolysis Max",
+        native_unit_of_measurement="g/h",
+        json_path=JSON_PATH_HYDROLYSIS_MAX,
+        value_fn=lambda x: round(safe_float(x, 0), 1),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="hydrolysis_unit",
+        translation_key="hydrolysis_unit",
+        name="Hydrolysis Unit",
+        json_path=JSON_PATH_HYDROLYSIS_UNIT,
+        value_fn=lambda x: str(x) if x is not None else None,
     ),
     NeoPoolSensorEntityDescription(
         key="hydrolysis_state",
@@ -213,6 +263,16 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         name="Hydrolysis Polarity Changes",
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_HYDROLYSIS_RUNTIME_CHANGES,
+        value_fn=safe_int,
+    ),
+    # Conductivity sensor (firmware emits flat scalar at NeoPool.Conductivity, %)
+    NeoPoolSensorEntityDescription(
+        key="conductivity_data",
+        translation_key="conductivity_data",
+        name="Conductivity",
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        json_path=JSON_PATH_CONDUCTIVITY_DATA,
         value_fn=safe_int,
     ),
     # Ionization sensor
