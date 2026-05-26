@@ -56,6 +56,13 @@ class TestBinarySensorDescriptions:
         assert any(d.key == "relay_base_state" for d in relay_descs)
         assert any(d.key == "relay_redox_state" for d in relay_descs)
 
+    def test_hydrolysis_redox_controlled_description(self) -> None:
+        """Test hydrolysis redox controlled binary sensor description."""
+        desc = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "hydrolysis_redox_controlled")
+
+        assert desc.json_path == "NeoPool.Hydrolysis.Redox"
+        assert desc.invert is False
+
     def test_all_descriptions_have_json_path(self) -> None:
         """Test all descriptions have json_path field."""
         for desc in BINARY_SENSOR_DESCRIPTIONS:

@@ -24,8 +24,12 @@ of your pool system through Home Assistant.
 - **Water Temperature** - Current pool water temperature
 - **pH** - pH level, state, and pump status
 - **Redox (ORP)** - Oxidation-reduction potential
-- **Hydrolysis** - Chlorine production level, state, and runtime statistics
+- **Hydrolysis** - Chlorine production level, state, runtime statistics, setpoint
+  (g/h), max capacity, and unit
+- **Chlorine** - Chlorine level (for controllers with chlorine module)
+- **Conductivity** - Conductivity level (for controllers with conductivity module)
 - **Ionization** - Current ionization level (for controllers with ionization module)
+- **Controller Time** - NeoPool controller internal clock (diagnostic)
 - **Filtration** - Mode and speed
 - **Powerunit** - Voltage diagnostics (5V, 12V, 24-30V, 4-20mA)
 - **Connection** - Modbus communication statistics
@@ -36,13 +40,15 @@ of your pool system through Home Assistant.
 - Named relay states (Acid, Base, Redox, Chlorine, Conductivity,
   Heating, UV, Valve)
 - Water flow and tank level indicators
+- Hydrolysis redox controlled
 
 ### Controls
 
 - **Switches** - Filtration, Light, AUX1-AUX4 relays
 - **Selects** - Filtration mode/speed, Boost mode
-- **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Ionization setpoint
-- **Buttons** - Clear error state
+- **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Chlorine setpoint,
+  Ionization setpoint
+- **Buttons** - Clear error state, Sync controller time
 
 ### Additional Features
 

@@ -12,7 +12,7 @@ from custom_components.sugar_valley_neopool.button import (
     NeoPoolButtonEntityDescription,
     async_setup_entry,
 )
-from custom_components.sugar_valley_neopool.const import CMD_ESCAPE
+from custom_components.sugar_valley_neopool.const import CMD_ESCAPE, CMD_TIME
 from homeassistant.const import EntityCategory
 
 
@@ -31,6 +31,15 @@ class TestButtonDescriptions:
         assert desc.payload == ""
         assert desc.entity_category == EntityCategory.CONFIG
         assert desc.icon == "mdi:alert-remove"
+
+    def test_sync_controller_time_description(self) -> None:
+        """Test sync controller time button description."""
+        desc = next(d for d in BUTTON_DESCRIPTIONS if d.key == "sync_controller_time")
+
+        assert desc.command == CMD_TIME
+        assert desc.payload == "0"
+        assert desc.entity_category == EntityCategory.CONFIG
+        assert desc.icon == "mdi:clock-check-outline"
 
     def test_all_descriptions_have_command(self) -> None:
         """Test all descriptions have command field."""

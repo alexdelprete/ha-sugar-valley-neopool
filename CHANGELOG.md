@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.20] - 2026-05-26
+
+### Added
+
+- **Chlorine entities**: New `chlorine_data` sensor (ppm) and `chlorine_setpoint`
+  number entity (0-10 ppm) for NeoPool controllers with the chlorine module.
+- **Conductivity sensor**: New `conductivity_data` sensor (%) for controllers with
+  the conductivity module.
+- **Hydrolysis detail sensors**: Three new read-only sensors — `hydrolysis_setpoint_gh`
+  (g/h setpoint), `hydrolysis_max` (max capacity), and `hydrolysis_unit` (unit string).
+- **Hydrolysis Redox Controlled**: New binary sensor indicating whether hydrolysis is
+  being controlled by the redox system.
+- **Controller Time sensor**: New diagnostic sensor showing the NeoPool controller's
+  internal clock (`NeoPool.Time`).
+- **Sync Controller Time button**: New button entity that syncs the controller clock
+  to Tasmota's time via `NPTime 0`.
+- **Driver reference documentation**: New `docs/TASMOTA_NEOPOOL_DRIVER_REFERENCE.md`
+  with firmware internals, Modbus registers, and driver quirks.
+
 ## [0.2.19] - 2026-05-21
 
 ### Added
