@@ -1,13 +1,13 @@
 # Sugar Valley NeoPool - Home Assistant Integration
 
 <!-- BEGIN SHARED:repo-sync:badges -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+<!-- Synced by repo-sync on 2026-05-27 -->
 
-[![GitHub Release][releases-shield]][releases]
-[![Buy Me A Coffee][buymecoffee-shield]][buymecoffee]
-[![Tests][tests-shield]][tests]
-[![Coverage][coverage-shield]][coverage]
-[![GitHub Downloads][downloads-shield]][downloads]
+[![GitHub Release](https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/alexdelprete)
+[![Tests](https://img.shields.io/github/actions/workflow/status/alexdelprete/ha-sugar-valley-neopool/test.yml?style=for-the-badge&label=Tests)](https://github.com/alexdelprete/ha-sugar-valley-neopool/actions/workflows/test.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://codecov.io/gh/alexdelprete/ha-sugar-valley-neopool)
+[![GitHub Downloads](https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/total?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
 
 <!-- END SHARED:repo-sync:badges -->
 
@@ -102,7 +102,7 @@ the device is recognized regardless of how SO157 is set afterward.
 No manual configuration of SO157 is required.
 
 <!-- BEGIN SHARED:repo-sync:installation -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+<!-- Synced by repo-sync on 2026-05-27 -->
 
 ## Installation
 
@@ -702,7 +702,7 @@ mypy custom_components/sugar_valley_neopool --ignore-missing-imports
   version validation
 
 <!-- BEGIN SHARED:repo-sync:contributing -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+<!-- Synced by repo-sync on 2026-05-27 -->
 
 ## Contributing
 
@@ -728,7 +728,7 @@ but please don't feel obliged._ :)
 [![BuyMeCoffee][buymecoffee-button]][buymecoffee]
 
 <!-- BEGIN SHARED:repo-sync:license -->
-<!-- Synced by repo-sync on 2026-02-20 -->
+<!-- Synced by repo-sync on 2026-05-27 -->
 
 ## License
 
@@ -747,13 +747,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 [buymecoffee]: https://www.buymeacoffee.com/alexdelprete
 [buymecoffee-button]: https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=alexdelprete&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff
-[buymecoffee-shield]: https://img.shields.io/badge/buy%20me%20a%20coffee-donate-white?style=for-the-badge&logo=buymeacoffee&logoColor=white
-[coverage]: https://codecov.io/github/alexdelprete/ha-sugar-valley-neopool
-[coverage-shield]: https://img.shields.io/codecov/c/github/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge
-[downloads]: https://github.com/alexdelprete/ha-sugar-valley-neopool/releases
-[downloads-shield]: https://img.shields.io/github/downloads/alexdelprete/ha-sugar-valley-neopool/total?style=for-the-badge
 [issues]: https://github.com/alexdelprete/ha-sugar-valley-neopool/issues
-[releases]: https://github.com/alexdelprete/ha-sugar-valley-neopool/releases
-[releases-shield]: https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge&color=darkgreen
-[tests]: https://github.com/alexdelprete/ha-sugar-valley-neopool/actions/workflows/test.yml
-[tests-shield]: https://img.shields.io/github/actions/workflow/status/alexdelprete/ha-sugar-valley-neopool/test.yml?style=for-the-badge&label=Tests
