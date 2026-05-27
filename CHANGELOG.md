@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.1] - 2026-05-27
 
+### Added
+
+- **Lovelace dashboards**: Two ready-to-use example dashboards under
+  [`lovelace/`](lovelace/) — a full-width desktop layout
+  (`ha_neopool_lovelace.yaml`, mushroom cards + masonry 400px) and a
+  mobile-friendly responsive layout (`ha_neopool_lovelace_responsive.yaml`,
+  tile cards + masonry 320px). Both include conditional sections for the
+  chlorine, ionization, and conductivity modules so cards hide automatically
+  when those modules aren't installed. See [`lovelace/README.md`](lovelace/README.md)
+  for installation instructions and the full custom-card dependency list.
+
 ### Fixed
 
 - **Hydrolysis sensor stuck at 0% when controller is in % mode**: The `Hydrolysis`

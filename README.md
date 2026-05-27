@@ -484,6 +484,51 @@ script:
           message: "Power cycled for {{ device_name }} (NodeID: {{ nodeid }})"
 ```
 
+## Lovelace Dashboards
+
+Two example dashboards are provided under [`lovelace/`](lovelace/):
+
+- [`ha_neopool_lovelace.yaml`](lovelace/ha_neopool_lovelace.yaml) — full-width
+  desktop layout using mushroom cards, mini-graph cards, and a 400-px
+  masonry layout. Mirrors the structure of the original YAML-package
+  dashboard, plus conditional sections for the chlorine, ionization, and
+  conductivity modules and tiles for the new diagnostic entities
+  (Controller Time, Sync Controller Time, Hydrolysis Redox Controlled,
+  extra relay states).
+- [`ha_neopool_lovelace_responsive.yaml`](lovelace/ha_neopool_lovelace_responsive.yaml)
+  — mobile-friendly layout using HA's built-in tile cards in a 320-px
+  masonry layout. Same coverage as the full-width version.
+
+Both files are designed to be pasted under `views:` in an existing
+dashboard's raw configuration.
+
+### How to apply a dashboard
+
+1. Install the required custom cards via [HACS][hacs] — see
+   [`lovelace/README.md`](lovelace/README.md) for the full list.
+1. Open **Settings → Dashboards** → pick a dashboard → **⋮ → Edit
+   dashboard → ⋮ → Raw configuration editor**.
+1. Paste the chosen file's contents under `views:`.
+1. Save. The new view appears as a tab.
+
+### Caveats
+
+- **Default device name assumed.** Entity IDs in the files start with
+  `neopool_` (the default device-name slug). If you set a custom name
+  during setup (e.g. "Pool Backyard"), find/replace `neopool_` with your
+  slug before applying.
+- **Migrated from the YAML package?** Your entity IDs are preserved as
+  `neopool_mqtt_*`, so the example files in this repo **will not match**.
+  Use the original lovelace files in the
+  [HA-NeoPool-MQTT-Package][package-repo] repository instead — they keep
+  working unchanged after migration.
+
+See [`lovelace/README.md`](lovelace/README.md) for the full custom-card
+dependency list, installation notes, and entity-ID reference.
+
+[hacs]: <https://hacs.xyz>
+[package-repo]: <https://github.com/alexdelprete/HA-NeoPool-MQTT-Package>
+
 ## MQTT Topic Configuration
 
 In your Tasmota device, the MQTT topic is configured under
