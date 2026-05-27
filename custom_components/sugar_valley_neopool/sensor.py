@@ -148,6 +148,12 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         name="Controller Time",
         json_path=JSON_PATH_TIME,
         entity_category=EntityCategory.DIAGNOSTIC,
+        # Disabled by default: the value changes on every SENSOR telemetry
+        # tick (time always advances), so leaving it enabled spams the
+        # recorder with one row per TelePeriod cycle (~288/day at default,
+        # ~8.6k/day at TelePeriod=10s) for near-zero value. The companion
+        # button.sync_controller_time still works regardless of this entity.
+        entity_registry_enabled_default=False,
         # Raw string from firmware GetDT() (e.g. "2026-05-26T14:30:00"); no
         # device_class=TIMESTAMP because the firmware string has no timezone
         # info, which would make HA reject it.

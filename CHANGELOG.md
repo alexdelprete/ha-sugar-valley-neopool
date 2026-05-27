@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **State-change logs upgraded to WARNING**: entity enable/disable
   events are now logged at WARNING level (previously INFO) so they're
   visible without enabling debug logging.
+- **`sensor.controller_time` disabled by default**: the value changes
+  on every SENSOR telemetry tick (time always advances), spamming the
+  recorder with one row per `TelePeriod` cycle (~288/day at the default
+  300s, ~8,600/day at `TelePeriod=10s`) for near-zero analytical value.
+  The companion `button.sync_controller_time` still works regardless.
+  Users who want to display the controller clock can enable the entity
+  manually under **Settings → Devices & services → NeoPool**.
 
 ## [1.0.1] - 2026-05-27
 
