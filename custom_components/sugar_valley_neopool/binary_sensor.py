@@ -12,8 +12,13 @@ from homeassistant.components.binary_sensor import (
     BinarySensorEntityDescription,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.entity import EntityCategory
 
+from . import connection_rate_signal
 from .const import (
+    CONF_CONNECTION_ERROR_RATE_THRESHOLD,
+    DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
     JSON_PATH_HYDROLYSIS_COVER,
     JSON_PATH_HYDROLYSIS_FL1,
     JSON_PATH_HYDROLYSIS_LOW,
@@ -36,7 +41,7 @@ from .const import (
     JSON_PATH_RELAY_UV,
     JSON_PATH_RELAY_VALVE,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
 if TYPE_CHECKING:
@@ -222,9 +227,13 @@ async def async_setup_entry(
     """Set up NeoPool binary sensors based on a config entry."""
     _LOGGER.debug("Setting up NeoPool binary sensors")
 
-    sensors = [
+    sensors: list[BinarySensorEntity] = [
         NeoPoolBinarySensor(entry, description) for description in BINARY_SENSOR_DESCRIPTIONS
     ]
+
+    # Connection-problem binary sensor — driven by the shared rate tracker,
+    # configurable threshold via options flow.
+    sensors.append(NeoPoolConnectionProblemBinarySensor(entry))
 
     async_add_entities(sensors)
     _LOGGER.info("Added %d NeoPool binary sensors", len(sensors))
@@ -297,3 +306,61 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
             sensor_topic,
             self.entity_description.json_path,
         )
+
+
+class NeoPoolConnectionProblemBinarySensor(NeoPoolEntity, BinarySensorEntity):
+    """Binary sensor that turns ON when the rolling error rate exceeds the threshold.
+
+    Reads from the shared `ConnectionRateTracker` in `runtime_data` via the
+    rate-updated dispatcher signal — same source the rate sensor uses, so
+    both stay consistent.
+
+    Threshold is read from the options entry (`CONF_CONNECTION_ERROR_RATE_THRESHOLD`,
+    defaulting to `DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD`). Options changes
+    auto-reload the integration via `OptionsFlowWithReload`, so the threshold
+    is picked up on next setup.
+    """
+
+    _attr_should_poll = False
+    _attr_device_class = BinarySensorDeviceClass.PROBLEM
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "connection_problem"
+    _attr_icon = "mdi:alert-circle-outline"
+
+    def __init__(self, config_entry: NeoPoolConfigEntry) -> None:
+        """Initialize the problem binary sensor."""
+        super().__init__(config_entry, "connection_problem")
+        self._attr_name = "Connection Problem"
+        self._attr_is_on: bool | None = None
+        self._attr_available = True
+        self._threshold: float = float(
+            config_entry.options.get(
+                CONF_CONNECTION_ERROR_RATE_THRESHOLD,
+                DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
+            )
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to the rate-updated dispatcher signal."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                connection_rate_signal(self._config_entry),
+                self._handle_rate_update,
+            )
+        )
+
+    @callback
+    def _handle_rate_update(self) -> None:
+        """Pull the latest rate from the shared tracker and update is_on."""
+        tracker = self._config_entry.runtime_data.connection_rate_tracker
+        if tracker is None:
+            return
+        rate = tracker.rate
+        if rate is None:
+            # Insufficient samples / reboot detected — leave previous state
+            # unchanged. The next valid rate will flip the state correctly.
+            return
+        self._attr_is_on = rate > self._threshold
+        self.async_write_ha_state()

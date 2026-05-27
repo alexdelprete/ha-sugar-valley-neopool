@@ -18,8 +18,10 @@ from custom_components.sugar_valley_neopool.const import (
     JSON_PATH_IONIZATION_DATA,
     JSON_PATH_TIME,
 )
+from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker
 from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
+    NeoPoolConnectionRateSensor,
     NeoPoolCumulativeSensor,
     NeoPoolCumulativeSensorEntityDescription,
     NeoPoolSensor,
@@ -561,7 +563,12 @@ class TestAsyncSetupEntry:
     async def test_setup_entry_creates_sensors(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test that setup entry creates all sensor entities."""
+        """Test that setup entry creates all sensor entities.
+
+        Setup creates one entity per SENSOR_DESCRIPTIONS plus the standalone
+        NeoPoolConnectionRateSensor (which has no description because it
+        reads from the shared ConnectionRateTracker, not from a JSON path).
+        """
         added_entities = []
 
         def async_add_entities(entities):
@@ -569,14 +576,18 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(SENSOR_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolSensor) for e in added_entities)
+        # +1 for the standalone NeoPoolConnectionRateSensor
+        assert len(added_entities) == len(SENSOR_DESCRIPTIONS) + 1
+
+        assert all(
+            isinstance(e, (NeoPoolSensor, NeoPoolConnectionRateSensor)) for e in added_entities
+        )
 
     @pytest.mark.asyncio
     async def test_setup_entry_sensor_keys_match(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test that created sensors match description keys."""
+        """Created sensors include every SENSOR_DESCRIPTIONS key (plus the rate sensor)."""
         added_entities = []
 
         def async_add_entities(entities):
@@ -584,9 +595,14 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        entity_keys = {e.entity_description.key for e in added_entities}
         description_keys = {d.key for d in SENSOR_DESCRIPTIONS}
-
+        description_keys.add("connection_error_rate")  # standalone, no description
+        entity_keys = {
+            e.entity_description.key
+            if hasattr(e, "entity_description") and e.entity_description is not None
+            else e._entity_key
+            for e in added_entities
+        }
         assert entity_keys == description_keys
 
 
@@ -904,3 +920,44 @@ class TestThrottleAndCumulative:
         assert desc.min_update_interval == 300.0
         # entity_registry_enabled_default defaults to True when not overridden
         assert desc.entity_registry_enabled_default is True
+
+
+class TestConnectionRateSensor:
+    """Tests for NeoPoolConnectionRateSensor (reads from runtime_data tracker)."""
+
+    @pytest.mark.asyncio
+    async def test_rate_sensor_reads_tracker_on_dispatch(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Dispatcher signal triggers reading the tracker's current rate."""
+
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=1)
+        tracker.update(timestamp=1010.0, requests=200, errors=3)
+        # (3-1)/(200-100) * 100 = 2%
+        mock_config_entry.runtime_data.connection_rate_tracker = tracker
+
+        sensor = NeoPoolConnectionRateSensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.neopool_connection_error_rate"
+        sensor.async_write_ha_state = MagicMock()
+
+        # Pretend the dispatcher fired
+        sensor._handle_rate_update()
+        assert sensor._attr_native_value == 2.0
+        sensor.async_write_ha_state.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_rate_sensor_none_when_tracker_has_no_data(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Insufficient samples → tracker returns None → entity value is None."""
+
+        mock_config_entry.runtime_data.connection_rate_tracker = ConnectionRateTracker(60.0)
+        sensor = NeoPoolConnectionRateSensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.neopool_connection_error_rate"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor._handle_rate_update()
+        assert sensor._attr_native_value is None

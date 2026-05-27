@@ -38,6 +38,7 @@ CONF_ENABLE_REPAIR_NOTIFICATION: Final = "enable_repair_notification"
 CONF_FAILURES_THRESHOLD: Final = "failures_threshold"
 CONF_RECOVERY_SCRIPT: Final = "recovery_script"
 CONF_OFFLINE_TIMEOUT: Final = "offline_timeout"
+CONF_CONNECTION_ERROR_RATE_THRESHOLD: Final = "connection_error_rate_threshold"
 CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
 CONF_NODEID_HASHED: Final = "nodeid_hashed"
 CONF_NODEID_REAL: Final = "nodeid_real"
@@ -58,12 +59,20 @@ DEFAULT_ENABLE_REPAIR_NOTIFICATION: Final = True
 DEFAULT_FAILURES_THRESHOLD: Final = 3
 DEFAULT_RECOVERY_SCRIPT: Final = ""
 DEFAULT_OFFLINE_TIMEOUT: Final = 300  # 5 minutes in seconds
+DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD: Final = 5.0  # percent
 
 # Options flow validation bounds
 MIN_FAILURES_THRESHOLD: Final = 1
 MAX_FAILURES_THRESHOLD: Final = 10
 MIN_OFFLINE_TIMEOUT: Final = 60  # 1 minute
 MAX_OFFLINE_TIMEOUT: Final = 3600  # 1 hour
+MIN_CONNECTION_ERROR_RATE_THRESHOLD: Final = 0.1
+MAX_CONNECTION_ERROR_RATE_THRESHOLD: Final = 100.0
+
+# Connection-rate sliding-window size (seconds). Not exposed in the UI —
+# 10 minutes is a sensible default that smooths over individual poll noise
+# while remaining responsive to actual connection issues.
+CONNECTION_ERROR_RATE_WINDOW_SECONDS: Final = 600.0
 
 # MQTT Topics - Tasmota NeoPool patterns
 TOPIC_SENSOR: Final = "tele/{device}/SENSOR"

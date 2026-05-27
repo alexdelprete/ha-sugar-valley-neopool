@@ -32,6 +32,7 @@ from homeassistant.util import slugify
 
 from .const import (
     CONF_CONFIRM_MIGRATION,
+    CONF_CONNECTION_ERROR_RATE_THRESHOLD,
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_REPAIR_NOTIFICATION,
@@ -42,6 +43,7 @@ from .const import (
     CONF_RECOVERY_SCRIPT,
     CONF_REGENERATE_ENTITY_IDS,
     CONF_UNIQUE_ID_PREFIX,
+    DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
     DEFAULT_FAILURES_THRESHOLD,
@@ -50,8 +52,10 @@ from .const import (
     DEFAULT_RECOVERY_SCRIPT,
     DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
+    MAX_CONNECTION_ERROR_RATE_THRESHOLD,
     MAX_FAILURES_THRESHOLD,
     MAX_OFFLINE_TIMEOUT,
+    MIN_CONNECTION_ERROR_RATE_THRESHOLD,
     MIN_FAILURES_THRESHOLD,
     MIN_OFFLINE_TIMEOUT,
 )
@@ -1260,11 +1264,12 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
         if user_input is not None:
             _LOGGER.debug(
                 "Options updated: enable_repair=%s, failures_threshold=%s, "
-                "offline_timeout=%s, recovery_script=%s",
+                "offline_timeout=%s, recovery_script=%s, conn_error_rate_threshold=%s",
                 user_input.get(CONF_ENABLE_REPAIR_NOTIFICATION),
                 user_input.get(CONF_FAILURES_THRESHOLD),
                 user_input.get(CONF_OFFLINE_TIMEOUT),
                 user_input.get(CONF_RECOVERY_SCRIPT),
+                user_input.get(CONF_CONNECTION_ERROR_RATE_THRESHOLD),
             )
             return self.async_create_entry(data=user_input)
 
@@ -1283,6 +1288,10 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
         )
         recovery_script = current_options.get(CONF_RECOVERY_SCRIPT, DEFAULT_RECOVERY_SCRIPT)
         offline_timeout = current_options.get(CONF_OFFLINE_TIMEOUT, DEFAULT_OFFLINE_TIMEOUT)
+        connection_error_rate_threshold = current_options.get(
+            CONF_CONNECTION_ERROR_RATE_THRESHOLD,
+            DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
+        )
 
         description_placeholders: dict[str, str] = {}
 
@@ -1323,6 +1332,20 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                             max=MAX_OFFLINE_TIMEOUT,
                             mode=NumberSelectorMode.BOX,
                             unit_of_measurement="seconds",
+                        )
+                    ),
+                    # 5. Connection error-rate threshold (% above which
+                    # binary_sensor.connection_problem turns on)
+                    vol.Required(
+                        CONF_CONNECTION_ERROR_RATE_THRESHOLD,
+                        default=connection_error_rate_threshold,
+                    ): NumberSelector(
+                        NumberSelectorConfig(
+                            min=MIN_CONNECTION_ERROR_RATE_THRESHOLD,
+                            max=MAX_CONNECTION_ERROR_RATE_THRESHOLD,
+                            mode=NumberSelectorMode.BOX,
+                            unit_of_measurement="%",
+                            step=0.1,
                         )
                     ),
                 },

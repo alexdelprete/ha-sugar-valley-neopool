@@ -643,6 +643,79 @@ WARNING (MainThread) [custom_components.sugar_valley_neopool]
   reload: ['sensor.neopool_chlorine_data', 'number.neopool_chlorine_setpoint']
 ```
 
+## Connection Health Monitoring
+
+Two diagnostic entities surface the health of the Modbus connection
+between the Tasmota device and the NeoPool controller — useful for
+spotting flaky RS485 wiring, interference, or controller-side issues.
+
+### `sensor.neopool_connection_error_rate`
+
+Reports the rolling 10-minute Modbus failure rate as a percentage:
+
+```text
+((no_response + out_of_range) / requests) × 100
+```
+
+The window is **sliding** rather than lifetime, so recent issues are
+reflected within minutes regardless of how big the cumulative
+denominator has grown. A healthy NeoPool/Tasmota pair runs at ~0%.
+Values above 5% sustained for more than a few minutes typically
+indicate a real connection problem (loose RS485 terminals, marginal
+cable run, electrical interference).
+
+Goes `unknown` for the first few minutes after HA startup (the
+window needs ≥2 samples to compute a delta) and clears itself when a
+Tasmota reboot is detected within the window (so the reset's
+counter-drop doesn't pollute the rate).
+
+### `binary_sensor.neopool_connection_problem`
+
+`device_class=problem`. Turns **on** when the rolling rate exceeds a
+configurable threshold (default 5%), **off** when it drops back below.
+Use as the trigger for any notification mechanism you prefer.
+
+#### Tuning the threshold
+
+Settings → Devices & services → NeoPool → **Configure** → set
+*Connection error-rate threshold* (0.1% – 100%, default 5%).
+
+Reasonable starting points:
+
+- **Short, shielded RS485 (≤5m)**: 1–2% — anything more is unusual
+- **Typical install (5–15m unshielded)**: 5% (default)
+- **Long / shared cable / known noisy environment**: 10%+
+
+The change takes effect immediately (the integration reloads
+automatically when options change). No HA restart needed.
+
+#### Example automation
+
+Copy/paste into your automations YAML and tweak as you like:
+
+```yaml
+automation:
+  - alias: NeoPool — connection error rate high
+    description: Notify when the Modbus connection becomes unhealthy
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.neopool_connection_problem
+        to: "on"
+        for: "00:05:00"   # sustained 5 min — ignore transient spikes
+    action:
+      - service: persistent_notification.create
+        data:
+          title: NeoPool connection unhealthy
+          message: >
+            Error rate is
+            {{ states('sensor.neopool_connection_error_rate') }}%
+            (threshold exceeded for 5+ min). Check RS485 wiring,
+            Tasmota logs, and the controller's Modbus settings.
+```
+
+For migrated YAML-package installs, replace `neopool_` with
+`neopool_mqtt_` in the entity IDs.
+
 ## Recorder Considerations
 
 A handful of entities update frequently. The integration handles this

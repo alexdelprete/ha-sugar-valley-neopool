@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from custom_components.sugar_valley_neopool.helpers import (
+    ConnectionRateTracker,
     bit_to_bool,
     clamp,
     get_nested_value,
@@ -358,3 +359,66 @@ class TestValidateNodeid:
         """Test 'hidden_by_default' returns False."""
         assert validate_nodeid("hidden_by_default") is False
         assert validate_nodeid("Hidden_By_Default") is False
+
+
+class TestConnectionRateTracker:
+    """Tests for the sliding-window error-rate calculator."""
+
+    def test_initial_rate_is_none(self) -> None:
+        """No samples → rate is None (not enough data to compute)."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        assert tracker.rate is None
+        assert tracker.samples_count == 0
+
+    def test_single_sample_rate_is_none(self) -> None:
+        """One sample → rate is None (no delta possible)."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=2)
+        assert tracker.rate is None
+        assert tracker.samples_count == 1
+
+    def test_two_samples_rate_computed(self) -> None:
+        """Two samples in the window → rate = (err_delta / req_delta) * 100."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=2)
+        tracker.update(timestamp=1030.0, requests=200, errors=4)
+        # (4-2)/(200-100) * 100 = 2%
+        assert tracker.rate == 2.0
+
+    def test_zero_request_delta_returns_zero(self) -> None:
+        """Window with no new requests → 0%, not division-by-zero."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=500, errors=10)
+        tracker.update(timestamp=1010.0, requests=500, errors=10)
+        assert tracker.rate == 0.0
+
+    def test_tasmota_reboot_clears_window(self) -> None:
+        """Counter drop within window → window cleared, rate becomes None."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=10000, errors=50)
+        tracker.update(timestamp=1010.0, requests=10100, errors=51)
+        # Tasmota reboot — counter drops back
+        tracker.update(timestamp=1020.0, requests=50, errors=1)
+        assert tracker.rate is None  # window cleared on reboot detection
+        assert tracker.samples_count == 0
+
+    def test_old_samples_pruned(self) -> None:
+        """Samples older than window_seconds are pruned on update."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=2)
+        tracker.update(timestamp=1030.0, requests=200, errors=4)
+        # 100 seconds later: oldest two should be pruned
+        tracker.update(timestamp=1130.0, requests=400, errors=10)
+        assert tracker.samples_count == 1
+        assert tracker.rate is None  # only 1 sample left
+
+    def test_window_captures_recent_change(self) -> None:
+        """Recent error spike inside the window is reflected in the rate."""
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        # Old, healthy traffic (will be pruned by window age)
+        tracker.update(timestamp=1000.0, requests=10000, errors=10)
+        # Recent traffic with bad rate — within the 60s window
+        tracker.update(timestamp=1500.0, requests=10100, errors=50)
+        tracker.update(timestamp=1520.0, requests=10200, errors=100)
+        # Old sample pruned. (100 - 50) errors / (10200 - 10100) reqs * 100 = 50%
+        assert tracker.rate == 50.0

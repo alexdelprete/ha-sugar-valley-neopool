@@ -13,6 +13,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_DEVICE_NAME,
@@ -25,6 +27,7 @@ from .const import (
     CONF_NODEID_REAL,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONNECTION_ERROR_RATE_WINDOW_SECONDS,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
     DEFAULT_FAILURES_THRESHOLD,
@@ -40,6 +43,7 @@ from .const import (
     YAML_TO_INTEGRATION_KEY_MAP,
 )
 from .helpers import (
+    ConnectionRateTracker,
     async_set_setoption157,
     classify_nodeid,
     extract_entity_key_from_masked_unique_id,
@@ -56,6 +60,16 @@ _LOGGER = logging.getLogger(__name__)
 
 # Config entry version for migrations
 CONFIG_ENTRY_VERSION = 2
+
+
+def connection_rate_signal(entry: ConfigEntry) -> str:
+    """Return the dispatcher signal name for connection-rate updates.
+
+    Used by the rate sensor and the problem binary_sensor to react when
+    the integration's central SENSOR watch updates the shared
+    ConnectionRateTracker.
+    """
+    return f"{DOMAIN}_connection_rate_updated_{entry.entry_id}"
 
 
 @dataclass
@@ -81,6 +95,10 @@ class NeoPoolData:
     # when the controller is in % mode. None means we haven't seen it yet.
     hydrolysis_unit: str | None = None
     device_ip: str | None = None  # From Status 5 network info
+    # Sliding-window tracker for the Modbus connection error rate.
+    # Populated lazily on first SENSOR message by _setup_dynamic_disable_watch
+    # so the rate sensor / problem binary sensor can read .rate.
+    connection_rate_tracker: ConnectionRateTracker | None = None
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -109,6 +127,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         mqtt_topic=mqtt_topic,
         nodeid=nodeid,
         entity_id_mapping=entity_id_mapping,
+        connection_rate_tracker=ConnectionRateTracker(
+            window_seconds=CONNECTION_ERROR_RATE_WINDOW_SECONDS,
+        ),
     )
 
     # Auto-acquire dual NodeIDs if not yet stored (upgrade from older version)
@@ -907,6 +928,7 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
     sensor_topic = f"tele/{mqtt_topic}/SENSOR"
 
     relay_names = {"Acid", "Base", "Redox", "Chlorine", "Conductivity", "Heating", "UV", "Valve"}
+    rate_signal = connection_rate_signal(entry)
 
     @callback
     def on_sensor(msg: mqtt.ReceiveMessage) -> None:
@@ -918,6 +940,24 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
             )
         except (json.JSONDecodeError, UnicodeDecodeError):
             return
+
+        # Feed the connection rate tracker on every message regardless of
+        # whether other signals changed — the rate is meant to be current.
+        tracker = entry.runtime_data.connection_rate_tracker
+        if tracker is not None:
+            requests = get_nested_value(payload, "NeoPool.Connection.MBRequests")
+            no_response = get_nested_value(payload, "NeoPool.Connection.MBNoResponse")
+            out_of_range = get_nested_value(payload, "NeoPool.Connection.DataOutOfRange")
+            if requests is not None and no_response is not None:
+                try:
+                    tracker.update(
+                        timestamp=dt_util.utcnow().timestamp(),
+                        requests=int(requests),
+                        errors=int(no_response) + int(out_of_range or 0),
+                    )
+                    async_dispatcher_send(hass, rate_signal)
+                except (TypeError, ValueError) as err:
+                    _LOGGER.debug("Failed to update connection rate tracker: %s", err)
 
         modules_data = get_nested_value(payload, "NeoPool.Modules")
         new_modules: set[str] = (

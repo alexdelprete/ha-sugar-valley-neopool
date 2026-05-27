@@ -12,9 +12,14 @@ from custom_components.sugar_valley_neopool.binary_sensor import (
     BINARY_SENSOR_DESCRIPTIONS,
     NeoPoolBinarySensor,
     NeoPoolBinarySensorEntityDescription,
+    NeoPoolConnectionProblemBinarySensor,
     async_setup_entry,
 )
-from custom_components.sugar_valley_neopool.helpers import bit_to_bool
+from custom_components.sugar_valley_neopool.const import (
+    CONF_CONNECTION_ERROR_RATE_THRESHOLD,
+    DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
+)
+from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker, bit_to_bool
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 
 
@@ -289,7 +294,13 @@ class TestAsyncSetupEntry:
     async def test_setup_entry_creates_binary_sensors(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test that setup entry creates all binary sensor entities."""
+        """Test that setup entry creates all binary sensor entities.
+
+        Setup creates one entity per BINARY_SENSOR_DESCRIPTIONS plus the
+        standalone NeoPoolConnectionProblemBinarySensor (which reads from
+        the shared ConnectionRateTracker, no description-driven JSON path).
+        """
+
         added_entities = []
 
         def async_add_entities(entities):
@@ -297,5 +308,90 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(BINARY_SENSOR_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolBinarySensor) for e in added_entities)
+        # +1 for the standalone NeoPoolConnectionProblemBinarySensor
+        assert len(added_entities) == len(BINARY_SENSOR_DESCRIPTIONS) + 1
+        assert all(
+            isinstance(e, (NeoPoolBinarySensor, NeoPoolConnectionProblemBinarySensor))
+            for e in added_entities
+        )
+
+
+class TestConnectionProblemBinarySensor:
+    """Tests for NeoPoolConnectionProblemBinarySensor."""
+
+    @pytest.mark.asyncio
+    async def test_problem_on_when_rate_exceeds_threshold(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """is_on becomes True when the tracker's rate > threshold."""
+
+        # Threshold = 5 %; tracker should report 10 %
+        mock_config_entry.options = {CONF_CONNECTION_ERROR_RATE_THRESHOLD: 5.0}
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=0)
+        tracker.update(timestamp=1010.0, requests=200, errors=10)
+        mock_config_entry.runtime_data.connection_rate_tracker = tracker
+
+        sensor = NeoPoolConnectionProblemBinarySensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.neopool_connection_problem"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor._handle_rate_update()
+        assert sensor._attr_is_on is True
+        sensor.async_write_ha_state.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_problem_off_when_rate_below_threshold(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """is_on stays False while rate is at/below threshold."""
+
+        mock_config_entry.options = {CONF_CONNECTION_ERROR_RATE_THRESHOLD: 5.0}
+        tracker = ConnectionRateTracker(window_seconds=60.0)
+        tracker.update(timestamp=1000.0, requests=100, errors=0)
+        tracker.update(timestamp=1010.0, requests=200, errors=2)  # 2 %
+        mock_config_entry.runtime_data.connection_rate_tracker = tracker
+
+        sensor = NeoPoolConnectionProblemBinarySensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.neopool_connection_problem"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor._handle_rate_update()
+        assert sensor._attr_is_on is False
+
+    @pytest.mark.asyncio
+    async def test_problem_holds_previous_state_on_none_rate(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Tracker rate=None (reboot / insufficient samples) → state unchanged."""
+
+        mock_config_entry.options = {CONF_CONNECTION_ERROR_RATE_THRESHOLD: 5.0}
+        # Empty tracker → rate is None
+        mock_config_entry.runtime_data.connection_rate_tracker = ConnectionRateTracker(60.0)
+
+        sensor = NeoPoolConnectionProblemBinarySensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.neopool_connection_problem"
+        sensor._attr_is_on = True  # pretend a previous state
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor._handle_rate_update()
+        # Previous state preserved, no state write
+        assert sensor._attr_is_on is True
+        sensor.async_write_ha_state.assert_not_called()
+
+    def test_threshold_read_from_options(self) -> None:
+        """Threshold should come from CONF_CONNECTION_ERROR_RATE_THRESHOLD option."""
+
+        entry = MagicMock()
+        entry.options = {CONF_CONNECTION_ERROR_RATE_THRESHOLD: 7.5}
+        entry.runtime_data.nodeid = "ABC"
+        sensor = NeoPoolConnectionProblemBinarySensor(entry)
+        assert sensor._threshold == 7.5
+
+        # Fallback to default when option absent
+        entry.options = {}
+        sensor = NeoPoolConnectionProblemBinarySensor(entry)
+        assert sensor._threshold == DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD

@@ -116,13 +116,15 @@
           "recovery_script": "Recovery script (optional)",
           "enable_repair_notification": "Enable repair notifications",
           "failures_threshold": "Failures before notification (1-10)",
-          "offline_timeout": "Offline timeout (seconds)"
+          "offline_timeout": "Offline timeout (seconds)",
+          "connection_error_rate_threshold": "Connection error-rate threshold (%)"
         },
         "data_description": {
           "recovery_script": "Script to run when device is offline for too long",
           "enable_repair_notification": "Create a repair issue when device goes offline",
           "failures_threshold": "Number of consecutive LWT offline messages before triggering notifications",
-          "offline_timeout": "How long the device must be offline before triggering notifications"
+          "offline_timeout": "How long the device must be offline before triggering notifications",
+          "connection_error_rate_threshold": "Modbus error percentage (over a rolling 10-minute window) above which `binary_sensor.connection_problem` turns on"
         }
       }
     }
@@ -220,6 +222,9 @@
       "connection_out_of_range": {
         "name": "Connection Out of Range"
       },
+      "connection_error_rate": {
+        "name": "Connection Error Rate"
+      },
       "system_id": {
         "name": "System ID"
       },
@@ -311,6 +316,9 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hydrolysis Redox Controlled"
+      },
+      "connection_problem": {
+        "name": "Connection Problem"
       }
     },
     "switch": {

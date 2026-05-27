@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 import json
 import logging
 from typing import TYPE_CHECKING, Any, overload
@@ -10,6 +11,85 @@ if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
+
+
+class ConnectionRateTracker:
+    """Sliding-window calculator for the NeoPool Modbus connection error rate.
+
+    Consumes the raw Tasmota counters from NeoPool.Connection.* in each
+    SENSOR telemetry message and reports the percentage of failed polls
+    within a configurable sliding window (default: 10 minutes).
+
+    Failures = MBNoResponse + DataOutOfRange. The first value is a Modbus
+    timeout (genuine connection failure); the second is a successful poll
+    that returned invalid data (data-quality issue). Both reflect "this
+    request didn't yield usable data" and are summed for the rate.
+
+    Tasmota-reboot handling: if the requests counter ever drops vs the
+    oldest sample in the window, the entire window is cleared — we don't
+    try to compute a rate that spans a counter reset. The next sample
+    starts a new accumulation.
+
+    The tracker is intentionally framework-agnostic — it holds state but
+    doesn't subscribe to MQTT or emit HA events. The NeoPool integration
+    feeds it from its existing SENSOR-watch callback and entities read
+    `rate` and `samples_count` to drive their own state.
+    """
+
+    def __init__(self, window_seconds: float = 600.0) -> None:
+        """Initialize the tracker with a sliding-window size in seconds."""
+        self._window_seconds = window_seconds
+        # Each sample: (timestamp, requests, errors)
+        self._samples: deque[tuple[float, int, int]] = deque()
+
+    @property
+    def window_seconds(self) -> float:
+        """Return the configured sliding-window size."""
+        return self._window_seconds
+
+    @property
+    def samples_count(self) -> int:
+        """Return the number of samples currently in the window."""
+        return len(self._samples)
+
+    def update(self, timestamp: float, requests: int, errors: int) -> None:
+        """Add a new sample at `timestamp` and prune older samples out of the window.
+
+        `requests` and `errors` are the absolute counter values from Tasmota at
+        the time of the sample (NOT deltas). The rate is computed as the delta
+        between the oldest and newest samples in the window.
+        """
+        cutoff = timestamp - self._window_seconds
+        while self._samples and self._samples[0][0] < cutoff:
+            self._samples.popleft()
+        self._samples.append((timestamp, requests, errors))
+
+    @property
+    def rate(self) -> float | None:
+        """Return the current error-rate percentage, or None if undeterminable.
+
+        Returns None when there are fewer than two samples in the window
+        (not enough data to compute a delta) or when a Tasmota-reboot was
+        detected within the window (request counter dropped). Returns 0.0
+        when there are samples but no requests happened in the window
+        (e.g. controller idle).
+        """
+        if len(self._samples) < 2:
+            return None
+
+        _, oldest_req, oldest_err = self._samples[0]
+        _, newest_req, newest_err = self._samples[-1]
+        req_delta = newest_req - oldest_req
+        err_delta = newest_err - oldest_err
+
+        if req_delta < 0:
+            # Tasmota rebooted within the window — the rate would be misleading.
+            # Drop the window so subsequent samples start a clean accumulation.
+            self._samples.clear()
+            return None
+        if req_delta == 0:
+            return 0.0
+        return err_delta / req_delta * 100
 
 
 def get_nested_value(data: dict[str, Any], path: str) -> Any | None:

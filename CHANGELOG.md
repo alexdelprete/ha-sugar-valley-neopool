@@ -63,6 +63,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   called at most once per interval. Available for future entities
   that would otherwise be too chatty.
 
+### Added
+
+- **`sensor.connection_error_rate`** — diagnostic sensor that reports
+  the rolling 10-minute Modbus failure rate
+  (`(no_response + out_of_range) / requests * 100`). The window is
+  sliding, not lifetime, so a recent issue is reflected within minutes
+  regardless of how big the lifetime denominator has grown. Returns
+  `unknown` until ≥2 samples have arrived inside the window, and clears +
+  restarts the window on a Tasmota reboot (so resets don't pollute the
+  rate).
+- **`binary_sensor.connection_problem`** — diagnostic binary sensor
+  (`device_class=problem`) that turns on when the rolling rate exceeds a
+  configurable threshold. Default: 5%. Configure via
+  **Settings → Devices & services → NeoPool → Configure → Connection
+  error-rate threshold**. Reads from the same shared
+  `ConnectionRateTracker` as the rate sensor, so both stay consistent.
+- **`connection_error_rate_threshold` option** in the options flow
+  (range 0.1–100%, step 0.1). Triggers a config-entry reload via
+  `OptionsFlowWithReload`, so the new threshold takes effect immediately
+  without a HA restart.
+
 ## [1.0.1] - 2026-05-27
 
 ### Added

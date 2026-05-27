@@ -20,10 +20,12 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 
+from . import connection_rate_signal
 from .const import (
     BOOST_MODE_MAP,
     FILTRATION_MODE_MAP,
@@ -66,7 +68,7 @@ from .const import (
     PH_PUMP_MAP,
     PH_STATE_MAP,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity
 from .helpers import (
     get_nested_value,
     parse_json_payload,
@@ -493,12 +495,16 @@ async def async_setup_entry(
     """Set up NeoPool sensors based on a config entry."""
     _LOGGER.debug("Setting up NeoPool sensors")
 
-    sensors: list[NeoPoolSensor] = []
+    sensors: list[SensorEntity] = []
     for description in SENSOR_DESCRIPTIONS:
         if isinstance(description, NeoPoolCumulativeSensorEntityDescription):
             sensors.append(NeoPoolCumulativeSensor(entry, description))
         else:
             sensors.append(NeoPoolSensor(entry, description))
+
+    # Connection error-rate sensor — sliding window, no JSON path of its own.
+    # Reads from the shared ConnectionRateTracker in runtime_data.
+    sensors.append(NeoPoolConnectionRateSensor(entry))
 
     async_add_entities(sensors)
     _LOGGER.info("Added %d NeoPool sensors", len(sensors))
@@ -668,3 +674,50 @@ class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
         self._last_raw = current
         self._cumulative += delta
         return self._cumulative
+
+
+class NeoPoolConnectionRateSensor(NeoPoolEntity, SensorEntity):
+    """Sliding-window error-rate sensor for the Modbus connection.
+
+    Reads from the shared `ConnectionRateTracker` in `runtime_data` which
+    the integration's central SENSOR watch feeds on every telemetry tick.
+    Reacts via a dispatcher signal, so we don't open a second MQTT
+    subscription just to compute the rate.
+    """
+
+    _attr_should_poll = False
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_translation_key = "connection_error_rate"
+    _attr_icon = "mdi:percent"
+    _attr_suggested_display_precision = 2
+
+    def __init__(self, config_entry: NeoPoolConfigEntry) -> None:
+        """Initialize the rate sensor."""
+        super().__init__(config_entry, "connection_error_rate")
+        self._attr_name = "Connection Error Rate"
+        self._attr_native_value: float | None = None
+        # Always available — the rate is undefined (None) until the window
+        # has accumulated >=2 samples, but the entity itself is live.
+        self._attr_available = True
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to the rate-updated dispatcher signal."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                connection_rate_signal(self._config_entry),
+                self._handle_rate_update,
+            )
+        )
+
+    @callback
+    def _handle_rate_update(self) -> None:
+        """Pull the latest rate from the shared tracker and write state."""
+        tracker = self._config_entry.runtime_data.connection_rate_tracker
+        if tracker is None:
+            return
+        self._attr_native_value = tracker.rate
+        self.async_write_ha_state()
