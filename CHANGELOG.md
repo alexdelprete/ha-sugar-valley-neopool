@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-27
+
 ### Changed
 
 - **Auto-disable entities for absent modules**: `sensor.chlorine_data`,
