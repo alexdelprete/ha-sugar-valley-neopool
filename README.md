@@ -486,20 +486,34 @@ script:
 
 ## Lovelace Dashboards
 
-Two example dashboards are provided under [`lovelace/`](lovelace/):
+Four example dashboards are provided under [`lovelace/`](lovelace/) —
+two for **fresh installs** and two for users who **migrated from the
+YAML package**.
 
-- [`ha_neopool_lovelace.yaml`](lovelace/ha_neopool_lovelace.yaml) — full-width
-  desktop layout using mushroom cards, mini-graph cards, and a 400-px
-  masonry layout. Mirrors the structure of the original YAML-package
-  dashboard, plus conditional sections for the chlorine, ionization, and
-  conductivity modules and tiles for the new diagnostic entities
-  (Controller Time, Sync Controller Time, Hydrolysis Redox Controlled,
-  extra relay states).
+**Fresh install** (default device name `NeoPool`):
+
+- [`ha_neopool_lovelace.yaml`](lovelace/ha_neopool_lovelace.yaml) —
+  full-width desktop layout (mushroom cards + masonry 400 px).
 - [`ha_neopool_lovelace_responsive.yaml`](lovelace/ha_neopool_lovelace_responsive.yaml)
-  — mobile-friendly layout using HA's built-in tile cards in a 320-px
-  masonry layout. Same coverage as the full-width version.
+  — mobile-friendly layout (tile cards + masonry 320 px).
 
-Both files are designed to be pasted under `views:` in an existing
+**Migrated from the YAML package** (entity IDs still `neopool_mqtt_*`):
+
+- [`ha_neopool_lovelace_migrated.yaml`](lovelace/ha_neopool_lovelace_migrated.yaml)
+  — full-width variant.
+- [`ha_neopool_lovelace_responsive_migrated.yaml`](lovelace/ha_neopool_lovelace_responsive_migrated.yaml)
+  — responsive variant.
+
+All four files cover the same scope (sensors, controls, setpoints,
+modules, relay states, power-unit voltages, connection diagnostics) and
+use **conditional cards** so the chlorine, ionization, and conductivity
+sections auto-hide when those modules aren't installed.
+
+The migrated variants additionally drop tiles for the three relay-state
+entities (pH / Filtration / Light) that the integration deletes during
+migration, and use the YAML package's entity-ID slugs.
+
+All files are designed to be pasted under `views:` in an existing
 dashboard's raw configuration.
 
 ### How to apply a dashboard
@@ -513,21 +527,20 @@ dashboard's raw configuration.
 
 ### Caveats
 
-- **Default device name assumed.** Entity IDs in the files start with
-  `neopool_` (the default device-name slug). If you set a custom name
-  during setup (e.g. "Pool Backyard"), find/replace `neopool_` with your
-  slug before applying.
-- **Migrated from the YAML package?** Your entity IDs are preserved as
-  `neopool_mqtt_*`, so the example files in this repo **will not match**.
-  Use the original lovelace files in the
-  [HA-NeoPool-MQTT-Package][package-repo] repository instead — they keep
-  working unchanged after migration.
+- **Device name assumption.** Each file assumes a specific entity-ID
+  prefix (`neopool_` for fresh installs, `neopool_mqtt_` for migrated
+  installs). If you set a custom device name during setup, find/replace
+  the prefix with your slug before applying.
+- **Not sure which file?** Open **Settings → Devices & services →
+  NeoPool → Entities** and look at one entity's ID. Starts with
+  `sensor.neopool_mqtt_…`? You migrated, use the `_migrated.yaml`
+  files. Starts with `sensor.neopool_…` (no `_mqtt_`)? Fresh install,
+  use the others.
 
 See [`lovelace/README.md`](lovelace/README.md) for the full custom-card
 dependency list, installation notes, and entity-ID reference.
 
 [hacs]: <https://hacs.xyz>
-[package-repo]: <https://github.com/alexdelprete/HA-NeoPool-MQTT-Package>
 
 ## MQTT Topic Configuration
 

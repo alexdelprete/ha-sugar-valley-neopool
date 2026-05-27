@@ -1,30 +1,65 @@
 # Lovelace dashboards
 
-Two example dashboards for the Sugar Valley NeoPool integration:
+Four example dashboards for the Sugar Valley NeoPool integration —
+two for **fresh installs** and two for users who **migrated from the
+YAML package**.
 
-- [`ha_neopool_lovelace.yaml`](ha_neopool_lovelace.yaml) — full-width
-  desktop layout using mushroom cards, mini-graph cards, and a 400-px
-  masonry layout. Mirrors the structure of the original YAML-package
-  dashboard, plus conditional sections for the chlorine, ionization, and
-  conductivity modules and tiles for the new diagnostic entities.
+## Which file should I use?
+
+**Fresh install** (default device name `NeoPool`):
+
+- [`ha_neopool_lovelace.yaml`](ha_neopool_lovelace.yaml) —
+  full-width desktop layout (mushroom + masonry 400 px).
 - [`ha_neopool_lovelace_responsive.yaml`](ha_neopool_lovelace_responsive.yaml)
-  — mobile-friendly layout using HA's built-in tile cards in a 320-px
-  masonry layout. Same coverage as the full-width version.
+  — mobile-friendly layout (tile + masonry 320 px).
 
-Both files are designed to be pasted as a **view** into an existing
-dashboard's `views:` array (they start with a top-level `- type:` /
-`- icon:`).
+**Migrated from the YAML package** (entity IDs still `neopool_mqtt_*`):
+
+- [`ha_neopool_lovelace_migrated.yaml`](ha_neopool_lovelace_migrated.yaml)
+  — full-width variant.
+- [`ha_neopool_lovelace_responsive_migrated.yaml`](ha_neopool_lovelace_responsive_migrated.yaml)
+  — responsive variant.
+
+Not sure which you are? Open **Settings → Devices & services →
+NeoPool → Entities** and look at one entity's ID. If it starts with
+`sensor.neopool_mqtt_…` you migrated; if it starts with
+`sensor.neopool_…` (no `_mqtt_`) you have a fresh install.
+
+## Coverage
+
+All four files cover the same scope:
+
+- Sensors: temperature, pH, redox, hydrolysis (%) + (g/h), hydrolysis
+  state / runtimes / polarity changes, pH state / pump, power-unit
+  voltages, connection diagnostics.
+- Controls: filtration switch, light switch, AUX1–AUX4 switches, clear
+  error button, sync controller time button.
+- Selects: filtration mode, filtration speed, boost mode.
+- Setpoints: pH min / max, redox, hydrolysis, chlorine, ionization.
+- Module presence and per-module relay states.
+- Conditional sections that auto-hide when the relevant module
+  (chlorine, ionization, conductivity) isn't installed.
+
+The **migrated** variants additionally:
+
+- Drop three relay-state tiles (pH / Filtration / Light) — the
+  integration deletes those entities during migration because the YAML
+  package's assumed fixed relay→function mapping was wrong (see
+  `const.py:YAML_ENTITIES_TO_DELETE`).
+- Use the package's entity-ID slugs (`hydrolysis_data`, `redox_data`,
+  `connection_system_requests`, etc.) instead of the integration's
+  default slugs (`hydrolysis`, `redox_orp`, `connection_requests`).
 
 ## Custom-card dependencies
 
-Install these via [HACS][hacs] before applying either dashboard.
+Install these via [HACS][hacs] before applying any dashboard.
 
-### Required by both files
+### Required by all four files
 
 - [mini-graph-card][mini-graph-card]
 - [masonry-layout (layout-card)][layout-card]
 
-### Required by the full-width dashboard only
+### Required by the full-width variants only
 
 - [mushroom cards][mushroom] — provides `mushroom-entity-card`,
   `mushroom-select-card`, `mushroom-number-card`
@@ -33,7 +68,7 @@ Install these via [HACS][hacs] before applying either dashboard.
 
 ### Optional icon packs
 
-Both dashboards reference icons from the `phu:` (Pool & Hot-tub
+All dashboards reference icons from the `phu:` (Pool & Hot-tub
 Utilities) and `si:` (Simple Icons) icon packs. They render with
 fallbacks if missing, but for fidelity install:
 
@@ -42,51 +77,53 @@ fallbacks if missing, but for fidelity install:
 
 ## Entity-ID assumptions
 
-Both files reference entities using the **default** device name of
+The **fresh-install** files (`ha_neopool_lovelace.yaml`,
+`ha_neopool_lovelace_responsive.yaml`) assume the default device name
 `NeoPool` — i.e. entity IDs like `sensor.neopool_water_temperature`,
-`switch.neopool_filtration`, etc.
+`switch.neopool_filtration`.
 
-If you set a different device name during setup (e.g. "Pool Backyard"),
-the integration will generate slugified entity IDs accordingly
-(`sensor.pool_backyard_water_temperature`). In that case, do a
-find/replace on `neopool_` in the YAML before applying it.
+The **migrated** files (`*_migrated.yaml`) assume the device name
+extracted during YAML-package migration is `Neopool Mqtt` — i.e.
+entity IDs like `sensor.neopool_mqtt_water_temperature`,
+`switch.neopool_mqtt_filtration_switch`. This is the standard
+auto-extracted name; if you changed it manually during setup, do a
+find/replace on `neopool_mqtt_` with your slug before applying.
 
 You can confirm the actual entity IDs your install generated under
 **Settings → Devices & services → NeoPool → Entities**.
-
-## Migrated from the YAML package?
-
-If you migrated to this integration from the
-[HA-NeoPool-MQTT-Package][package-repo], your entity IDs were preserved
-as the original `sensor.neopool_mqtt_*` pattern (so your existing
-history and automations keep working). The two example files in this
-folder will **not** match your entity IDs.
-
-Use the original lovelace files from the package repository instead:
-
-- [`ha_neopool_mqtt_lovelace.yaml`][upstream-full]
-- [`ha_neopool_mqtt_lovelace_responsive.yaml`][upstream-responsive]
-
-Those files continue to work unchanged for migrated installs.
 
 ## How to install
 
 1. Install the [custom cards][hacs] listed above.
 1. Open **Settings → Dashboards** → choose a dashboard → ⋮ → **Edit
    dashboard** → ⋮ → **Raw configuration editor**.
-1. Under `views:`, paste the contents of one of the two YAML files in
+1. Under `views:`, paste the contents of one of the four YAML files in
    this folder.
 1. Save. Hit ⋮ → **Refresh** if anything looks stale.
 
 To preview without editing your main dashboard, create a new dashboard
 first and paste the YAML there.
 
+## Note for migrated users on the upstream package's lovelace files
+
+The upstream [HA-NeoPool-MQTT-Package][package-repo] also ships
+[`ha_neopool_mqtt_lovelace.yaml`][upstream-full] and
+[`ha_neopool_mqtt_lovelace_responsive.yaml`][upstream-responsive].
+Those continue to work after migration but with two caveats:
+
+- Three tiles will show "entity not available" (pH / Filtration / Light
+  relay states are deleted during migration).
+- New entities the integration ships beyond the package (chlorine,
+  ionization, conductivity, sync time, etc.) won't appear.
+
+The `_migrated.yaml` files in this folder fix both gaps.
+
 ## Reporting issues
 
-If an entity ID in either file doesn't match what your install
-generated, please open an issue with the actual entity ID from your
-registry — we'll either fix the dashboard or document the device-name
-caveat better.
+If an entity ID in any file doesn't match what your install generated,
+please open an issue with the actual entity ID from your registry —
+we'll either fix the dashboard or document the device-name caveat
+better.
 
 [hacs]: <https://hacs.xyz>
 [mini-graph-card]: <https://github.com/kalkih/mini-graph-card>

@@ -1,0 +1,465 @@
+# yamllint disable
+#
+# Sugar Valley NeoPool — full-width Lovelace dashboard (MIGRATED users)
+#
+# This file is a Lovelace view fragment (pasted under `views:` in a
+# dashboard), not a standalone YAML document — yamllint is disabled for
+# the whole file because the top-level indentation is intentional.
+#
+# Companion to the alexdelprete/ha-sugar-valley-neopool custom integration.
+# Use this file ONLY IF you migrated from the YAML package
+# (HA-NeoPool-MQTT-Package) and your entity IDs are still `neopool_mqtt_*`.
+#
+# For a fresh install (default device name `NeoPool`), use
+# `ha_neopool_lovelace.yaml` instead.
+#
+# Compared to the upstream package's `ha_neopool_mqtt_lovelace.yaml`, this
+# file:
+# - drops three relay-state tiles (pH / Filtration / Light) that the
+#   integration deletes during migration (the YAML package's assumption of
+#   a fixed relay→function mapping was incorrect — see CLAUDE.md and
+#   const.py:YAML_ENTITIES_TO_DELETE);
+# - adds conditional sections for the chlorine, ionization, and
+#   conductivity modules so cards hide when those modules aren't installed;
+# - adds tiles for the new entities the integration ships beyond the
+#   package (sync controller time button, hydrolysis redox controlled,
+#   controller time sensor, extra relay-state binary sensors).
+
+  - icon: mdi:pool
+    type: custom:masonry-layout
+    layout:
+      width: 400
+    badges: []
+    cards:
+      - type: custom:stack-in-card
+        cards:
+          - type: custom:text-divider-row
+            text: Sugar Valley NeoPool
+          - type: grid
+            square: false
+            columns: 3
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_water_temperature
+                primary_info: state
+                secondary_info: name
+                name: Temperature
+                icon_color: blue
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_ph_data
+                primary_info: state
+                secondary_info: name
+                name: pH
+                icon_color: green
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_redox_data
+                primary_info: state
+                secondary_info: name
+                name: Redox
+                icon_color: cyan
+          - type: custom:mini-graph-card
+            entities:
+              - entity: sensor.neopool_mqtt_water_temperature
+                name: Temperature
+                color: var(--blue-color)
+              - entity: sensor.neopool_mqtt_ph_data
+                name: pH
+                color: var(--green-color)
+                y_axis: secondary
+            hours_to_show: 24
+            line_width: 3
+            font_size: 50
+            animate: true
+            show:
+              name: false
+              icon: false
+              state: false
+              legend: false
+              fill: fade
+          - type: custom:mini-graph-card
+            entities:
+              - entity: sensor.neopool_mqtt_redox_data
+                name: Redox
+                color: var(--cyan-color)
+            hours_to_show: 24
+            line_width: 3
+            font_size: 50
+            animate: true
+            show:
+              name: false
+              icon: false
+              state: false
+              legend: false
+              fill: fade
+          - type: custom:text-divider-row
+            text: Main Controls
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_filtration_switch
+                icon: phu:pool-filter
+                name: Filtration
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_light_switch
+                icon: mdi:light-recessed
+                name: Light
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+              - type: custom:mushroom-entity-card
+                entity: button.neopool_mqtt_clear_error_state
+                name: Clear Errors
+                icon: mdi:brush-variant
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_filtration_mode
+                name: Mode
+                icon: mdi:auto-mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_filtration_speed
+                name: Speed
+                icon: si:speedtest
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_boost_mode
+                icon: mdi:lightning-bolt-outline
+                name: Boost
+          - type: custom:text-divider-row
+            text: AUX Relays Switch
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_aux1_switch
+                name: Aux1
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_aux2_switch
+                name: Aux2
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_aux3_switch
+                name: Aux3
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_aux4_switch
+                name: Aux4
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+          - type: custom:text-divider-row
+            text: Setpoints
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_hydrolysis_setpoint
+                name: Hydrolysis
+                icon: phu:pool-clorine
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_redox_setpoint
+                name: Redox
+                icon: phu:pool-electric-lvl
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_ph_min
+                name: pH Min.
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_ph_max
+                name: pH Max.
+                layout: horizontal
+                display_mode: slider
+              # Conditional setpoints — only render when the relevant module is installed
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_chlorine_module
+                    state: "on"
+                card:
+                  type: custom:mushroom-number-card
+                  entity: number.neopool_mqtt_chlorine_setpoint
+                  name: Chlorine
+                  icon: mdi:test-tube
+                  layout: horizontal
+                  display_mode: slider
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_ionization_module
+                    state: "on"
+                card:
+                  type: custom:mushroom-number-card
+                  entity: number.neopool_mqtt_ionization_setpoint
+                  name: Ionization
+                  icon: mdi:atom
+                  layout: horizontal
+                  display_mode: slider
+      - type: custom:stack-in-card
+        cards:
+          - type: custom:text-divider-row
+            text: Hydrolysis Module Info
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_state
+                name: Hydro State
+                icon: mdi:water-sync
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_data_g_h
+                name: Hydro Production
+                icon: phu:pool-clorine
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_data
+                name: Hydro Production %
+                icon: phu:pool-clorine
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_hydrolysis_low_production
+                icon: mdi:alarm-light-outline
+                name: Low Production
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_hydrolysis_water_flow
+                name: Water Flow
+                icon: mdi:air-filter
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_polarity_changes
+                name: Polarity Changes
+                icon: mdi:swap-horizontal-circle-outline
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_total
+                name: Tot. Runtime
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_pol1
+                name: Pol1 Runtime
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_pol2
+                name: Pol2 Runtime
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_ph_state
+                name: pH State
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_ph_pump
+                name: pH Pump
+                icon: phu:pool-filter
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_hydrolysis_cover
+                name: Cover
+                icon: mdi:window-shutter-cog
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_hydrolysis_redox_controlled
+                name: Redox Ctrl
+                icon: mdi:auto-mode
+          # Conditional: Chlorine module
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.neopool_mqtt_chlorine_module
+                state: "on"
+            card:
+              type: custom:stack-in-card
+              cards:
+                - type: custom:text-divider-row
+                  text: Chlorine Module
+                - type: grid
+                  columns: 2
+                  square: false
+                  cards:
+                    - type: custom:mushroom-entity-card
+                      entity: sensor.neopool_mqtt_chlorine
+                      name: Chlorine
+                      icon: mdi:test-tube
+                    - type: custom:mushroom-entity-card
+                      entity: binary_sensor.neopool_mqtt_relay_chlorine_state
+                      name: Relay
+                      icon: mdi:electric-switch
+          # Conditional: Ionization module
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.neopool_mqtt_ionization_module
+                state: "on"
+            card:
+              type: custom:stack-in-card
+              cards:
+                - type: custom:text-divider-row
+                  text: Ionization Module
+                - type: grid
+                  columns: 1
+                  square: false
+                  cards:
+                    - type: custom:mushroom-entity-card
+                      entity: sensor.neopool_mqtt_ionization
+                      name: Ionization
+                      icon: mdi:atom
+          # Conditional: Conductivity module
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.neopool_mqtt_conductivity_module
+                state: "on"
+            card:
+              type: custom:stack-in-card
+              cards:
+                - type: custom:text-divider-row
+                  text: Conductivity Module
+                - type: grid
+                  columns: 2
+                  square: false
+                  cards:
+                    - type: custom:mushroom-entity-card
+                      entity: sensor.neopool_mqtt_conductivity
+                      name: Conductivity
+                      icon: mdi:water-percent
+                    - type: custom:mushroom-entity-card
+                      entity: binary_sensor.neopool_mqtt_relay_conductivity_state
+                      name: Relay
+                      icon: mdi:electric-switch
+          - type: custom:text-divider-row
+            text: Modules Detected
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_ph_module
+                name: pH
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_redox_module
+                name: Redox
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_hydrolysis_module
+                name: Hydrolysis
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_chlorine_module
+                name: Chlorine
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_conductivity_module
+                name: Conductivity
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_ionization_module
+                name: Ionization
+          # Relay-state tiles: only Acid is kept from the package layout
+          # (pH/Filtration/Light state tiles are removed — the integration
+          # deletes those entities during migration because the YAML
+          # package's assumed fixed relay→function mapping was wrong).
+          # All other relays below are NEW entities added by the integration.
+          - type: custom:text-divider-row
+            text: Relays State
+          - type: grid
+            columns: 4
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_acid_state
+                name: Acid
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_base_state
+                name: Base
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_redox_state
+                name: Redox
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_heating_state
+                name: Heating
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_uv_state
+                name: UV
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_relay_valve_state
+                name: Valve
+          - type: custom:text-divider-row
+            text: Power Unit Info
+          - square: false
+            type: grid
+            columns: 4
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_powerunit_5v
+                name: 5V
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_powerunit_12v
+                name: 12V
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_powerunit_24_30v
+                name: 24V
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_powerunit_4_20ma
+                name: 4mA
+          - type: custom:text-divider-row
+            text: Controller
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_controller_time
+                name: Controller Time
+                icon: mdi:clock-outline
+              - type: custom:mushroom-entity-card
+                entity: button.neopool_mqtt_sync_controller_time
+                name: Sync Time
+                icon: mdi:clock-check-outline
+                tap_action:
+                  action: toggle
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
+          - type: custom:text-divider-row
+            text: Connection Statistics
+          - square: false
+            type: grid
+            columns: 4
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_connection_system_requests
+                name: Requests
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_connection_system_responses
+                name: Responses
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_connection_missed_system_responses
+                name: Missed
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_connection_out_of_range_system_responses
+                name: Invalid

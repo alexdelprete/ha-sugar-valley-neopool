@@ -1,0 +1,416 @@
+# yamllint disable
+#
+# Sugar Valley NeoPool — responsive Lovelace dashboard (MIGRATED users)
+#
+# This file is a Lovelace view fragment (pasted under `views:` in a
+# dashboard), not a standalone YAML document — yamllint is disabled for
+# the whole file because the top-level indentation is intentional.
+#
+# Companion to the alexdelprete/ha-sugar-valley-neopool custom integration.
+# Use this file ONLY IF you migrated from the YAML package
+# (HA-NeoPool-MQTT-Package) and your entity IDs are still `neopool_mqtt_*`.
+#
+# For a fresh install (default device name `NeoPool`), use
+# `ha_neopool_lovelace_responsive.yaml` instead.
+#
+# Compared to the upstream package's `ha_neopool_mqtt_lovelace_responsive.yaml`:
+# - drops three relay-state tiles (pH / Filtration / Light) that the
+#   integration deletes during migration;
+# - adds conditional sections for chlorine, ionization, and conductivity
+#   modules so cards hide when those modules aren't installed;
+# - adds tiles for the new entities the integration ships beyond the
+#   package (sync controller time button, hydrolysis redox controlled,
+#   controller time sensor, extra relay-state binary sensors).
+
+  - type: custom:masonry-layout
+    icon: mdi:pool
+    layout:
+      width: 320
+    cards:
+      - type: vertical-stack
+        title: Sugar Valley NeoPool
+        cards:
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_water_temperature
+                name: Temperature
+                color: blue
+              - type: tile
+                entity: sensor.neopool_mqtt_ph_data
+                name: pH
+                color: green
+          - type: custom:mini-graph-card
+            entities:
+              - entity: sensor.neopool_mqtt_water_temperature
+                name: Temperature
+                color: var(--blue-color)
+              - entity: sensor.neopool_mqtt_ph_data
+                name: pH
+                color: var(--green-color)
+                y_axis: secondary
+            hours_to_show: 24
+            line_width: 3
+            font_size: 50
+            animate: true
+            show:
+              name: false
+              icon: false
+              state: false
+              legend: true
+              fill: fade
+          - type: tile
+            entity: sensor.neopool_mqtt_redox_data
+            name: Redox
+            color: cyan
+          - type: custom:mini-graph-card
+            entities:
+              - entity: sensor.neopool_mqtt_redox_data
+                name: Redox
+                color: var(--cyan-color)
+            hours_to_show: 24
+            line_width: 3
+            font_size: 50
+            animate: true
+            show:
+              name: false
+              icon: false
+              state: false
+              legend: true
+              fill: fade
+      - type: vertical-stack
+        title: Main Controls
+        cards:
+          - type: horizontal-stack
+            cards:
+              - show_name: true
+                show_icon: true
+                type: button
+                show_state: true
+                tap_action:
+                  action: toggle
+                entity: switch.neopool_mqtt_filtration_switch
+                icon: phu:pool-filter
+                name: Filtration
+                icon_height: 60px
+              - type: tile
+                entity: select.neopool_mqtt_filtration_mode
+                name: Mode
+                icon: mdi:auto-mode
+                hide_state: true
+                features:
+                  - type: select-options
+          - type: horizontal-stack
+            cards:
+              - features:
+                  - type: select-options
+                type: tile
+                entity: select.neopool_mqtt_filtration_speed
+                name: Speed
+                icon: mdi:speedometer
+                hide_state: true
+              - type: tile
+                entity: select.neopool_mqtt_boost_mode
+                icon: mdi:lightning-bolt-outline
+                name: Boost
+                hide_state: true
+                features:
+                  - type: select-options
+          - type: horizontal-stack
+            cards:
+              - type: tile
+                entity: switch.neopool_mqtt_light_switch
+                icon: mdi:light-recessed
+                name: Light
+              - type: tile
+                entity: button.neopool_mqtt_clear_error_state
+                name: Clear Errors
+                icon: mdi:brush-variant
+      - type: vertical-stack
+        title: Setpoints
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: number.neopool_mqtt_ph_min
+                name: pH Min
+                features:
+                  - style: slider
+                    type: numeric-input
+              - type: tile
+                entity: number.neopool_mqtt_ph_max
+                name: pH Max
+                features:
+                  - style: slider
+                    type: numeric-input
+              - type: tile
+                entity: number.neopool_mqtt_redox_setpoint
+                name: Redox
+                icon: phu:pool-electric-lvl
+                features:
+                  - style: slider
+                    type: numeric-input
+              - type: tile
+                entity: number.neopool_mqtt_hydrolysis_setpoint
+                name: Hydrolysis
+                icon: phu:pool-clorine
+                features:
+                  - style: slider
+                    type: numeric-input
+              # Conditional setpoints — only render when the relevant module is installed
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_chlorine_module
+                    state: "on"
+                card:
+                  type: tile
+                  entity: number.neopool_mqtt_chlorine_setpoint
+                  name: Chlorine
+                  icon: mdi:test-tube
+                  features:
+                    - style: slider
+                      type: numeric-input
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_ionization_module
+                    state: "on"
+                card:
+                  type: tile
+                  entity: number.neopool_mqtt_ionization_setpoint
+                  name: Ionization
+                  icon: mdi:atom
+                  features:
+                    - style: slider
+                      type: numeric-input
+      - type: vertical-stack
+        title: Hydrolysis Module Info
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_state
+                name: State
+                icon: mdi:water-sync
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_data
+                name: Production
+                icon: phu:pool-clorine
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_data_g_h
+                name: Production g/h
+                icon: phu:pool-clorine
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_hydrolysis_low_production
+                icon: mdi:alert
+                name: Production Low
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_hydrolysis_water_flow
+                name: Water Flow
+                icon: mdi:waves-arrow-right
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_total
+                name: Runtime Total
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_polarity_changes
+                name: Polarity Changes
+                icon: mdi:swap-horizontal-circle-outline
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_pol1
+                name: Runtime Pol1
+              - type: tile
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_pol2
+                name: Runtime Pol2
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_hydrolysis_cover
+                name: Cover
+                icon: mdi:window-shutter
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_hydrolysis_redox_controlled
+                name: Redox Ctrl
+                icon: mdi:auto-mode
+      - type: vertical-stack
+        title: pH Module Info
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_ph_state
+                name: Controller
+              - type: tile
+                entity: sensor.neopool_mqtt_ph_pump
+                name: Pump
+                icon: phu:pool-filter
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_ph_tank_level
+                name: Tank
+                icon: mdi:cup
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_ph_fl1
+                name: Flow Alarm
+                icon: mdi:waves-arrow-right
+      # Conditional: Chlorine module
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.neopool_mqtt_chlorine_module
+            state: "on"
+        card:
+          type: vertical-stack
+          title: Chlorine Module
+          cards:
+            - type: grid
+              columns: 2
+              square: false
+              cards:
+                - type: tile
+                  entity: sensor.neopool_mqtt_chlorine
+                  name: Chlorine
+                  icon: mdi:test-tube
+                - type: tile
+                  entity: binary_sensor.neopool_mqtt_relay_chlorine_state
+                  name: Relay
+                  icon: mdi:electric-switch
+      # Conditional: Ionization module
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.neopool_mqtt_ionization_module
+            state: "on"
+        card:
+          type: vertical-stack
+          title: Ionization Module
+          cards:
+            - type: tile
+              entity: sensor.neopool_mqtt_ionization
+              name: Ionization
+              icon: mdi:atom
+      # Conditional: Conductivity module
+      - type: conditional
+        conditions:
+          - entity: binary_sensor.neopool_mqtt_conductivity_module
+            state: "on"
+        card:
+          type: vertical-stack
+          title: Conductivity Module
+          cards:
+            - type: grid
+              columns: 2
+              square: false
+              cards:
+                - type: tile
+                  entity: sensor.neopool_mqtt_conductivity
+                  name: Conductivity
+                  icon: mdi:water-percent
+                - type: tile
+                  entity: binary_sensor.neopool_mqtt_relay_conductivity_state
+                  name: Relay
+                  icon: mdi:electric-switch
+      - type: vertical-stack
+        title: Modules Detected
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_ph_module
+                name: pH
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_redox_module
+                name: Redox
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_hydrolysis_module
+                name: Hydrolysis
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_chlorine_module
+                name: Chlorine
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_conductivity_module
+                name: Conductivity
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_ionization_module
+                name: Ionization
+      # Relay-state tiles: only Acid kept from package layout (pH / Filtration / Light
+      # state entities are deleted during migration). All others below are new entities.
+      - type: vertical-stack
+        title: Relays State
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_acid_state
+                name: Acid
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_base_state
+                name: Base
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_redox_state
+                name: Redox
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_heating_state
+                name: Heating
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_uv_state
+                name: UV
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_relay_valve_state
+                name: Valve
+      - type: vertical-stack
+        title: AUX Relays Switch
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: switch.neopool_mqtt_aux1_switch
+                name: Aux1
+              - type: tile
+                entity: switch.neopool_mqtt_aux2_switch
+                name: Aux2
+              - type: tile
+                entity: switch.neopool_mqtt_aux3_switch
+                name: Aux3
+              - type: tile
+                entity: switch.neopool_mqtt_aux4_switch
+                name: Aux4
+      - type: vertical-stack
+        title: Power Unit Info
+        cards:
+          - square: false
+            type: grid
+            columns: 2
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_powerunit_5v
+                name: 5 V
+              - type: tile
+                entity: sensor.neopool_mqtt_powerunit_12v
+                name: 12 V
+              - type: tile
+                entity: sensor.neopool_mqtt_powerunit_24_30v
+                name: 24 V
+              - type: tile
+                entity: sensor.neopool_mqtt_powerunit_4_20ma
+                name: 4 mA Source
+      - type: vertical-stack
+        title: Controller
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_controller_time
+                name: Controller Time
+                icon: mdi:clock-outline
+              - type: tile
+                entity: button.neopool_mqtt_sync_controller_time
+                name: Sync Time
+                icon: mdi:clock-check-outline

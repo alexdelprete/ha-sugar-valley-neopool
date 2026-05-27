@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Migrated-user Lovelace dashboards**: Two additional example dashboards
+  under [`lovelace/`](lovelace/) targeting users who migrated from the YAML
+  package — `ha_neopool_lovelace_migrated.yaml` (full-width) and
+  `ha_neopool_lovelace_responsive_migrated.yaml` (responsive). They use the
+  preserved `neopool_mqtt_*` entity IDs, drop tiles for the three relay-state
+  entities that migration deletes, and add tiles for the new entities the
+  integration ships beyond the package (chlorine, ionization, conductivity,
+  sync controller time button, hydrolysis redox controlled, extra relay
+  states). See [`lovelace/README.md`](lovelace/README.md) for the
+  fresh-vs-migrated selection guide.
+
 ## [1.0.1] - 2026-05-27
 
 ### Added
