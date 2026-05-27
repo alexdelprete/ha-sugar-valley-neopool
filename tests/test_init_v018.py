@@ -25,9 +25,11 @@ from custom_components.sugar_valley_neopool import (
     NeoPoolData,
     _auto_acquire_dual_nodeids,
     _cleanup_removed_entities,
+    _disable_unavailable_mode_entities,
     _disable_unavailable_module_entities,
     _disable_unavailable_relay_entities,
     _migrate_to_canonical_nodeid,
+    _refresh_entity_disable_state,
     _update_device_registry_metadata,
     _wait_for_any_nodeid,
     async_fetch_device_metadata,
@@ -533,6 +535,238 @@ class TestDisableUnavailableModuleEntities:
         e = entity_registry.async_get("sensor.neopool_chlorine_data")
         assert e is not None
         assert e.disabled_by == er.RegistryEntryDisabler.USER
+
+
+# ---------------------------------------------------------------------------
+# _disable_unavailable_mode_entities
+# ---------------------------------------------------------------------------
+class TestDisableUnavailableModeEntities:
+    """Tests for _disable_unavailable_mode_entities (hydrolysis g/h entities)."""
+
+    def test_no_unit_data_skips(self, hass: HomeAssistant) -> None:
+        """No unit data and device unavailable → returns without changes."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            hydrolysis_unit=None,
+            available=False,
+        )
+        _disable_unavailable_mode_entities(hass, entry)  # must not raise
+
+    def test_unknown_unit_skips(self, hass: HomeAssistant) -> None:
+        """Unrecognized unit string → don't touch anything (safe default)."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            hydrolysis_unit="weird",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_hydrolysis_data",
+            config_entry=entry,
+            suggested_object_id="neopool_hydrolysis_data",
+        )
+        _disable_unavailable_mode_entities(hass, entry)
+        e = entity_registry.async_get("sensor.neopool_hydrolysis_data")
+        assert e is not None
+        assert e.disabled_by is None  # untouched
+
+    def test_disables_gh_entities_in_percent_mode(self, hass: HomeAssistant) -> None:
+        """In % mode, the 3 g/h-labeled sensors get disabled by INTEGRATION."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            hydrolysis_unit="%",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        for key in ["hydrolysis_data", "hydrolysis_setpoint_gh", "hydrolysis_max"]:
+            entity_registry.async_get_or_create(
+                domain="sensor",
+                platform=DOMAIN,
+                unique_id=f"neopool_mqtt_ABC123_{key}",
+                config_entry=entry,
+                suggested_object_id=f"neopool_{key}",
+            )
+
+        _disable_unavailable_mode_entities(hass, entry)
+
+        for key in ["hydrolysis_data", "hydrolysis_setpoint_gh", "hydrolysis_max"]:
+            e = entity_registry.async_get(f"sensor.neopool_{key}")
+            assert e is not None, key
+            assert e.disabled_by == er.RegistryEntryDisabler.INTEGRATION, key
+
+    def test_reenables_gh_entities_in_gh_mode(self, hass: HomeAssistant) -> None:
+        """Flipping back to g/h re-enables previously INTEGRATION-disabled g/h sensors."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            hydrolysis_unit="g/h",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        created = entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_hydrolysis_data",
+            config_entry=entry,
+            suggested_object_id="neopool_hydrolysis_data",
+        )
+        entity_registry.async_update_entity(
+            created.entity_id,
+            disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+        )
+        _disable_unavailable_mode_entities(hass, entry)
+        e = entity_registry.async_get("sensor.neopool_hydrolysis_data")
+        assert e is not None
+        assert e.disabled_by is None
+
+    def test_does_not_reenable_user_disabled(self, hass: HomeAssistant) -> None:
+        """User-disabled g/h entities stay disabled even when controller is in g/h mode."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            hydrolysis_unit="g/h",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        created = entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_hydrolysis_max",
+            config_entry=entry,
+            suggested_object_id="neopool_hydrolysis_max",
+        )
+        entity_registry.async_update_entity(
+            created.entity_id,
+            disabled_by=er.RegistryEntryDisabler.USER,
+        )
+        _disable_unavailable_mode_entities(hass, entry)
+        e = entity_registry.async_get("sensor.neopool_hydrolysis_max")
+        assert e is not None
+        assert e.disabled_by == er.RegistryEntryDisabler.USER
+
+
+# ---------------------------------------------------------------------------
+# _refresh_entity_disable_state
+# ---------------------------------------------------------------------------
+class TestRefreshEntityDisableState:
+    """Tests for _refresh_entity_disable_state (orchestrator + reload trigger)."""
+
+    def test_no_changes_no_reload(self, hass: HomeAssistant) -> None:
+        """Steady-state: nothing transitions to enabled, no reload scheduled."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules={"Hydrolysis"},
+            available_relays={"Acid"},
+            hydrolysis_unit="g/h",
+            available=True,
+        )
+        # Pre-create one of each managed entity in the "correct" state
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_relay_acid_state",
+            config_entry=entry,
+            suggested_object_id="neopool_relay_acid",
+        )
+
+        with patch.object(hass.config_entries, "async_reload", AsyncMock()) as mock_reload:
+            _refresh_entity_disable_state(hass, entry)
+
+        mock_reload.assert_not_called()
+
+    def test_disable_only_no_reload(self, hass: HomeAssistant) -> None:
+        """Disable-direction transitions don't trigger a reload."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules=set(),  # Chlorine module not installed
+            available_relays={"Acid"},
+            hydrolysis_unit="g/h",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_chlorine_data",
+            config_entry=entry,
+            suggested_object_id="neopool_chlorine_data",
+        )  # currently enabled
+
+        with patch.object(hass.config_entries, "async_reload", AsyncMock()) as mock_reload:
+            _refresh_entity_disable_state(hass, entry)
+
+        # Entity got disabled, but no reload needed
+        e = entity_registry.async_get("sensor.neopool_chlorine_data")
+        assert e is not None
+        assert e.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        mock_reload.assert_not_called()
+
+    def test_enable_triggers_reload(self, hass: HomeAssistant) -> None:
+        """INTEGRATION→None transition triggers a config-entry reload."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules={"Chlorine"},  # module now present
+            available_relays={"Acid"},
+            hydrolysis_unit="g/h",
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        created = entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_chlorine_data",
+            config_entry=entry,
+            suggested_object_id="neopool_chlorine_data",
+        )
+        entity_registry.async_update_entity(
+            created.entity_id,
+            disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+        )
+
+        with patch.object(hass.config_entries, "async_reload", AsyncMock()) as mock_reload:
+            _refresh_entity_disable_state(hass, entry)
+
+        # Entity re-enabled, reload scheduled
+        e = entity_registry.async_get("sensor.neopool_chlorine_data")
+        assert e is not None
+        assert e.disabled_by is None
+        # async_reload was scheduled via async_create_task — give the loop a tick
+        # The mock should have been called once with entry.entry_id
+        assert mock_reload.call_count >= 1
+        mock_reload.assert_any_call(entry.entry_id)
 
 
 # ---------------------------------------------------------------------------

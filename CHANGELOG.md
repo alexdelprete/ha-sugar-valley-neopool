@@ -20,6 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was previously disabled by the integration, it gets re-enabled.
   User-disabled entities are left alone. Mirrors the existing behaviour
   of `_disable_unavailable_relay_entities` for relay binary sensors.
+- **Auto-disable g/h hydrolysis entities in % display mode**: when
+  `NeoPool.Hydrolysis.Unit` is `"%"`, the three g/h-labeled sensors
+  (`sensor.hydrolysis_data` g/h, `sensor.hydrolysis_setpoint_gh`,
+  `sensor.hydrolysis_max`) are auto-disabled, since the absolute g/h
+  value is unrecoverable from the telemetry in that mode. Re-enabled
+  automatically when the controller is flipped back to g/h.
+- **Dynamic refresh of disable state**: the integration now subscribes
+  persistently to SENSOR telemetry and re-evaluates the disable rules
+  whenever `NeoPool.Modules`, `NeoPool.Relay`, or
+  `NeoPool.Hydrolysis.Unit` changes vs the last seen value. If any
+  previously-disabled entity needs to be re-enabled (e.g. user installs
+  a new module mid-session or flips the display unit), the integration
+  schedules an automatic config-entry reload so the entity actually
+  materializes. Disable-direction transitions don't trigger a reload.
+- **State-change logs upgraded to WARNING**: entity enable/disable
+  events are now logged at WARNING level (previously INFO) so they're
+  visible without enabling debug logging.
 
 ## [1.0.1] - 2026-05-27
 

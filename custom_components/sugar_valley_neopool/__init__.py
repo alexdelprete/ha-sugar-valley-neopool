@@ -77,6 +77,9 @@ class NeoPoolData:
     # Module keys reported as installed (value == 1) in NeoPool.Modules; used to
     # auto-disable sensor/number entities for modules the controller doesn't have.
     available_modules: set[str] = field(default_factory=set)
+    # Hydrolysis.Unit ("%" or "g/h"); used to auto-disable g/h-labeled entities
+    # when the controller is in % mode. None means we haven't seen it yet.
+    hydrolysis_unit: str | None = None
     device_ip: str | None = None  # From Status 5 network info
 
 
@@ -149,6 +152,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Disable sensor/number entities for modules the controller doesn't have
     _disable_unavailable_module_entities(hass, entry)
 
+    # Disable g/h-labeled entities when the controller is in % display mode
+    _disable_unavailable_mode_entities(hass, entry)
+
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _LOGGER.debug("Platform setup complete for %d platforms", len(PLATFORMS))
@@ -175,6 +181,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
         # Clean up orphaned YAML entities that can't be migrated (e.g., binary sensors
         # replaced by switches). This runs only when entity_id_mapping exists (YAML migration).
         await _cleanup_orphaned_yaml_entities(hass, entry)
+
+    # Subscribe to SENSOR telemetry to dynamically react to module/relay/mode
+    # changes (e.g. user installs a module, flips display unit). On change,
+    # idempotently flips entity disabled_by flags and schedules a reload if any
+    # entity needs to be (re-)materialized.
+    await _setup_dynamic_disable_watch(hass, entry)
 
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
@@ -665,7 +677,7 @@ def _disable_unavailable_relay_entities(hass: HomeAssistant, entry: NeoPoolConfi
                 entity_id,
                 disabled_by=er.RegistryEntryDisabler.INTEGRATION,
             )
-            _LOGGER.info(
+            _LOGGER.warning(
                 "Disabled relay entity %s (%s not assigned on controller)",
                 entity_id,
                 relay_name,
@@ -676,7 +688,7 @@ def _disable_unavailable_relay_entities(hass: HomeAssistant, entry: NeoPoolConfi
                 entity_id,
                 disabled_by=None,
             )
-            _LOGGER.info(
+            _LOGGER.warning(
                 "Re-enabled relay entity %s (%s is assigned on controller)",
                 entity_id,
                 relay_name,
@@ -738,18 +750,213 @@ def _disable_unavailable_module_entities(hass: HomeAssistant, entry: NeoPoolConf
                     entity_id,
                     disabled_by=er.RegistryEntryDisabler.INTEGRATION,
                 )
-                _LOGGER.info(
+                _LOGGER.warning(
                     "Disabled module entity %s (%s module not installed)",
                     entity_id,
                     module_name,
                 )
             elif is_present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
                 entity_registry.async_update_entity(entity_id, disabled_by=None)
-                _LOGGER.info(
+                _LOGGER.warning(
                     "Re-enabled module entity %s (%s module is installed)",
                     entity_id,
                     module_name,
                 )
+
+
+# (domain, entity_key) entries that go unavailable when the controller's
+# hydrolysis display unit is "%": the JSON values exist but in % mode the
+# absolute g/h amount is unrecoverable (Max collapses to 100).
+_MODE_DEPENDENT_GH_ENTITIES: Final[list[tuple[str, str]]] = [
+    ("sensor", "hydrolysis_data"),  # the g/h sensor
+    ("sensor", "hydrolysis_setpoint_gh"),
+    ("sensor", "hydrolysis_max"),
+]
+
+
+@callback
+def _disable_unavailable_mode_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Disable g/h-labeled entities when the controller is in % display mode.
+
+    Uses hydrolysis_unit from SENSOR payload (NeoPool.Hydrolysis.Unit).
+    Only acts on entities whose disabled_by is None or INTEGRATION — user-disabled
+    entities are left alone. Re-enables INTEGRATION-disabled entities when the
+    unit flips back to "g/h".
+    """
+    unit = entry.runtime_data.hydrolysis_unit
+    if unit is None and not entry.runtime_data.available:
+        # No SENSOR data received yet — can't determine display unit
+        _LOGGER.debug("No hydrolysis unit available, skipping mode-dependent entity management")
+        return
+
+    # Treat unknown unit as "we don't know" → don't disable; only act on confirmed "%"
+    if unit not in ("%", "g/h"):
+        return
+
+    is_percent_mode = unit == "%"
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    for domain, entity_key in _MODE_DEPENDENT_GH_ENTITIES:
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+        if not entity_id:
+            continue
+
+        entity_entry = entity_registry.async_get(entity_id)
+        if not entity_entry:
+            continue
+
+        if is_percent_mode and entity_entry.disabled_by is None:
+            entity_registry.async_update_entity(
+                entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+            _LOGGER.warning(
+                "Disabled mode entity %s (controller is in %% mode)",
+                entity_id,
+            )
+        elif (
+            not is_percent_mode and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        ):
+            entity_registry.async_update_entity(entity_id, disabled_by=None)
+            _LOGGER.warning(
+                "Re-enabled mode entity %s (controller is in g/h mode)",
+                entity_id,
+            )
+
+
+@callback
+def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Re-evaluate all dynamic entity disable rules; trigger reload on enable.
+
+    Runs the three disable management functions (relays, modules, hydrolysis
+    unit mode) atomically. If any entity transitions from INTEGRATION-disabled
+    to enabled, schedules a config-entry reload so the re-enabled entities
+    actually materialize (HA does NOT create entities on registry flag flip
+    alone — a reload is required).
+
+    Disable transitions (None → INTEGRATION) don't need a reload; the entity
+    just gets hidden from the UI and cleaned up on the next natural reload.
+    """
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    # Collect entity_ids for everything we manage across the three functions
+    managed_keys = set()
+    for relay_key in [
+        "relay_acid_state",
+        "relay_base_state",
+        "relay_redox_state",
+        "relay_chlorine_state",
+        "relay_conductivity_state",
+        "relay_heating_state",
+        "relay_uv_state",
+        "relay_valve_state",
+    ]:
+        managed_keys.add(("binary_sensor", relay_key))
+    for entries in _MODULE_ENTITY_MAP.values():
+        managed_keys.update(entries)
+    managed_keys.update(_MODE_DEPENDENT_GH_ENTITIES)
+
+    # Snapshot which managed entities are currently INTEGRATION-disabled
+    was_disabled = set()
+    for domain, key in managed_keys:
+        unique_id = f"neopool_mqtt_{nodeid}_{key}"
+        eid = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+        if not eid:
+            continue
+        e = entity_registry.async_get(eid)
+        if e and e.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            was_disabled.add(eid)
+
+    # Run all three management functions (each is idempotent)
+    _disable_unavailable_relay_entities(hass, entry)
+    _disable_unavailable_module_entities(hass, entry)
+    _disable_unavailable_mode_entities(hass, entry)
+
+    # Detect re-enable transitions (INTEGRATION → None)
+    reenabled = {
+        eid
+        for eid in was_disabled
+        if (e := entity_registry.async_get(eid)) is not None and e.disabled_by is None
+    }
+    if reenabled:
+        _LOGGER.warning(
+            "Re-enabled %d previously-disabled entities, scheduling integration reload: %s",
+            len(reenabled),
+            sorted(reenabled),
+        )
+        hass.async_create_task(hass.config_entries.async_reload(entry.entry_id))
+
+
+async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Subscribe to SENSOR telemetry and refresh entity disable state on changes.
+
+    Watches NeoPool.Modules, NeoPool.Hydrolysis.Unit, and NeoPool.Relay across
+    incoming telemetry. When any of these signals changes vs the last seen
+    value, refreshes runtime_data and runs `_refresh_entity_disable_state` —
+    which idempotently flips registry flags and schedules a config-entry
+    reload if any entity transitioned from INTEGRATION-disabled to enabled
+    (necessary because re-enabled entities don't materialize until reload).
+
+    The subscription persists for the lifetime of the config entry;
+    `entry.async_on_unload(unsub)` ensures it's torn down on unload.
+    """
+    mqtt_topic = entry.runtime_data.mqtt_topic
+    sensor_topic = f"tele/{mqtt_topic}/SENSOR"
+
+    relay_names = {"Acid", "Base", "Redox", "Chlorine", "Conductivity", "Heating", "UV", "Valve"}
+
+    @callback
+    def on_sensor(msg: mqtt.ReceiveMessage) -> None:
+        try:
+            payload = json.loads(
+                msg.payload.decode("utf-8")
+                if isinstance(msg.payload, (bytes, bytearray))
+                else msg.payload
+            )
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return
+
+        modules_data = get_nested_value(payload, "NeoPool.Modules")
+        new_modules: set[str] = (
+            {k for k, v in modules_data.items() if v == 1}
+            if isinstance(modules_data, dict)
+            else entry.runtime_data.available_modules
+        )
+
+        relay_data = get_nested_value(payload, "NeoPool.Relay")
+        new_relays: set[str] = (
+            {k for k in relay_data if k in relay_names}
+            if isinstance(relay_data, dict)
+            else entry.runtime_data.available_relays
+        )
+
+        unit = get_nested_value(payload, "NeoPool.Hydrolysis.Unit")
+        new_unit: str | None = unit if isinstance(unit, str) else entry.runtime_data.hydrolysis_unit
+
+        if (
+            new_modules == entry.runtime_data.available_modules
+            and new_relays == entry.runtime_data.available_relays
+            and new_unit == entry.runtime_data.hydrolysis_unit
+        ):
+            return  # Nothing relevant changed — skip the refresh
+
+        _LOGGER.debug(
+            "Detected change in module/relay/unit signals — modules=%s relays=%s unit=%s",
+            new_modules,
+            new_relays,
+            new_unit,
+        )
+        entry.runtime_data.available_modules = new_modules
+        entry.runtime_data.available_relays = new_relays
+        entry.runtime_data.hydrolysis_unit = new_unit
+        _refresh_entity_disable_state(hass, entry)
+
+    unsub = await mqtt.async_subscribe(hass, sensor_topic, on_sensor, qos=1)
+    entry.async_on_unload(unsub)
+    _LOGGER.debug("Dynamic disable watch subscribed to %s", sensor_topic)
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
@@ -1061,7 +1268,7 @@ async def _send_and_wait(
         _LOGGER.debug("Timeout waiting for %s", label)
 
 
-async def async_fetch_device_metadata(
+async def async_fetch_device_metadata(  # noqa: C901
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
     wait_timeout: float = 10.0,
@@ -1085,14 +1292,15 @@ async def async_fetch_device_metadata(
     device_ip: str | None = None
     available_relays: set[str] = set()
     available_modules: set[str] = set()
+    hydrolysis_unit: str | None = None
     sensor_event = asyncio.Event()
     status2_event = asyncio.Event()
     status5_event = asyncio.Event()
 
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SENSOR telemetry for manufacturer, version, relay, and module detection."""
-        nonlocal manufacturer, fw_version, available_relays, available_modules
+        """Handle SENSOR telemetry for manufacturer, version, relay, module, and unit detection."""
+        nonlocal manufacturer, fw_version, available_relays, available_modules, hydrolysis_unit
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -1127,6 +1335,11 @@ async def async_fetch_device_metadata(
             if isinstance(modules_data, dict):
                 available_modules = {k for k, v in modules_data.items() if v == 1}
                 _LOGGER.debug("Detected available modules: %s", available_modules)
+            # Capture hydrolysis display unit ("%" or "g/h")
+            unit = get_nested_value(payload, "NeoPool.Hydrolysis.Unit")
+            if isinstance(unit, str):
+                hydrolysis_unit = unit
+                _LOGGER.debug("Detected hydrolysis unit: %s", hydrolysis_unit)
             if manufacturer or fw_version:
                 sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
@@ -1231,6 +1444,10 @@ async def async_fetch_device_metadata(
     # Store available modules (used to auto-disable entities for absent modules)
     if available_modules:
         entry.runtime_data.available_modules = available_modules
+
+    # Store hydrolysis unit (used to auto-disable g/h-labeled entities in % mode)
+    if hydrolysis_unit:
+        entry.runtime_data.hydrolysis_unit = hydrolysis_unit
 
     # Update device registry if we got any metadata
     if manufacturer or fw_version or tasmota_version or device_ip:
