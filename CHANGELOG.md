@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-27
+
 ### Fixed
 
 - **Hydrolysis sensor stuck at 0% when controller is in % mode**: The `Hydrolysis`
