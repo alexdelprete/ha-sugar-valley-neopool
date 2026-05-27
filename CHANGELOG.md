@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hydrolysis sensor stuck at 0% when controller is in % mode**: The `Hydrolysis`
+  (%) sensor read `NeoPool.Hydrolysis.Percent.Data`, which is only emitted by
+  Tasmota firmware from November 2023 onwards and is computed with integer math
+  that truncates small values to 0. The sensor now computes the percent directly
+  from `Hydrolysis.Data`, `Hydrolysis.Unit`, and `Hydrolysis.Max`, so it works
+  correctly regardless of the configured display unit and firmware version.
+
+### Changed
+
+- **`Hydrolysis (g/h)`, `Hydrolysis Setpoint (g/h)`, `Hydrolysis Max` sensors**:
+  These sensors now go unavailable when the controller is in % display mode,
+  instead of showing the percentage value with a misleading `g/h` unit suffix.
+  When the controller is in g/h mode, behavior is unchanged.
+
 ## [1.0.0] - 2026-05-26
 
 ### Added

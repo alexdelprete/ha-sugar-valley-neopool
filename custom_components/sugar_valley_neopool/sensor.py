@@ -90,6 +90,48 @@ class NeoPoolSensorEntityDescription(SensorEntityDescription):
 
     json_path: str
     value_fn: Callable[[Any], Any] | None = None
+    # When set, called with the full SENSOR payload to compute the value.
+    # Returning None marks the sensor unavailable. Takes precedence over value_fn.
+    # json_path is still used for the initial availability gate.
+    payload_fn: Callable[[dict[str, Any]], Any] | None = None
+
+
+def _hydrolysis_percent_fn(payload: dict[str, Any]) -> float | None:
+    """Compute hydrolysis production percent.
+
+    Tasmota emits Hydrolysis.Data in the controller's configured unit (% or g/h),
+    and a Percent.Data sub-object only from firmware >= Nov 2023 (PR #19924) using
+    integer math that truncates small values. Compute directly from Data/Unit/Max
+    so this works on older firmware too.
+    """
+    data = safe_float(get_nested_value(payload, JSON_PATH_HYDROLYSIS_DATA), None)
+    if data is None:
+        return None
+    unit = get_nested_value(payload, JSON_PATH_HYDROLYSIS_UNIT)
+    if unit == "%":
+        return round(data, 0)
+    max_val = safe_float(get_nested_value(payload, JSON_PATH_HYDROLYSIS_MAX), None)
+    if max_val and max_val > 0:
+        return round(data * 100.0 / max_val, 0)
+    fallback = safe_float(get_nested_value(payload, JSON_PATH_HYDROLYSIS_PERCENT), None)
+    return None if fallback is None else round(fallback, 0)
+
+
+def _hydrolysis_gh_only_fn(json_path: str) -> Callable[[dict[str, Any]], float | None]:
+    """Return a payload_fn that reads `json_path` as g/h, or None when unit is %.
+
+    Hydrolysis.Data/Setpoint/Max are emitted in the controller's configured unit.
+    When the user has selected % display mode there is no way to recover g/h from
+    the telemetry (Max becomes 100%), so the g/h-labeled sensors go unavailable.
+    """
+
+    def _fn(payload: dict[str, Any]) -> float | None:
+        if get_nested_value(payload, JSON_PATH_HYDROLYSIS_UNIT) != "g/h":
+            return None
+        value = get_nested_value(payload, json_path)
+        return None if value is None else round(safe_float(value, 0), 1)
+
+    return _fn
 
 
 SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
@@ -173,8 +215,11 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         name="Hydrolysis",
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
-        json_path=JSON_PATH_HYDROLYSIS_PERCENT,
-        value_fn=lambda x: round(safe_float(x, 0), 0),
+        # Availability is gated by Hydrolysis.Data (always present when the
+        # module is active); payload_fn computes the actual percent from
+        # Data/Unit/Max so it works regardless of the controller's display unit.
+        json_path=JSON_PATH_HYDROLYSIS_DATA,
+        payload_fn=_hydrolysis_percent_fn,
     ),
     NeoPoolSensorEntityDescription(
         key="hydrolysis_data",
@@ -183,7 +228,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         native_unit_of_measurement="g/h",
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_HYDROLYSIS_DATA,
-        value_fn=lambda x: round(safe_float(x, 0), 1),
+        payload_fn=_hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_DATA),
     ),
     NeoPoolSensorEntityDescription(
         key="hydrolysis_setpoint_gh",
@@ -192,7 +237,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         native_unit_of_measurement="g/h",
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_HYDROLYSIS_SETPOINT_GH,
-        value_fn=lambda x: round(safe_float(x, 0), 1),
+        payload_fn=_hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_SETPOINT_GH),
     ),
     NeoPoolSensorEntityDescription(
         key="hydrolysis_max",
@@ -200,7 +245,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         name="Hydrolysis Max",
         native_unit_of_measurement="g/h",
         json_path=JSON_PATH_HYDROLYSIS_MAX,
-        value_fn=lambda x: round(safe_float(x, 0), 1),
+        payload_fn=_hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_MAX),
     ),
     NeoPoolSensorEntityDescription(
         key="hydrolysis_unit",
@@ -445,7 +490,7 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
             if payload is None:
                 return
 
-            # Extract value using JSON path
+            # Extract value using JSON path (availability gate)
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
                 self._attr_native_value = None
@@ -453,8 +498,17 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
                 self.async_write_ha_state()
                 return
 
-            # Apply transformation function if defined
-            if self.entity_description.value_fn is not None:
+            # payload_fn takes precedence: it sees the full payload and may
+            # return None to signal "unavailable" even when json_path resolved.
+            if self.entity_description.payload_fn is not None:
+                new_value = self.entity_description.payload_fn(payload)
+                if new_value is None:
+                    self._attr_native_value = None
+                    self._attr_available = False
+                    self.async_write_ha_state()
+                    return
+                self._attr_native_value = new_value
+            elif self.entity_description.value_fn is not None:
                 self._attr_native_value = self.entity_description.value_fn(raw_value)
             else:
                 self._attr_native_value = raw_value

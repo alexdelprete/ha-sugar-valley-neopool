@@ -11,6 +11,7 @@ import pytest
 from custom_components.sugar_valley_neopool.const import (
     JSON_PATH_CHLORINE_DATA,
     JSON_PATH_CONDUCTIVITY_DATA,
+    JSON_PATH_HYDROLYSIS_DATA,
     JSON_PATH_HYDROLYSIS_MAX,
     JSON_PATH_HYDROLYSIS_SETPOINT_GH,
     JSON_PATH_HYDROLYSIS_UNIT,
@@ -21,6 +22,8 @@ from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
     NeoPoolSensor,
     NeoPoolSensorEntityDescription,
+    _hydrolysis_gh_only_fn,
+    _hydrolysis_percent_fn,
     async_setup_entry,
 )
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
@@ -105,6 +108,8 @@ class TestSensorDescriptions:
         # No state_class - this is a device capability constant, not a measurement
         assert desc.state_class is None
         assert desc.json_path == JSON_PATH_HYDROLYSIS_MAX
+        # g/h sensors use payload_fn to go unavailable when controller is in % mode
+        assert desc.payload_fn is not None
 
     def test_hydrolysis_unit_description(self) -> None:
         """Test hydrolysis_unit sensor description (string sensor)."""
@@ -119,6 +124,27 @@ class TestSensorDescriptions:
         assert desc.native_unit_of_measurement == "g/h"
         assert desc.state_class == SensorStateClass.MEASUREMENT
         assert desc.json_path == JSON_PATH_HYDROLYSIS_SETPOINT_GH
+        assert desc.payload_fn is not None
+
+    def test_hydrolysis_percent_description(self) -> None:
+        """Test hydrolysis_percent sensor description.
+
+        The percent sensor computes from Data/Unit/Max via payload_fn instead
+        of reading Hydrolysis.Percent.Data directly, so it works on Tasmota
+        firmware that pre-dates the Percent sub-object (pre-Nov 2023) and
+        also when the controller is in % mode.
+        """
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_percent")
+        assert desc.native_unit_of_measurement == PERCENTAGE
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.payload_fn is not None
+
+    def test_hydrolysis_data_description(self) -> None:
+        """Test hydrolysis_data (g/h) sensor description."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_data")
+        assert desc.native_unit_of_measurement == "g/h"
+        assert desc.state_class == SensorStateClass.MEASUREMENT
+        assert desc.payload_fn is not None
 
     def test_controller_time_description(self) -> None:
         """Test controller_time sensor description.
@@ -383,6 +409,147 @@ class TestNeoPoolSensor:
         sensor_callback(mock_msg)
 
         assert sensor._attr_native_value == "Sugar Valley"
+
+
+class TestHydrolysisPayloadFns:
+    """Tests for the hydrolysis payload_fn helpers."""
+
+    @staticmethod
+    def _payload(hydrolysis: dict[str, Any]) -> dict[str, Any]:
+        """Build a minimal payload with just the Hydrolysis block populated."""
+        return {"NeoPool": {"Hydrolysis": hydrolysis}}
+
+    def test_percent_uses_data_when_unit_is_percent(self) -> None:
+        """In % mode, Data is already the percentage — use it directly.
+
+        Reproduces the user-reported bug: controller in % mode published
+        Hydrolysis.Data = 50 (percent), but the integration was reading
+        Percent.Data which the firmware emits as 0 due to integer truncation
+        (or doesn't emit at all on older builds), so the % sensor stayed at 0.
+        """
+        payload = self._payload({"Data": 50, "Unit": "%", "Max": 100})
+        assert _hydrolysis_percent_fn(payload) == 50
+
+    def test_percent_computes_from_data_and_max_in_gh_mode(self) -> None:
+        """In g/h mode, compute percent from Data and Max in floating point."""
+        payload = self._payload({"Data": 25, "Unit": "g/h", "Max": 100})
+        assert _hydrolysis_percent_fn(payload) == 25
+
+    def test_percent_avoids_firmware_integer_truncation(self) -> None:
+        """Tasmota's `data * 100 / max` truncates to 0 for small data values.
+
+        Example: data=0.5, max=100 → Tasmota emits Percent.Data=0. Our
+        float-based computation correctly yields 1 (rounded from 0.5).
+        """
+        payload = self._payload({"Data": 0.5, "Unit": "g/h", "Max": 100, "Percent": {"Data": 0}})
+        assert _hydrolysis_percent_fn(payload) == round(0.5)
+
+    def test_percent_fallback_to_percent_data(self) -> None:
+        """Fall back to Hydrolysis.Percent.Data when Max is missing/zero."""
+        payload = self._payload({"Data": 5, "Unit": "g/h", "Max": 0, "Percent": {"Data": 42}})
+        assert _hydrolysis_percent_fn(payload) == 42
+
+    def test_percent_returns_none_when_data_missing(self) -> None:
+        """If Hydrolysis.Data is missing, return None (sensor unavailable)."""
+        payload = self._payload({"Unit": "g/h", "Max": 100})
+        assert _hydrolysis_percent_fn(payload) is None
+
+    def test_percent_returns_none_when_nothing_recoverable(self) -> None:
+        """g/h mode, Max=0, no Percent.Data → cannot compute, unavailable."""
+        payload = self._payload({"Data": 5, "Unit": "g/h", "Max": 0})
+        assert _hydrolysis_percent_fn(payload) is None
+
+    def test_gh_only_returns_value_in_gh_mode(self) -> None:
+        """g/h-only sensors return the raw value when controller is in g/h."""
+        fn = _hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_DATA)
+        payload = self._payload({"Data": 25.5, "Unit": "g/h", "Max": 100})
+        assert fn(payload) == 25.5
+
+    def test_gh_only_returns_none_in_percent_mode(self) -> None:
+        """g/h-labeled sensors must NOT show a percentage with a g/h unit.
+
+        Why: when the controller is in % mode the JSON fields are in percent,
+        not g/h, and there is no way to recover the absolute g/h value from
+        the telemetry (Max becomes 100%). Showing the raw value with a "g/h"
+        label would be misleading.
+        """
+        fn = _hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_DATA)
+        payload = self._payload({"Data": 50, "Unit": "%", "Max": 100})
+        assert fn(payload) is None
+
+    def test_gh_only_returns_none_when_path_missing(self) -> None:
+        """If the requested field is missing, return None."""
+        fn = _hydrolysis_gh_only_fn(JSON_PATH_HYDROLYSIS_MAX)
+        payload = self._payload({"Data": 25, "Unit": "g/h"})
+        assert fn(payload) is None
+
+
+class TestSensorPayloadFnIntegration:
+    """Tests for NeoPoolSensor end-to-end with payload_fn."""
+
+    @pytest.mark.asyncio
+    async def test_percent_sensor_works_in_percent_mode(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """End-to-end: % sensor reports value when controller is in % mode."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_percent")
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.hydrolysis"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor_callback = None
+
+        async def capture_callback(hass, topic, callback, **kwargs):
+            nonlocal sensor_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=capture_callback,
+        ):
+            await sensor.async_added_to_hass()
+
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Hydrolysis": {"Data": 50, "Unit": "%", "Max": 100}}})
+        sensor_callback(msg)
+
+        assert sensor._attr_native_value == 50
+        assert sensor._attr_available is True
+
+    @pytest.mark.asyncio
+    async def test_gh_sensor_unavailable_in_percent_mode(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """End-to-end: g/h sensor goes unavailable when controller is in % mode."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "hydrolysis_data")
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.hydrolysis_gh"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor_callback = None
+
+        async def capture_callback(hass, topic, callback, **kwargs):
+            nonlocal sensor_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=capture_callback,
+        ):
+            await sensor.async_added_to_hass()
+
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Hydrolysis": {"Data": 50, "Unit": "%", "Max": 100}}})
+        sensor_callback(msg)
+
+        assert sensor._attr_native_value is None
+        assert sensor._attr_available is False
 
 
 class TestAsyncSetupEntry:
