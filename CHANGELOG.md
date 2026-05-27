@@ -7,31 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Migrated-user Lovelace dashboards**: Two additional example dashboards
-  under [`lovelace/`](lovelace/) targeting users who migrated from the YAML
-  package — `ha_neopool_lovelace_migrated.yaml` (full-width) and
-  `ha_neopool_lovelace_responsive_migrated.yaml` (responsive). They use the
-  preserved `neopool_mqtt_*` entity IDs, drop tiles for the three relay-state
-  entities that migration deletes, and add tiles for the new entities the
-  integration ships beyond the package (chlorine, ionization, conductivity,
-  sync controller time button, hydrolysis redox controlled, extra relay
-  states). See [`lovelace/README.md`](lovelace/README.md) for the
-  fresh-vs-migrated selection guide.
-
 ## [1.0.1] - 2026-05-27
 
 ### Added
 
-- **Lovelace dashboards**: Two ready-to-use example dashboards under
-  [`lovelace/`](lovelace/) — a full-width desktop layout
-  (`ha_neopool_lovelace.yaml`, mushroom cards + masonry 400px) and a
-  mobile-friendly responsive layout (`ha_neopool_lovelace_responsive.yaml`,
-  tile cards + masonry 320px). Both include conditional sections for the
-  chlorine, ionization, and conductivity modules so cards hide automatically
-  when those modules aren't installed. See [`lovelace/README.md`](lovelace/README.md)
-  for installation instructions and the full custom-card dependency list.
+- **Lovelace dashboards**: Four ready-to-use example dashboards under
+  [`lovelace/`](lovelace/) — two for fresh installs and two for users who
+  migrated from the YAML package. Each pair has a full-width desktop layout
+  (mushroom cards + masonry 400px) and a mobile-friendly responsive layout
+  (tile cards + masonry 320px). Fresh-install files use the default
+  `neopool_` entity-ID prefix; `_migrated.yaml` variants use the preserved
+  `neopool_mqtt_*` IDs, drop tiles for the three relay-state entities that
+  migration deletes, and add tiles for the new entities the integration
+  ships beyond the package (chlorine, ionization, conductivity, sync
+  controller time button, hydrolysis redox controlled, extra relay states).
+  All four include conditional sections that hide chlorine / ionization /
+  conductivity cards when those modules aren't installed. See
+  [`lovelace/README.md`](lovelace/README.md) for the fresh-vs-migrated
+  selection guide, installation instructions, and the full custom-card
+  dependency list.
 
 ### Fixed
 
