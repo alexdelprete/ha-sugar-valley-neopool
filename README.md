@@ -645,61 +645,55 @@ WARNING (MainThread) [custom_components.sugar_valley_neopool]
 
 ## Recorder Considerations
 
-A handful of entities update on every Tasmota SENSOR telemetry tick and
-their values legitimately change each time. The total recorder churn
-scales linearly with your Tasmota `TelePeriod` setting. The table below
-assumes hydrolysis runs ~6 hours per day; values are per device.
+A handful of entities update frequently. The integration handles this
+in two ways internally so the default configuration is sensible at any
+`TelePeriod` setting:
 
-| `TelePeriod` | Recorder rows/day | 10-day DB footprint |
-|---|---|---|
-| 300s (default) | ~870 | ~2 MB |
-| 60s | ~4,300 | ~11 MB |
-| 30s | ~8,600 | ~22 MB |
-| 10s | ~26,000 | ~65 MB |
-| 1s | ~260,000 | ~650 MB |
+- **Throttling**: entities like `sensor.neopool_controller_time` track
+  every SENSOR message in memory but only write a new state to the
+  recorder once per fixed interval (5 minutes for `controller_time`).
+- **Lifetime cumulative**: the four `sensor.neopool_connection_*`
+  entities aggregate Tasmota's volatile RAM counters into smooth
+  lifetime totals across Tasmota reboots, and write once per hour.
+  State persists across HA restarts via `RestoreEntity`.
 
-For the default `TelePeriod=300s`, the volume is negligible. The
-considerations below matter primarily if you've lowered `TelePeriod` for
-more responsive Home Assistant updates.
+Net effect: the entities most prone to recorder spam stay clean
+regardless of how aggressive your `TelePeriod` setting is.
 
-### Already disabled by default
+### `sensor.controller_time` (throttled to 5 min)
 
-- **`sensor.controller_time`** — the controller's clock string updates on
-  every telemetry tick (time always advances) and provides no statistical
-  value (no `state_class`). It's disabled out of the box so it doesn't
-  spam the recorder. The companion **Sync Controller Time** button works
-  independently. Enable it manually under **Settings → Devices &
-  services → NeoPool → Entities** if you want to display the clock.
+Updates the displayed value on every SENSOR tick (time always
+advances), but only writes a new state to the recorder once per 5
+minutes. Caps at ~288 rows/day regardless of `TelePeriod`. Useful as
+a sanity-check for the controller's clock and for verifying the
+**Sync Controller Time** button worked.
 
-### Enabled by default — connection diagnostics (rate value only)
+### Connection diagnostics (lifetime cumulative, hourly writes)
 
 `sensor.neopool_connection_requests`, `sensor.neopool_connection_responses`,
 `sensor.neopool_connection_no_response`,
 `sensor.neopool_connection_out_of_range`.
 
-These counters live in **Tasmota's RAM** and **reset to 0 every time
-Tasmota restarts** (firmware update, power cycle, manual restart). Same
-behaviour as Tasmota's built-in `MqttCount` / `Uptime` etc. Despite the
-`state_class: total_increasing`, the *absolute cumulative number* loses
-its meaning across reboots — graphs of these counters over time look
-like a sawtooth.
+The underlying Tasmota counters (`MBRequests`, `MBNoError`,
+`MBNoResponse`, `DataOutOfRange`) live in Tasmota RAM and reset to 0
+every Tasmota restart — same behaviour as `MqttCount` / `Uptime` etc.
+The integration accumulates them across resets in memory: each new
+raw value contributes its delta to the entity's lifetime cumulative,
+and a drop (negative delta) is treated as a Tasmota-reboot signal so
+the new value itself becomes the delta from 0. The cumulative
+survives HA restarts via `RestoreEntity`.
 
-What's actually useful is the **rate** within a Tasmota uptime session:
+State writes are throttled to once per hour — exactly what HA's
+statistics engine needs to compute hourly aggregates, so long-term
+trend graphs (*"Modbus error rate over the last 30 days"*) work
+cleanly. About 96 recorder rows per day total for all four entities,
+no matter what `TelePeriod` you've set on the Tasmota side.
 
-```text
-no_response / requests = 15,747 / 1,317,109 ≈ 1.2% failure rate
-```
+Snapshot diagnostics (current per-Tasmota-uptime counters) are still
+visible via Tasmota's own web UI / MQTT, but the lifetime numbers in
+Home Assistant are the canonical view now.
 
-That's a real diagnostic — *"my RS485 wiring drops ~1% of polls."* Home
-Assistant's statistics engine handles the resets correctly for hourly
-delta tracking, so per-hour error-rate trends still work. Just don't
-read "1.3 million requests" as a lifetime number — it's "since the last
-Tasmota boot."
-
-Keep them enabled if you ever need to troubleshoot MQTT / Modbus
-issues. Drop them via `recorder.exclude` below if you don't.
-
-### Enabled by default — true lifetime counters
+### Hydrolysis lifetime counters (recorded on every SENSOR tick)
 
 `sensor.neopool_hydrolysis_runtime_total`,
 `sensor.neopool_hydrolysis_runtime_part`,
@@ -707,47 +701,58 @@ issues. Drop them via `recorder.exclude` below if you don't.
 `sensor.neopool_hydrolysis_runtime_pol2`,
 `sensor.neopool_hydrolysis_polarity_changes`.
 
-These come from **Modbus registers in the NeoPool controller's
-persistent storage** (`MBF_CELL_RUNTIME_*` and similar). They survive
-both Tasmota and NeoPool reboots — they're lifetime counters of the
-electrolysis cell hardware itself. *"This cell has accumulated 4,352
-hours on Pol1 since installation"* is a real, single, persistent
-number.
+These come from Modbus registers in the NeoPool controller's
+persistent storage (`MBF_CELL_RUNTIME_*`). They survive both Tasmota
+and NeoPool reboots — true lifetime counters of the electrolysis cell
+hardware itself. They update on every SENSOR tick (no throttle)
+because they only change while hydrolysis is actively running, and
+each change is a small persistent increment that's worth recording
+for cell-usage tracking.
 
-These earn their full long-term-statistics keep — cell-replacement
-decisions, polarity wear balance, seasonal usage trends.
+### Raw row counts per day
+
+Assuming hydrolysis runs ~6 h/day. Per device, all integration
+entities combined:
+
+| `TelePeriod` | Recorder rows/day | 10-day DB footprint |
+|---|---|---|
+| 300s (default) | ~570 | ~1.4 MB |
+| 60s | ~3,000 | ~7 MB |
+| 30s | ~6,000 | ~15 MB |
+| 10s | ~17,500 | ~44 MB |
+| 1s | ~173,000 | ~430 MB |
+
+The connection cumulative entities contribute a constant ~96 rows/day
+regardless of `TelePeriod`. The hydrolysis runtime counters scale
+with `TelePeriod` only during active hydrolysis. `controller_time`
+contributes a constant ~288 rows/day. Most of the variance above
+comes from the runtime counters.
 
 ### How to reduce churn further
 
-If you run a fast `TelePeriod` and don't need raw state-by-state
-history for these entities, add a recorder exclude block to your
-`configuration.yaml`. For the hydrolysis runtime / polarity counters,
-the hourly long-term statistics are stored separately and remain
-available for trend graphs even when raw history is excluded. For the
-connection diagnostics, excluding them simply drops the per-tick rows
-— you lose nothing meaningful since the absolute values reset on
-Tasmota reboot anyway.
+For most users the defaults are fine. If you run an aggressive
+`TelePeriod` (≤10s) and want to cut the per-tick runtime-counter
+rows, add a recorder exclude block. The hourly long-term statistics
+are stored separately and remain available for trend graphs even when
+raw history is excluded.
 
 ```yaml
 recorder:
   exclude:
     entities:
-      # Modbus diagnostics — Tasmota RAM counters, reset on Tasmota
-      # reboot. Useful for snapshot diagnostics but no long-term value;
-      # safe to drop entirely if you don't troubleshoot MQTT/Modbus.
-      - sensor.neopool_connection_requests
-      - sensor.neopool_connection_responses
-      - sensor.neopool_connection_no_response
-      - sensor.neopool_connection_out_of_range
-      # Hydrolysis runtime counters — NeoPool-persistent. Excluding them
-      # from raw history keeps the hourly long-term statistics, which
-      # are stored separately and remain available for trend graphs.
+      # Hydrolysis runtime counters — NeoPool-persistent. Excluding
+      # them from raw history keeps the hourly long-term statistics,
+      # which are stored separately and remain available for trend
+      # graphs.
       - sensor.neopool_hydrolysis_runtime_total
       - sensor.neopool_hydrolysis_runtime_part
       - sensor.neopool_hydrolysis_runtime_pol1
       - sensor.neopool_hydrolysis_runtime_pol2
       - sensor.neopool_hydrolysis_polarity_changes
 ```
+
+The connection diagnostics no longer need a `recorder.exclude` entry
+— their hourly throttling already caps their volume.
 
 Note: entity IDs in the example assume the default device name
 `NeoPool`. Migrated installs use the `neopool_mqtt_*` prefix instead —

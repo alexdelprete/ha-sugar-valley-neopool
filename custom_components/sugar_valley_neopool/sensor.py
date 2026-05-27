@@ -21,6 +21,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BOOST_MODE_MAP,
@@ -94,6 +96,25 @@ class NeoPoolSensorEntityDescription(SensorEntityDescription):
     # Returning None marks the sensor unavailable. Takes precedence over value_fn.
     # json_path is still used for the initial availability gate.
     payload_fn: Callable[[dict[str, Any]], Any] | None = None
+    # Minimum seconds between recorder-visible state writes. 0 = write on every
+    # SENSOR message (default). >0 = in-memory value still tracks each message
+    # but async_write_ha_state() is throttled so the recorder only sees one row
+    # per `min_update_interval`. First write after entity becomes available
+    # always goes through immediately so users don't wait for it.
+    min_update_interval: float = 0.0
+
+
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolCumulativeSensorEntityDescription(NeoPoolSensorEntityDescription):
+    """Describes a cumulative-counter sensor.
+
+    Reads a Tasmota-RAM counter from SENSOR telemetry (which resets on
+    Tasmota reboot), computes the lifetime cumulative by tracking deltas
+    in memory across resets. State persists across HA restarts via
+    RestoreEntity. Writes are throttled per `min_update_interval`
+    (typically 3600 — once per hour, which matches HA's statistics
+    aggregation granularity).
+    """
 
 
 def _hydrolysis_percent_fn(payload: dict[str, Any]) -> float | None:
@@ -148,12 +169,13 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         name="Controller Time",
         json_path=JSON_PATH_TIME,
         entity_category=EntityCategory.DIAGNOSTIC,
-        # Disabled by default: the value changes on every SENSOR telemetry
-        # tick (time always advances), so leaving it enabled spams the
-        # recorder with one row per TelePeriod cycle (~288/day at default,
-        # ~8.6k/day at TelePeriod=10s) for near-zero value. The companion
-        # button.sync_controller_time still works regardless of this entity.
-        entity_registry_enabled_default=False,
+        # Throttled to once per 5 minutes: the value changes on every
+        # SENSOR telemetry tick (time always advances). Throttling caps
+        # the recorder rate at ~288 rows/day regardless of TelePeriod,
+        # while keeping the entity useful as a sanity-check for the
+        # controller's clock and for verifying the Sync Controller Time
+        # button worked.
+        min_update_interval=300.0,
         # Raw string from firmware GetDT() (e.g. "2026-05-26T14:30:00"); no
         # device_class=TIMESTAMP because the firmware string has no timezone
         # info, which would make HA reject it.
@@ -410,42 +432,47 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         json_path=JSON_PATH_POWERUNIT_4MA,
         value_fn=safe_float,
     ),
-    # Connection diagnostics
-    NeoPoolSensorEntityDescription(
+    # Connection diagnostics — lifetime cumulative counters.
+    # The underlying Tasmota counters reset on every Tasmota reboot, so each
+    # of these entities tracks the cumulative across resets in memory (with
+    # state restored via RestoreEntity on HA restart). Writes are throttled
+    # to once per hour, which matches HA's statistics aggregation granularity
+    # and keeps recorder spam minimal.
+    NeoPoolCumulativeSensorEntityDescription(
         key="connection_requests",
         translation_key="connection_requests",
         name="Connection Requests",
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_CONNECTION_REQUESTS,
-        value_fn=safe_int,
         entity_category=EntityCategory.DIAGNOSTIC,
+        min_update_interval=3600.0,
     ),
-    NeoPoolSensorEntityDescription(
+    NeoPoolCumulativeSensorEntityDescription(
         key="connection_responses",
         translation_key="connection_responses",
         name="Connection Responses",
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_CONNECTION_NOERROR,
-        value_fn=safe_int,
         entity_category=EntityCategory.DIAGNOSTIC,
+        min_update_interval=3600.0,
     ),
-    NeoPoolSensorEntityDescription(
+    NeoPoolCumulativeSensorEntityDescription(
         key="connection_no_response",
         translation_key="connection_no_response",
         name="Connection No Response",
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_CONNECTION_NORESPONSE,
-        value_fn=safe_int,
         entity_category=EntityCategory.DIAGNOSTIC,
+        min_update_interval=3600.0,
     ),
-    NeoPoolSensorEntityDescription(
+    NeoPoolCumulativeSensorEntityDescription(
         key="connection_out_of_range",
         translation_key="connection_out_of_range",
         name="Connection Out of Range",
         state_class=SensorStateClass.TOTAL_INCREASING,
         json_path=JSON_PATH_CONNECTION_OUTOFRANGE,
-        value_fn=safe_int,
         entity_category=EntityCategory.DIAGNOSTIC,
+        min_update_interval=3600.0,
     ),
     # Diagnostic sensors
     NeoPoolSensorEntityDescription(
@@ -466,7 +493,12 @@ async def async_setup_entry(
     """Set up NeoPool sensors based on a config entry."""
     _LOGGER.debug("Setting up NeoPool sensors")
 
-    sensors = [NeoPoolSensor(entry, description) for description in SENSOR_DESCRIPTIONS]
+    sensors: list[NeoPoolSensor] = []
+    for description in SENSOR_DESCRIPTIONS:
+        if isinstance(description, NeoPoolCumulativeSensorEntityDescription):
+            sensors.append(NeoPoolCumulativeSensor(entry, description))
+        else:
+            sensors.append(NeoPoolSensor(entry, description))
 
     async_add_entities(sensors)
     _LOGGER.info("Added %d NeoPool sensors", len(sensors))
@@ -486,6 +518,39 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
         super().__init__(config_entry, description.key)
         self.entity_description = description
         self._attr_native_value = None
+        # Throttle bookkeeping: timestamp of the last async_write_ha_state()
+        # call. None means "no write yet" — first write goes through
+        # immediately so users see data without waiting for the throttle
+        # window to elapse.
+        self._last_write_ts: float | None = None
+
+    def _should_write_now(self) -> bool:
+        """Return True if we should call async_write_ha_state() now.
+
+        Honours `min_update_interval` on the entity description. First write
+        always passes through; subsequent writes are throttled.
+        """
+        interval = self.entity_description.min_update_interval
+        if interval <= 0 or self._last_write_ts is None:
+            return True
+        now = dt_util.utcnow().timestamp()
+        return (now - self._last_write_ts) >= interval
+
+    def _record_write(self) -> None:
+        """Mark a write as having just happened (for throttle bookkeeping)."""
+        self._last_write_ts = dt_util.utcnow().timestamp()
+
+    def _compute_value(self, payload: dict[str, Any], raw_value: Any) -> Any:
+        """Compute the entity's native value from the payload.
+
+        Override in subclasses to add custom logic (e.g. cumulative deltas).
+        Returning None signals "unavailable".
+        """
+        if self.entity_description.payload_fn is not None:
+            return self.entity_description.payload_fn(payload)
+        if self.entity_description.value_fn is not None:
+            return self.entity_description.value_fn(raw_value)
+        return raw_value
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to MQTT topic when entity is added."""
@@ -507,25 +572,25 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
                 self._attr_native_value = None
                 self._attr_available = False
                 self.async_write_ha_state()
+                # Becoming-unavailable resets the throttle so the next available
+                # update goes through immediately rather than being silenced.
+                self._last_write_ts = None
                 return
 
-            # payload_fn takes precedence: it sees the full payload and may
-            # return None to signal "unavailable" even when json_path resolved.
-            if self.entity_description.payload_fn is not None:
-                new_value = self.entity_description.payload_fn(payload)
-                if new_value is None:
-                    self._attr_native_value = None
-                    self._attr_available = False
-                    self.async_write_ha_state()
-                    return
-                self._attr_native_value = new_value
-            elif self.entity_description.value_fn is not None:
-                self._attr_native_value = self.entity_description.value_fn(raw_value)
-            else:
-                self._attr_native_value = raw_value
+            new_value = self._compute_value(payload, raw_value)
+            if new_value is None:
+                # payload_fn / cumulative logic signalled "unavailable"
+                self._attr_native_value = None
+                self._attr_available = False
+                self.async_write_ha_state()
+                self._last_write_ts = None
+                return
 
+            self._attr_native_value = new_value
             self._attr_available = True
-            self.async_write_ha_state()
+            if self._should_write_now():
+                self.async_write_ha_state()
+                self._record_write()
 
         await self._subscribe_topic(sensor_topic, message_received)
         _LOGGER.debug(
@@ -534,3 +599,72 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
             sensor_topic,
             self.entity_description.json_path,
         )
+
+
+class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
+    """Sensor that accumulates lifetime deltas from a Tasmota-RAM counter.
+
+    Tasmota's connection counters (MBRequests, MBNoError, MBNoResponse,
+    DataOutOfRange) reset to 0 every Tasmota reboot. This class computes
+    the lifetime cumulative across resets by tracking the raw counter
+    in memory: each delta (new - last) gets added to the cumulative,
+    and a negative delta is treated as a Tasmota-reboot signal (the
+    new value itself is the delta from 0).
+
+    The cumulative survives HA restarts via RestoreEntity. State writes
+    are throttled per `min_update_interval` so the recorder sees only
+    one row per throttle window — typically once per hour, which matches
+    HA's statistics aggregation granularity.
+    """
+
+    entity_description: NeoPoolCumulativeSensorEntityDescription
+
+    def __init__(
+        self,
+        config_entry: NeoPoolConfigEntry,
+        description: NeoPoolCumulativeSensorEntityDescription,
+    ) -> None:
+        """Initialize the cumulative sensor."""
+        super().__init__(config_entry, description)
+        self._cumulative: float = 0.0
+        # The last raw (volatile) counter value seen from SENSOR. We start
+        # with None so the first message just establishes the baseline
+        # without folding the full Tasmota-side counter into our cumulative.
+        self._last_raw: float | None = None
+
+    async def async_added_to_hass(self) -> None:
+        """Restore cumulative from prior HA session, then subscribe to SENSOR."""
+        # Restore cumulative from prior state before subscribing so the first
+        # SENSOR message doesn't briefly publish 0.
+        last_state = await self.async_get_last_state()
+        if last_state and last_state.state not in (None, "", "unknown", "unavailable"):
+            try:
+                self._cumulative = float(last_state.state)
+            except (TypeError, ValueError):
+                self._cumulative = 0.0
+        self._attr_native_value = self._cumulative
+        await super().async_added_to_hass()
+
+    def _compute_value(self, payload: dict[str, Any], raw_value: Any) -> Any:
+        """Update the cumulative with the delta vs last raw value."""
+        current = safe_float(raw_value, None)
+        if current is None:
+            return None
+
+        if self._last_raw is None:
+            # First sample after install or HA restart — establish baseline
+            # without folding the full Tasmota-side counter into the
+            # cumulative. The cumulative stays at whatever RestoreEntity
+            # restored (or 0).
+            self._last_raw = current
+            return self._cumulative
+
+        if current < self._last_raw:
+            # Negative delta → Tasmota rebooted. The current value is itself
+            # the delta from 0 (counts accumulated since the reboot).
+            delta = current
+        else:
+            delta = current - self._last_raw
+        self._last_raw = current
+        self._cumulative += delta
+        return self._cumulative

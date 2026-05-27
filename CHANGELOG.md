@@ -37,13 +37,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **State-change logs upgraded to WARNING**: entity enable/disable
   events are now logged at WARNING level (previously INFO) so they're
   visible without enabling debug logging.
-- **`sensor.controller_time` disabled by default**: the value changes
-  on every SENSOR telemetry tick (time always advances), spamming the
-  recorder with one row per `TelePeriod` cycle (~288/day at the default
-  300s, ~8,600/day at `TelePeriod=10s`) for near-zero analytical value.
-  The companion `button.sync_controller_time` still works regardless.
-  Users who want to display the controller clock can enable the entity
-  manually under **Settings → Devices & services → NeoPool**.
+- **Connection diagnostics are now lifetime cumulative**:
+  `sensor.connection_requests`, `sensor.connection_responses`,
+  `sensor.connection_no_response`, and `sensor.connection_out_of_range`
+  used to report Tasmota's RAM counters directly, which meant they
+  reset to 0 on every Tasmota restart — long-term graphs looked like a
+  sawtooth. They now track the cumulative across resets in memory: the
+  integration compares each new raw value to the previous one, treats a
+  drop as a Tasmota-reboot signal (the new value becomes the delta from
+  0), and accumulates. State persists across HA restarts via
+  `RestoreEntity`. State writes are throttled to once per hour (~96
+  total rows/day for all four), which still gives HA's statistics
+  engine clean hourly aggregates for long-term trend graphs.
+- **`sensor.controller_time` throttled to once per 5 minutes** (was
+  previously disabled by default in this Unreleased section): the
+  value changes on every SENSOR telemetry tick, so leaving it
+  unthrottled spammed the recorder. Throttling caps it at ~288
+  rows/day regardless of `TelePeriod` while keeping the entity useful
+  as a sanity-check for the controller's clock and verifying the Sync
+  Controller Time button worked. Now enabled by default again.
+- **Generic throttle mechanism**: new `min_update_interval` attribute
+  on `NeoPoolSensorEntityDescription`. When set, the entity's
+  in-memory value still tracks every SENSOR message, but
+  `async_write_ha_state()` (which is what creates recorder rows) is
+  called at most once per interval. Available for future entities
+  that would otherwise be too chatty.
 
 ## [1.0.1] - 2026-05-27
 

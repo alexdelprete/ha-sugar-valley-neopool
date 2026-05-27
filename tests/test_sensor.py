@@ -20,6 +20,8 @@ from custom_components.sugar_valley_neopool.const import (
 )
 from custom_components.sugar_valley_neopool.sensor import (
     SENSOR_DESCRIPTIONS,
+    NeoPoolCumulativeSensor,
+    NeoPoolCumulativeSensorEntityDescription,
     NeoPoolSensor,
     NeoPoolSensorEntityDescription,
     _hydrolysis_gh_only_fn,
@@ -586,3 +588,319 @@ class TestAsyncSetupEntry:
         description_keys = {d.key for d in SENSOR_DESCRIPTIONS}
 
         assert entity_keys == description_keys
+
+
+class TestThrottleAndCumulative:
+    """Tests for min_update_interval throttling and NeoPoolCumulativeSensor."""
+
+    @pytest.mark.asyncio
+    async def test_throttle_first_write_passes_through(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """The first SENSOR message after subscription writes immediately."""
+        desc = NeoPoolSensorEntityDescription(
+            key="throttled",
+            name="Throttled",
+            json_path="NeoPool.Temperature",
+            min_update_interval=300.0,
+        )
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.throttled"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture):
+            await sensor.async_added_to_hass()
+
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Temperature": 25.5}})
+        cb(msg)
+
+        assert sensor._attr_native_value == 25.5
+        sensor.async_write_ha_state.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_throttle_silences_within_window(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Updates within the throttle window track in memory but don't write."""
+        desc = NeoPoolSensorEntityDescription(
+            key="throttled",
+            name="Throttled",
+            json_path="NeoPool.Temperature",
+            min_update_interval=300.0,
+        )
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.throttled"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture):
+            await sensor.async_added_to_hass()
+
+        # First message writes
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 25.5}})))
+        assert sensor.async_write_ha_state.call_count == 1
+        # Second message immediately after — value tracks but no write
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 26.0}})))
+        assert sensor._attr_native_value == 26.0
+        assert sensor.async_write_ha_state.call_count == 1  # still 1
+
+    @pytest.mark.asyncio
+    async def test_throttle_writes_after_window_elapses(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """After the throttle window elapses, the next message writes."""
+        desc = NeoPoolSensorEntityDescription(
+            key="throttled",
+            name="Throttled",
+            json_path="NeoPool.Temperature",
+            min_update_interval=300.0,
+        )
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.throttled"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture):
+            await sensor.async_added_to_hass()
+
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 25.5}})))
+        # Rewind the throttle bookkeeping past the window
+        sensor._last_write_ts -= 301
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 26.0}})))
+
+        assert sensor.async_write_ha_state.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_unavailable_resets_throttle(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Going unavailable resets throttle so the next available update writes."""
+        desc = NeoPoolSensorEntityDescription(
+            key="throttled",
+            name="Throttled",
+            json_path="NeoPool.Temperature",
+            min_update_interval=300.0,
+        )
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.throttled"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture):
+            await sensor.async_added_to_hass()
+
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 25.5}})))
+        # Payload now without Temperature → unavailable, throttle resets
+        cb(MagicMock(payload=json.dumps({"NeoPool": {}})))
+        assert sensor._last_write_ts is None
+        # Next available update writes immediately even within nominal window
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Temperature": 27.0}})))
+        # Calls: write (25.5) + write (unavailable) + write (27.0)
+        assert sensor.async_write_ha_state.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_cumulative_first_sample_baseline(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """First raw sample establishes baseline without inflating cumulative."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cumulative",
+            json_path="NeoPool.Connection.MBRequests",
+            min_update_interval=0.0,  # no throttle for test simplicity
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.cum"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        # No prior state to restore
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+        ):
+            await sensor.async_added_to_hass()
+
+        # First sample of a huge Tasmota counter — must NOT fold into cumulative
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1_300_000}}})))
+        assert sensor._attr_native_value == 0.0
+        assert sensor._last_raw == 1_300_000
+
+    @pytest.mark.asyncio
+    async def test_cumulative_accumulates_delta(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Subsequent samples add (new - last_raw) to the cumulative."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cumulative",
+            json_path="NeoPool.Connection.MBRequests",
+            min_update_interval=0.0,
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.cum"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+        ):
+            await sensor.async_added_to_hass()
+
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1000}}})))
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1050}}})))
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1080}}})))
+        # 0 + (1050-1000) + (1080-1050) = 80
+        assert sensor._attr_native_value == 80.0
+
+    @pytest.mark.asyncio
+    async def test_cumulative_handles_tasmota_reboot(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """When the raw counter drops, treat new value as delta from 0 (reboot)."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cumulative",
+            json_path="NeoPool.Connection.MBRequests",
+            min_update_interval=0.0,
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.cum"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+        ):
+            await sensor.async_added_to_hass()
+
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1_000_000}}})))
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 1_000_500}}})))
+        # Tasmota reboot — counter drops back to 0 and starts climbing
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 200}}})))
+        # 0 + 500 + 200 = 700 (the 200 is treated as the new delta from 0)
+        assert sensor._attr_native_value == 700.0
+        assert sensor._last_raw == 200
+
+    @pytest.mark.asyncio
+    async def test_cumulative_restores_prior_state(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Cumulative is restored from prior HA session via RestoreEntity."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cumulative",
+            json_path="NeoPool.Connection.MBRequests",
+            min_update_interval=0.0,
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.cum"
+        sensor.async_write_ha_state = MagicMock()
+
+        cb = None
+
+        async def capture(hass, topic, callback, **kwargs):
+            nonlocal cb
+            if "SENSOR" in topic:
+                cb = callback
+            return MagicMock()
+
+        # Pretend HA last recorded 42,000 for this entity
+        prior_state = MagicMock()
+        prior_state.state = "42000"
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=prior_state),
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+        ):
+            await sensor.async_added_to_hass()
+
+        # Native value restored before any SENSOR arrives
+        assert sensor._cumulative == 42000.0
+        assert sensor._attr_native_value == 42000.0
+
+        # First sample establishes baseline; doesn't change cumulative
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 500}}})))
+        assert sensor._attr_native_value == 42000.0
+        # Next sample adds the delta
+        cb(MagicMock(payload=json.dumps({"NeoPool": {"Connection": {"MBRequests": 600}}})))
+        assert sensor._attr_native_value == 42100.0
+
+    def test_connection_entities_are_cumulative(self) -> None:
+        """The 4 connection diagnostic entities must use the cumulative class."""
+        for key in (
+            "connection_requests",
+            "connection_responses",
+            "connection_no_response",
+            "connection_out_of_range",
+        ):
+            desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == key)
+            assert isinstance(desc, NeoPoolCumulativeSensorEntityDescription), key
+            assert desc.min_update_interval == 3600.0, key
+
+    def test_controller_time_throttled_and_enabled(self) -> None:
+        """controller_time should be throttled to 5 min and enabled by default."""
+        desc = next(d for d in SENSOR_DESCRIPTIONS if d.key == "controller_time")
+        assert desc.min_update_interval == 300.0
+        # entity_registry_enabled_default defaults to True when not overridden
+        assert desc.entity_registry_enabled_default is True
