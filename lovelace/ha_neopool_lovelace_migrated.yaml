@@ -463,3 +463,11 @@
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_connection_out_of_range_system_responses
                 name: Invalid
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_connection_error_rate
+                name: Err Rate
+                icon: mdi:percent
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_connection_problem
+                name: Health
+                icon: mdi:alert-circle-outline

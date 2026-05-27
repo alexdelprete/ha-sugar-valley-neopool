@@ -414,3 +414,20 @@
                 entity: button.neopool_mqtt_sync_controller_time
                 name: Sync Time
                 icon: mdi:clock-check-outline
+      - type: vertical-stack
+        title: Connection Health
+        cards:
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.neopool_mqtt_connection_error_rate
+                name: Error Rate
+                icon: mdi:percent
+                color: yellow
+              - type: tile
+                entity: binary_sensor.neopool_mqtt_connection_problem
+                name: Health
+                icon: mdi:alert-circle-outline
+                color: red

@@ -451,3 +451,11 @@
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_connection_out_of_range
                 name: Invalid
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_connection_error_rate
+                name: Err Rate
+                icon: mdi:percent
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_connection_problem
+                name: Health
+                icon: mdi:alert-circle-outline
