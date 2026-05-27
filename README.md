@@ -568,6 +568,86 @@ NodeID handling is covered in [Requirements](#nodeid-and-setoption157).
 - **Push-based updates**: Data is received via MQTT push; frequency depends
   on your `NPTelePeriod` setting
 
+## Recorder Considerations
+
+A handful of entities update on every Tasmota SENSOR telemetry tick and
+their values legitimately change each time. The total recorder churn
+scales linearly with your Tasmota `TelePeriod` setting. The table below
+assumes hydrolysis runs ~6 hours per day; values are per device.
+
+| `TelePeriod` | Recorder rows/day | 10-day DB footprint |
+|---|---|---|
+| 300s (default) | ~870 | ~2 MB |
+| 60s | ~4,300 | ~11 MB |
+| 30s | ~8,600 | ~22 MB |
+| 10s | ~26,000 | ~65 MB |
+| 1s | ~260,000 | ~650 MB |
+
+For the default `TelePeriod=300s`, the volume is negligible. The
+considerations below matter primarily if you've lowered `TelePeriod` for
+more responsive Home Assistant updates.
+
+### Already disabled by default
+
+- **`sensor.controller_time`** — the controller's clock string updates on
+  every telemetry tick (time always advances) and provides no statistical
+  value (no `state_class`). It's disabled out of the box so it doesn't
+  spam the recorder. The companion **Sync Controller Time** button works
+  independently. Enable it manually under **Settings → Devices &
+  services → NeoPool → Entities** if you want to display the clock.
+
+### Enabled by default — generally worth keeping
+
+These have `state_class: total_increasing`, which means Home Assistant
+aggregates them into hourly long-term statistics for trend graphs
+(*"Modbus errors over the last 30 days"*, *"hours of hydrolysis runtime
+this season"*). The raw history is what fills the DB, not the stats.
+
+- **Connection diagnostics** — `sensor.neopool_connection_requests`,
+  `sensor.neopool_connection_responses`,
+  `sensor.neopool_connection_no_response`,
+  `sensor.neopool_connection_out_of_range`. Useful when troubleshooting
+  Modbus / MQTT issues.
+- **Hydrolysis runtime counters** —
+  `sensor.neopool_hydrolysis_runtime_total`,
+  `sensor.neopool_hydrolysis_runtime_part`,
+  `sensor.neopool_hydrolysis_runtime_pol1`,
+  `sensor.neopool_hydrolysis_runtime_pol2`. Useful for cell-usage and
+  polarity-balance tracking.
+
+### How to reduce churn further
+
+If you run a fast `TelePeriod` and don't want the raw history (only the
+long-term statistics), add a recorder exclude block to your
+`configuration.yaml`. Statistics are stored separately and remain
+available for trend graphs.
+
+```yaml
+recorder:
+  exclude:
+    entities:
+      # Modbus diagnostics — keep long-term stats, drop raw history
+      - sensor.neopool_connection_requests
+      - sensor.neopool_connection_responses
+      - sensor.neopool_connection_no_response
+      - sensor.neopool_connection_out_of_range
+      # Hydrolysis runtime counters — same reasoning
+      - sensor.neopool_hydrolysis_runtime_total
+      - sensor.neopool_hydrolysis_runtime_part
+      - sensor.neopool_hydrolysis_runtime_pol1
+      - sensor.neopool_hydrolysis_runtime_pol2
+```
+
+Note: entity IDs in the example assume the default device name
+`NeoPool`. Migrated installs use the `neopool_mqtt_*` prefix instead —
+see [Lovelace Dashboards](#lovelace-dashboards) for the same naming
+caveat.
+
+For broader recorder tuning options (purge interval, commit interval,
+etc.) see the [Home Assistant recorder documentation][recorder-docs].
+
+[recorder-docs]: <https://www.home-assistant.io/integrations/recorder/>
+
 ## Troubleshooting
 
 ### Enable Debug Logging
