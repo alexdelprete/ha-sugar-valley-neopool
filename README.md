@@ -671,46 +671,82 @@ more responsive Home Assistant updates.
   independently. Enable it manually under **Settings → Devices &
   services → NeoPool → Entities** if you want to display the clock.
 
-### Enabled by default — generally worth keeping
+### Enabled by default — connection diagnostics (rate value only)
 
-These have `state_class: total_increasing`, which means Home Assistant
-aggregates them into hourly long-term statistics for trend graphs
-(*"Modbus errors over the last 30 days"*, *"hours of hydrolysis runtime
-this season"*). The raw history is what fills the DB, not the stats.
+`sensor.neopool_connection_requests`, `sensor.neopool_connection_responses`,
+`sensor.neopool_connection_no_response`,
+`sensor.neopool_connection_out_of_range`.
 
-- **Connection diagnostics** — `sensor.neopool_connection_requests`,
-  `sensor.neopool_connection_responses`,
-  `sensor.neopool_connection_no_response`,
-  `sensor.neopool_connection_out_of_range`. Useful when troubleshooting
-  Modbus / MQTT issues.
-- **Hydrolysis runtime counters** —
-  `sensor.neopool_hydrolysis_runtime_total`,
-  `sensor.neopool_hydrolysis_runtime_part`,
-  `sensor.neopool_hydrolysis_runtime_pol1`,
-  `sensor.neopool_hydrolysis_runtime_pol2`. Useful for cell-usage and
-  polarity-balance tracking.
+These counters live in **Tasmota's RAM** and **reset to 0 every time
+Tasmota restarts** (firmware update, power cycle, manual restart). Same
+behaviour as Tasmota's built-in `MqttCount` / `Uptime` etc. Despite the
+`state_class: total_increasing`, the *absolute cumulative number* loses
+its meaning across reboots — graphs of these counters over time look
+like a sawtooth.
+
+What's actually useful is the **rate** within a Tasmota uptime session:
+
+```text
+no_response / requests = 15,747 / 1,317,109 ≈ 1.2% failure rate
+```
+
+That's a real diagnostic — *"my RS485 wiring drops ~1% of polls."* Home
+Assistant's statistics engine handles the resets correctly for hourly
+delta tracking, so per-hour error-rate trends still work. Just don't
+read "1.3 million requests" as a lifetime number — it's "since the last
+Tasmota boot."
+
+Keep them enabled if you ever need to troubleshoot MQTT / Modbus
+issues. Drop them via `recorder.exclude` below if you don't.
+
+### Enabled by default — true lifetime counters
+
+`sensor.neopool_hydrolysis_runtime_total`,
+`sensor.neopool_hydrolysis_runtime_part`,
+`sensor.neopool_hydrolysis_runtime_pol1`,
+`sensor.neopool_hydrolysis_runtime_pol2`,
+`sensor.neopool_hydrolysis_polarity_changes`.
+
+These come from **Modbus registers in the NeoPool controller's
+persistent storage** (`MBF_CELL_RUNTIME_*` and similar). They survive
+both Tasmota and NeoPool reboots — they're lifetime counters of the
+electrolysis cell hardware itself. *"This cell has accumulated 4,352
+hours on Pol1 since installation"* is a real, single, persistent
+number.
+
+These earn their full long-term-statistics keep — cell-replacement
+decisions, polarity wear balance, seasonal usage trends.
 
 ### How to reduce churn further
 
-If you run a fast `TelePeriod` and don't want the raw history (only the
-long-term statistics), add a recorder exclude block to your
-`configuration.yaml`. Statistics are stored separately and remain
-available for trend graphs.
+If you run a fast `TelePeriod` and don't need raw state-by-state
+history for these entities, add a recorder exclude block to your
+`configuration.yaml`. For the hydrolysis runtime / polarity counters,
+the hourly long-term statistics are stored separately and remain
+available for trend graphs even when raw history is excluded. For the
+connection diagnostics, excluding them simply drops the per-tick rows
+— you lose nothing meaningful since the absolute values reset on
+Tasmota reboot anyway.
 
 ```yaml
 recorder:
   exclude:
     entities:
-      # Modbus diagnostics — keep long-term stats, drop raw history
+      # Modbus diagnostics — Tasmota RAM counters, reset on Tasmota
+      # reboot. Useful for snapshot diagnostics but no long-term value;
+      # safe to drop entirely if you don't troubleshoot MQTT/Modbus.
       - sensor.neopool_connection_requests
       - sensor.neopool_connection_responses
       - sensor.neopool_connection_no_response
       - sensor.neopool_connection_out_of_range
-      # Hydrolysis runtime counters — same reasoning
+      # Hydrolysis runtime counters — NeoPool-persistent. Excluding them
+      # from raw history keeps the hourly long-term statistics, which
+      # are stored separately and remain available for trend graphs.
       - sensor.neopool_hydrolysis_runtime_total
       - sensor.neopool_hydrolysis_runtime_part
       - sensor.neopool_hydrolysis_runtime_pol1
       - sensor.neopool_hydrolysis_runtime_pol2
+      - sensor.neopool_hydrolysis_polarity_changes
 ```
 
 Note: entity IDs in the example assume the default device name
