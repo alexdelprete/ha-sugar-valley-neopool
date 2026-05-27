@@ -198,7 +198,8 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         json_path=JSON_PATH_REDOX_DATA,
         value_fn=safe_float,
     ),
-    # Chlorine sensor
+    # Chlorine sensor — disabled by default; re-enabled by
+    # _disable_unavailable_module_entities when Modules.Chlorine == 1
     NeoPoolSensorEntityDescription(
         key="chlorine_data",
         translation_key="chlorine_data",
@@ -207,6 +208,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_CHLORINE_DATA,
         value_fn=safe_float,
+        entity_registry_enabled_default=False,
     ),
     # Hydrolysis sensors
     NeoPoolSensorEntityDescription(
@@ -311,6 +313,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         value_fn=safe_int,
     ),
     # Conductivity sensor (firmware emits flat scalar at NeoPool.Conductivity, %)
+    # Disabled by default; re-enabled when Modules.Conductivity == 1
     NeoPoolSensorEntityDescription(
         key="conductivity_data",
         translation_key="conductivity_data",
@@ -319,8 +322,9 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_CONDUCTIVITY_DATA,
         value_fn=safe_int,
+        entity_registry_enabled_default=False,
     ),
-    # Ionization sensor
+    # Ionization sensor — disabled by default; re-enabled when Modules.Ionization == 1
     NeoPoolSensorEntityDescription(
         key="ionization_data",
         translation_key="ionization_data",
@@ -329,6 +333,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         json_path=JSON_PATH_IONIZATION_DATA,
         value_fn=safe_float,
+        entity_registry_enabled_default=False,
     ),
     # Filtration sensors
     NeoPoolSensorEntityDescription(

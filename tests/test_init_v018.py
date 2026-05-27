@@ -25,6 +25,7 @@ from custom_components.sugar_valley_neopool import (
     NeoPoolData,
     _auto_acquire_dual_nodeids,
     _cleanup_removed_entities,
+    _disable_unavailable_module_entities,
     _disable_unavailable_relay_entities,
     _migrate_to_canonical_nodeid,
     _update_device_registry_metadata,
@@ -384,6 +385,154 @@ class TestDisableUnavailableRelayEntities:
         uv = entity_registry.async_get("binary_sensor.neopool_relay_uv")
         assert uv is not None
         assert uv.disabled_by == er.RegistryEntryDisabler.USER
+
+
+# ---------------------------------------------------------------------------
+# _disable_unavailable_module_entities
+# ---------------------------------------------------------------------------
+class TestDisableUnavailableModuleEntities:
+    """Tests for _disable_unavailable_module_entities."""
+
+    def test_no_module_data_skips(self, hass: HomeAssistant) -> None:
+        """No module data and device unavailable → function returns without changes."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules=set(),
+            available=False,
+        )
+        _disable_unavailable_module_entities(hass, entry)  # must not raise
+
+    def test_disables_absent_module_entities(self, hass: HomeAssistant) -> None:
+        """Entities for modules not in available_modules get disabled by INTEGRATION."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            # Only Hydrolysis is installed; Chlorine / Ionization / Conductivity absent.
+            available_modules={"Hydrolysis"},
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        for domain, key in [
+            ("sensor", "chlorine_data"),
+            ("number", "chlorine_setpoint"),
+            ("sensor", "ionization_data"),
+            ("number", "ionization_setpoint"),
+            ("sensor", "conductivity_data"),
+        ]:
+            entity_registry.async_get_or_create(
+                domain=domain,
+                platform=DOMAIN,
+                unique_id=f"neopool_mqtt_ABC123_{key}",
+                config_entry=entry,
+                suggested_object_id=f"neopool_{key}",
+            )
+
+        _disable_unavailable_module_entities(hass, entry)
+
+        # All five should now be disabled by INTEGRATION
+        for entity_id in [
+            "sensor.neopool_chlorine_data",
+            "number.neopool_chlorine_setpoint",
+            "sensor.neopool_ionization_data",
+            "number.neopool_ionization_setpoint",
+            "sensor.neopool_conductivity_data",
+        ]:
+            e = entity_registry.async_get(entity_id)
+            assert e is not None, entity_id
+            assert e.disabled_by == er.RegistryEntryDisabler.INTEGRATION, entity_id
+
+    def test_leaves_present_module_entities_enabled(self, hass: HomeAssistant) -> None:
+        """Entities whose module IS present stay enabled."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules={"Chlorine"},
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_chlorine_data",
+            config_entry=entry,
+            suggested_object_id="neopool_chlorine_data",
+        )
+
+        _disable_unavailable_module_entities(hass, entry)
+
+        e = entity_registry.async_get("sensor.neopool_chlorine_data")
+        assert e is not None
+        assert e.disabled_by is None
+
+    def test_reenables_previously_disabled_module_entity(self, hass: HomeAssistant) -> None:
+        """An INTEGRATION-disabled entity gets re-enabled when its module reappears."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules={"Ionization"},
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        created = entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_ionization_data",
+            config_entry=entry,
+            suggested_object_id="neopool_ionization_data",
+        )
+        entity_registry.async_update_entity(
+            created.entity_id,
+            disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+        )
+
+        _disable_unavailable_module_entities(hass, entry)
+
+        e = entity_registry.async_get("sensor.neopool_ionization_data")
+        assert e is not None
+        assert e.disabled_by is None
+
+    def test_does_not_reenable_user_disabled(self, hass: HomeAssistant) -> None:
+        """User-disabled entities are left alone even when their module is present."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_modules={"Chlorine"},
+            available=True,
+        )
+        entity_registry = er.async_get(hass)
+        created = entity_registry.async_get_or_create(
+            domain="sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_chlorine_data",
+            config_entry=entry,
+            suggested_object_id="neopool_chlorine_data",
+        )
+        entity_registry.async_update_entity(
+            created.entity_id,
+            disabled_by=er.RegistryEntryDisabler.USER,
+        )
+
+        _disable_unavailable_module_entities(hass, entry)
+
+        e = entity_registry.async_get("sensor.neopool_chlorine_data")
+        assert e is not None
+        assert e.disabled_by == er.RegistryEntryDisabler.USER
 
 
 # ---------------------------------------------------------------------------

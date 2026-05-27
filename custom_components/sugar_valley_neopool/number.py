@@ -92,6 +92,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         json_path=JSON_PATH_REDOX_SETPOINT,
         command=CMD_REDOX,
     ),
+    # Chlorine setpoint — disabled by default; re-enabled when Modules.Chlorine == 1
     NeoPoolNumberEntityDescription(
         key="chlorine_setpoint",
         translation_key="chlorine_setpoint",
@@ -103,6 +104,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         mode=NumberMode.SLIDER,
         json_path=JSON_PATH_CHLORINE_SETPOINT,
         command=CMD_CHLORINE,
+        entity_registry_enabled_default=False,
     ),
     NeoPoolNumberEntityDescription(
         key="hydrolysis_setpoint",
@@ -117,6 +119,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         command=CMD_HYDROLYSIS,
         command_template="{value} %",  # NeoPool expects "50 %" format
     ),
+    # Ionization setpoint — disabled by default; re-enabled when Modules.Ionization == 1
     NeoPoolNumberEntityDescription(
         key="ionization_setpoint",
         translation_key="ionization_setpoint",
@@ -128,6 +131,7 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
         json_path=JSON_PATH_IONIZATION_SETPOINT,
         command=CMD_IONIZATION,
         max_json_path=JSON_PATH_IONIZATION_MAX,
+        entity_registry_enabled_default=False,
     ),
 )
 

@@ -6,7 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry
@@ -74,6 +74,9 @@ class NeoPoolData:
     fw_version: str | None = None  # From NeoPool.Powerunit.Version
     tasmota_version: str | None = None  # From StatusFWR.Version
     available_relays: set[str] = field(default_factory=set)  # Relay keys present in SENSOR
+    # Module keys reported as installed (value == 1) in NeoPool.Modules; used to
+    # auto-disable sensor/number entities for modules the controller doesn't have.
+    available_modules: set[str] = field(default_factory=set)
     device_ip: str | None = None  # From Status 5 network info
 
 
@@ -142,6 +145,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Disable relay entities that aren't assigned on the controller
     _disable_unavailable_relay_entities(hass, entry)
+
+    # Disable sensor/number entities for modules the controller doesn't have
+    _disable_unavailable_module_entities(hass, entry)
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -677,6 +683,75 @@ def _disable_unavailable_relay_entities(hass: HomeAssistant, entry: NeoPoolConfi
             )
 
 
+# Map: module name in NeoPool.Modules → (domain, entity_key) entries to manage.
+# Only entities that go unavailable when the module is absent belong here.
+# Relay state binary sensors (e.g. relay_chlorine_state) are managed separately
+# by _disable_unavailable_relay_entities via NeoPool.Relay detection.
+_MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
+    "Chlorine": [
+        ("sensor", "chlorine_data"),
+        ("number", "chlorine_setpoint"),
+    ],
+    "Ionization": [
+        ("sensor", "ionization_data"),
+        ("number", "ionization_setpoint"),
+    ],
+    "Conductivity": [
+        ("sensor", "conductivity_data"),
+    ],
+}
+
+
+@callback
+def _disable_unavailable_module_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Disable sensor/number entities for NeoPool modules not installed.
+
+    Uses available_modules from SENSOR payload (NeoPool.Modules) to decide.
+    Only acts on entities whose disabled_by is either None or INTEGRATION —
+    user-disabled entities (disabled_by=USER) are left alone. Re-enables
+    entities that were previously disabled by the integration when the
+    module is later detected as present.
+    """
+    available = entry.runtime_data.available_modules
+    if not available and not entry.runtime_data.available:
+        # No SENSOR data received yet — can't determine module availability
+        _LOGGER.debug("No module data available, skipping module entity management")
+        return
+
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    for module_name, entity_descriptors in _MODULE_ENTITY_MAP.items():
+        is_present = module_name in available
+        for domain, entity_key in entity_descriptors:
+            unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+            entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if not entity_id:
+                continue
+
+            entity_entry = entity_registry.async_get(entity_id)
+            if not entity_entry:
+                continue
+
+            if not is_present and entity_entry.disabled_by is None:
+                entity_registry.async_update_entity(
+                    entity_id,
+                    disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+                )
+                _LOGGER.info(
+                    "Disabled module entity %s (%s module not installed)",
+                    entity_id,
+                    module_name,
+                )
+            elif is_present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                entity_registry.async_update_entity(entity_id, disabled_by=None)
+                _LOGGER.info(
+                    "Re-enabled module entity %s (%s module is installed)",
+                    entity_id,
+                    module_name,
+                )
+
+
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
     """Register the NeoPool device in the device registry.
 
@@ -1009,14 +1084,15 @@ async def async_fetch_device_metadata(
     tasmota_version: str | None = None
     device_ip: str | None = None
     available_relays: set[str] = set()
+    available_modules: set[str] = set()
     sensor_event = asyncio.Event()
     status2_event = asyncio.Event()
     status5_event = asyncio.Event()
 
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SENSOR telemetry for manufacturer, version, and relay detection."""
-        nonlocal manufacturer, fw_version, available_relays
+        """Handle SENSOR telemetry for manufacturer, version, relay, and module detection."""
+        nonlocal manufacturer, fw_version, available_relays, available_modules
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -1046,6 +1122,11 @@ async def async_fetch_device_metadata(
                 }
                 available_relays = {k for k in relay_data if k in relay_names}
                 _LOGGER.debug("Detected available relays: %s", available_relays)
+            # Detect which modules are installed (value == 1)
+            modules_data = get_nested_value(payload, "NeoPool.Modules")
+            if isinstance(modules_data, dict):
+                available_modules = {k for k, v in modules_data.items() if v == 1}
+                _LOGGER.debug("Detected available modules: %s", available_modules)
             if manufacturer or fw_version:
                 sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
@@ -1146,6 +1227,10 @@ async def async_fetch_device_metadata(
     # Store available relays
     if available_relays:
         entry.runtime_data.available_relays = available_relays
+
+    # Store available modules (used to auto-disable entities for absent modules)
+    if available_modules:
+        entry.runtime_data.available_modules = available_modules
 
     # Update device registry if we got any metadata
     if manufacturer or fw_version or tasmota_version or device_ip:

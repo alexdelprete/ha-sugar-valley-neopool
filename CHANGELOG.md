@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Auto-disable entities for absent modules**: `sensor.chlorine_data`,
+  `sensor.ionization_data`, `sensor.conductivity_data`,
+  `number.chlorine_setpoint`, and `number.ionization_setpoint` now default
+  to disabled and are automatically enabled by the integration only when
+  the corresponding module is reported as installed in
+  `NeoPool.Modules` (value `1`). Existing installs are migrated on next
+  startup: if the module isn't present, the entity is disabled
+  (`disabled_by=INTEGRATION`); if the module is present but the entity
+  was previously disabled by the integration, it gets re-enabled.
+  User-disabled entities are left alone. Mirrors the existing behaviour
+  of `_disable_unavailable_relay_entities` for relay binary sensors.
+
 ## [1.0.1] - 2026-05-27
 
 ### Added
