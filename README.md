@@ -568,6 +568,81 @@ NodeID handling is covered in [Requirements](#nodeid-and-setoption157).
 - **Push-based updates**: Data is received via MQTT push; frequency depends
   on your `NPTelePeriod` setting
 
+## Dynamic Entity Management
+
+The integration watches the SENSOR telemetry stream continuously and
+automatically enables or disables entities based on what the controller
+reports — so your device page stays clean as you add, remove, or
+reconfigure pool equipment without needing to touch Home Assistant's
+entity settings manually.
+
+### What gets managed
+
+Three signals from `tele/{topic}/SENSOR` drive the auto-management:
+
+- **`NeoPool.Modules.{Chlorine,Ionization,Conductivity}`** — the matching
+  sensor / number entities (`chlorine_data`, `chlorine_setpoint`,
+  `ionization_data`, `ionization_setpoint`, `conductivity_data`) are
+  disabled when the module isn't installed (`value == 0`).
+- **`NeoPool.Relay.{Acid,Base,Redox,Chlorine,Conductivity,Heating,UV,Valve}`**
+  — the matching `relay_*_state` binary sensors are disabled when the
+  relay isn't assigned on the controller (key not emitted).
+- **`NeoPool.Hydrolysis.Unit`** (`%` or `g/h`) — the three g/h-labeled
+  hydrolysis sensors (`hydrolysis_data` g/h, `hydrolysis_setpoint_gh`,
+  `hydrolysis_max`) are disabled in `%` mode, where the absolute g/h
+  value isn't recoverable from telemetry.
+
+### End-to-end scenarios
+
+- **Install a chlorine module mid-session** → next SENSOR telemetry
+  reports `Modules.Chlorine = 1` → integration re-enables
+  `sensor.chlorine_data` and `number.chlorine_setpoint` in the registry
+  → schedules an automatic reload → ~1-2 second blip across the
+  integration's entities → chlorine entities now live and reporting
+  data, with no manual intervention.
+- **Remove a relay assignment from the controller** → Tasmota stops
+  emitting that relay key in the JSON → integration disables the
+  matching binary sensor on next telemetry tick. No reload — the entity
+  just gets hidden from the UI immediately.
+- **Flip the controller display unit `g/h` → `%`** → next telemetry
+  carries `Hydrolysis.Unit: "%"` → the three g/h-labeled sensors get
+  disabled. No reload (disable-only).
+- **Flip `%` → `g/h`** → g/h sensors re-enabled → reload scheduled so
+  the entities materialize with live values.
+- **No change** → integration sees identical signals to last seen, no
+  registry writes, no reload. Watching is cheap.
+
+### Manual control is sticky
+
+If you disable an entity yourself via the UI (Settings → Devices &
+services → NeoPool → Entities → toggle off), the integration **does
+not** re-enable it even when the underlying module is present. Only
+entities that the integration itself disabled get auto-re-enabled.
+
+### Where to see it happen
+
+Enable / disable transitions log at `WARNING` level so they're visible
+in the default Home Assistant log without needing to switch on debug
+logging:
+
+```text
+WARNING (MainThread) [custom_components.sugar_valley_neopool]
+  Disabled module entity sensor.neopool_chlorine_data
+  (Chlorine module not installed)
+
+WARNING (MainThread) [custom_components.sugar_valley_neopool]
+  Re-enabled mode entity sensor.neopool_hydrolysis_max
+  (controller is in g/h mode)
+```
+
+If a reload is triggered (re-enable transition), you'll also see:
+
+```text
+WARNING (MainThread) [custom_components.sugar_valley_neopool]
+  Re-enabled 2 previously-disabled entities, scheduling integration
+  reload: ['sensor.neopool_chlorine_data', 'number.neopool_chlorine_setpoint']
+```
+
 ## Recorder Considerations
 
 A handful of entities update on every Tasmota SENSOR telemetry tick and
