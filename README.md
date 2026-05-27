@@ -29,10 +29,14 @@ of your pool system through Home Assistant.
 - **Chlorine** - Chlorine level (for controllers with chlorine module)
 - **Conductivity** - Conductivity level (for controllers with conductivity module)
 - **Ionization** - Current ionization level (for controllers with ionization module)
-- **Controller Time** - NeoPool controller internal clock (diagnostic)
+- **Controller Time** - NeoPool controller internal clock (diagnostic,
+  throttled to 5-min updates)
 - **Filtration** - Mode and speed
 - **Powerunit** - Voltage diagnostics (5V, 12V, 24-30V, 4-20mA)
-- **Connection** - Modbus communication statistics
+- **Connection** - Modbus communication statistics (lifetime cumulative,
+  reset-aware across Tasmota reboots)
+- **Connection Error Rate** - Rolling 10-minute Modbus failure
+  percentage (diagnostic)
 
 ### Binary Sensors
 
@@ -41,6 +45,8 @@ of your pool system through Home Assistant.
   Heating, UV, Valve)
 - Water flow and tank level indicators
 - Hydrolysis redox controlled
+- **Connection Problem** - Triggered when the rolling Modbus error rate
+  exceeds a configurable threshold (default 5%)
 
 ### Controls
 
@@ -64,8 +70,15 @@ of your pool system through Home Assistant.
   language (supports German, English, Spanish, Estonian, Finnish, French,
   Italian, Norwegian, Portuguese, and Swedish)
 - **Options flow**: Adjust offline timeout, recovery script, repair
-  notification settings at runtime
+  notification settings, and the connection error-rate threshold at
+  runtime
 - **Reconfigure flow**: Change device name and MQTT topic
+- **Dynamic entity management**: Sensor and number entities for chlorine,
+  ionization, and conductivity modules auto-enable when the controller
+  reports the module installed and auto-disable when it's removed.
+  Hydrolysis g/h-labeled entities auto-disable when the controller is
+  in `%` display mode and re-enable when flipped back to `g/h`. See
+  the [Dynamic Entity Management](#dynamic-entity-management) section
 - **Repair notifications**: Device offline issues are surfaced in Home
   Assistant's repair system with configurable threshold
 - **Recovery notifications**: Detailed timing info (downtime, script execution)
