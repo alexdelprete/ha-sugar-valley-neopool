@@ -94,6 +94,30 @@ custom_components/sugar_valley_neopool/
 └── translations/        # 10 languages (de, en, es, et, fi, fr, it, nb, pt, sv)
 ```
 
+### Example Lovelace Dashboards
+
+The repo ships four example dashboards in `lovelace/`:
+
+- `ha_neopool_lovelace.yaml` / `_responsive.yaml` — fresh installs
+  (entity-ID prefix `neopool_`, from `DEFAULT_DEVICE_NAME = "NeoPool"`).
+- `ha_neopool_lovelace_migrated.yaml` / `_responsive_migrated.yaml` —
+  users who migrated from the YAML package (entity-ID prefix
+  `neopool_mqtt_`, from `_extract_device_name_from_migration` in
+  `config_flow.py`).
+
+When renaming, adding, or removing an entity description, update the
+relevant dashboard files. The migrated variants must additionally
+respect:
+
+- `YAML_TO_INTEGRATION_KEY_MAP` (slug differences vs fresh installs —
+  e.g. `redox_data` vs `redox_orp`, `filtration_switch` vs `filtration`)
+- `YAML_ENTITIES_TO_DELETE` (don't reference entities removed by
+  migration — e.g. `relay_ph_state`, `relay_filtration_state`,
+  `relay_light_state`, the four `relay_aux*_state` binary sensors)
+
+Both are defined in `const.py`. `lovelace/README.md` documents the
+custom-card dependencies and the fresh-vs-migrated selection logic.
+
 ## MQTT Coding Patterns
 
 ### MQTT Subscription Pattern
@@ -773,7 +797,15 @@ This integration tracks [Home Assistant Quality Scale][qs] rules in `quality_sca
 > **STOP: NEVER create git tags or GitHub releases without explicit user command.**
 > This is a hard rule. Always stop after commit/push and wait for user instruction.
 
-**Published releases are FROZEN** - Never modify documentation for released versions.
+**Published releases are FROZEN** - Never modify the git tag, the ZIP asset, or the
+`docs/releases/vX.Y.Z.md` file in a way that changes the meaning of what shipped.
+
+The GitHub *release body* (what shows on the release page) may be edited via
+`gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md` to fix typos, add
+cross-references to companion files that landed on `main` shortly after the release,
+or clarify scope — as long as the edit doesn't misrepresent what's actually in the
+v1.0.x ZIP. When you do this, also update the matching `docs/releases/vX.Y.Z.md` so
+the file and the live release body stay in sync.
 
 **Master branch = Next Release** - All commits target the next version with version bumped
 in manifest.json and const.py.
@@ -978,11 +1010,32 @@ When a release fixes a specific GitHub issue:
 
 <!-- END SHARED:repo-sync -->
 
+## Companion YAML Package Repo
+
+[`alexdelprete/HA-NeoPool-MQTT-Package`](https://github.com/alexdelprete/HA-NeoPool-MQTT-Package)
+is the predecessor YAML-package project this integration replaces and supports
+migrating from. It exposes the same NeoPool MQTT data as HA MQTT entities defined
+in `ha_neopool_mqtt_package.yaml` (Jinja `value_template`s) and ships two
+companion Lovelace dashboards.
+
+When fixing bugs in *shared* logic (anything derived from the Tasmota
+`tele/SmartPool/SENSOR` payload — sensor value parsing, threshold clamping, unit
+handling, hydrolysis percent computation), **check whether the same fix is
+needed in the package repo**. The Jinja templates there are the equivalent of
+this integration's Python `value_fn` / `payload_fn` callables. Stay in lock-step
+on user-visible numeric semantics, even when the implementations diverge.
+
+When fixing the package repo, the canonical algorithm lives in this integration
+— reference the relevant function (e.g. `_hydrolysis_percent_fn` in `sensor.py`)
+in inline comments on the Jinja template so the two stay coherent under future
+edits.
+
 ## Reference Documentation
 
 - [Tasmota NeoPool Documentation](https://tasmota.github.io/docs/NeoPool/)
 - [Home Assistant MQTT Integration](https://www.home-assistant.io/integrations/mqtt/)
 - [Home Assistant Developer Docs](https://developers.home-assistant.io/)
 - [Project docs/](docs/) folder contains detailed analysis documents
+- [Companion YAML package repo](https://github.com/alexdelprete/HA-NeoPool-MQTT-Package)
 
 [qs]: https://developers.home-assistant.io/docs/core/integration-quality-scale/
