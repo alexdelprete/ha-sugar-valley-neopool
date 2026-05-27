@@ -70,6 +70,11 @@ class TestAsyncSetupEntry:
                 return_value=None,
             ),
             patch(
+                "custom_components.sugar_valley_neopool._setup_dynamic_disable_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
                 "custom_components.sugar_valley_neopool.async_migrate_masked_unique_ids",
                 new_callable=AsyncMock,
                 return_value=True,
@@ -130,6 +135,11 @@ class TestAsyncSetupEntry:
             ),
             patch(
                 "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._setup_dynamic_disable_watch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),

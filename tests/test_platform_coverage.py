@@ -142,7 +142,9 @@ class TestSensorPlatform:
 
         await sensor_setup(hass, mock_config_entry, capture_entities)
 
-        assert len(entities) == len(SENSOR_DESCRIPTIONS)
+        # +1 for the standalone NeoPoolConnectionRateSensor (no entity description —
+        # reads from the shared ConnectionRateTracker in runtime_data)
+        assert len(entities) == len(SENSOR_DESCRIPTIONS) + 1
 
     def test_all_sensor_descriptions_have_json_path(self) -> None:
         """Test all sensor descriptions have json_path."""
@@ -174,7 +176,8 @@ class TestBinarySensorPlatform:
 
         await binary_sensor_setup(hass, mock_config_entry, capture_entities)
 
-        assert len(entities) == len(BINARY_SENSOR_DESCRIPTIONS)
+        # +1 for the standalone NeoPoolConnectionProblemBinarySensor
+        assert len(entities) == len(BINARY_SENSOR_DESCRIPTIONS) + 1
 
     def test_binary_sensor_invert_logic(self) -> None:
         """Test some binary sensors use invert logic."""
