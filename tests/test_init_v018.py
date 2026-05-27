@@ -30,10 +30,12 @@ from custom_components.sugar_valley_neopool import (
     _disable_unavailable_relay_entities,
     _migrate_to_canonical_nodeid,
     _refresh_entity_disable_state,
+    _setup_dynamic_disable_watch,
     _update_device_registry_metadata,
     _wait_for_any_nodeid,
     async_fetch_device_metadata,
     async_migrate_masked_unique_ids,
+    connection_rate_signal,
     get_device_info,
 )
 from custom_components.sugar_valley_neopool.const import (
@@ -44,6 +46,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_NODEID_REAL,
     DOMAIN,
 )
+from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
@@ -1675,3 +1678,202 @@ class TestMigrateMaskedAdditional:
         result = await async_migrate_masked_unique_ids(hass, entry)
 
         assert result is True
+
+
+# ---------------------------------------------------------------------------
+# _setup_dynamic_disable_watch (continuous SENSOR watch + rate tracker feed)
+# ---------------------------------------------------------------------------
+class TestSetupDynamicDisableWatch:
+    """Tests for _setup_dynamic_disable_watch and its on_sensor callback."""
+
+    @pytest.mark.asyncio
+    async def test_watch_subscribes_to_sensor_topic(self, hass: HomeAssistant) -> None:
+        """Setup subscribes to tele/{topic}/SENSOR and stores the unsub via entry."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_topic: str | None = None
+
+        async def fake_subscribe(_hass, topic, _cb, **_kwargs):
+            nonlocal captured_topic
+            captured_topic = topic
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=fake_subscribe,
+        ):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        assert captured_topic == "tele/MyPool/SENSOR"
+
+    @pytest.mark.asyncio
+    async def test_on_sensor_feeds_tracker_and_dispatches(self, hass: HomeAssistant) -> None:
+        """A SENSOR message with Connection.* counters updates the tracker."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        dispatched: list[str] = []
+
+        def capture_signal(_hass, signal, *_args):
+            dispatched.append(signal)
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        # Invoke the captured callback with a representative payload
+        msg = MagicMock()
+        msg.payload = json.dumps(
+            {
+                "NeoPool": {
+                    "Connection": {
+                        "MBRequests": 1000,
+                        "MBNoResponse": 5,
+                        "DataOutOfRange": 0,
+                    }
+                }
+            }
+        )
+
+        with patch(
+            "custom_components.sugar_valley_neopool.async_dispatcher_send",
+            side_effect=capture_signal,
+        ):
+            captured_cb(msg)
+
+        assert entry.runtime_data.connection_rate_tracker.samples_count == 1
+        assert dispatched == [connection_rate_signal(entry)]
+
+    @pytest.mark.asyncio
+    async def test_on_sensor_detects_module_change_and_refreshes(self, hass: HomeAssistant) -> None:
+        """Module set change triggers _refresh_entity_disable_state."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            available=True,
+            available_modules=set(),  # nothing initially
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        # Mock the refresh so we can assert it was called
+        refresh_calls: list[str] = []
+        with patch(
+            "custom_components.sugar_valley_neopool._refresh_entity_disable_state",
+            side_effect=lambda *_args: refresh_calls.append("called"),
+        ):
+            msg = MagicMock()
+            msg.payload = json.dumps({"NeoPool": {"Modules": {"Chlorine": 1, "Ionization": 0}}})
+            captured_cb(msg)
+
+        assert refresh_calls == ["called"]
+        assert entry.runtime_data.available_modules == {"Chlorine"}
+
+    @pytest.mark.asyncio
+    async def test_on_sensor_no_change_no_refresh(self, hass: HomeAssistant) -> None:
+        """Identical signals to last seen → no refresh call (cheap no-op)."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            available=True,
+            available_modules={"Chlorine"},  # already what payload will report
+            available_relays={"Acid"},
+            hydrolysis_unit="g/h",
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        refresh_calls: list[str] = []
+        with patch(
+            "custom_components.sugar_valley_neopool._refresh_entity_disable_state",
+            side_effect=lambda *_args: refresh_calls.append("called"),
+        ):
+            msg = MagicMock()
+            msg.payload = json.dumps(
+                {
+                    "NeoPool": {
+                        "Modules": {"Chlorine": 1},
+                        "Relay": {"Acid": 0},
+                        "Hydrolysis": {"Unit": "g/h"},
+                    }
+                }
+            )
+            captured_cb(msg)
+
+        assert refresh_calls == []  # no change → no refresh
+
+    @pytest.mark.asyncio
+    async def test_on_sensor_invalid_json_silent(self, hass: HomeAssistant) -> None:
+        """Invalid JSON payload is swallowed without raising."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        msg = MagicMock()
+        msg.payload = "not valid json {{{"
+        captured_cb(msg)  # must not raise
+
+        assert entry.runtime_data.connection_rate_tracker.samples_count == 0
