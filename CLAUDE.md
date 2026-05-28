@@ -178,6 +178,56 @@ PH_STATE_MAP = {0: "No Alarm", 1: "pH too high", ...}
 value_fn=lambda x: PH_STATE_MAP.get(safe_int(x), f"Unknown ({x})")
 ```
 
+### Throttling and Cumulative Sensors
+
+For entities that change on every SENSOR tick but don't need
+recorder-row-per-tick granularity, use `min_update_interval` on
+`NeoPoolSensorEntityDescription`. The in-memory value still tracks
+every message; `async_write_ha_state()` is throttled. Example
+patterns already in the codebase:
+
+- `sensor.controller_time` — `min_update_interval=300.0`
+  (5-minute throttle for the controller clock)
+- All 4 connection lifetime counters — `min_update_interval=3600.0`
+  (one row per hour, matches HA's statistics aggregation)
+
+For Tasmota-RAM counters that reset on every Tasmota reboot
+(MBRequests, MBNoResponse, etc.), use `NeoPoolCumulativeSensor` +
+`NeoPoolCumulativeSensorEntityDescription`. The class extends
+`NeoPoolSensor` + `RestoreEntity` and:
+
+1. Tracks the raw counter in memory across SENSOR messages.
+2. Adds the delta (`new - last_raw`) to a cumulative total.
+3. Treats `new < last_raw` as a Tasmota-reboot signal — the new value
+   itself becomes the delta from 0.
+4. Persists the cumulative across HA restarts via `RestoreEntity`.
+
+Throttling is independent of cumulative tracking — combine via the
+description's `min_update_interval` attribute.
+
+### Sharing State Across Entities
+
+When multiple entities need to read the same derived value (e.g. the
+`ConnectionRateTracker` feeds both `sensor.connection_error_rate` and
+`binary_sensor.connection_problem`), the project convention is:
+
+1. **Single source of truth in `entry.runtime_data`** — e.g.
+   `runtime_data.connection_rate_tracker: ConnectionRateTracker`.
+2. **One MQTT subscription** updates the shared state. Today this
+   piggybacks on `_setup_dynamic_disable_watch` in `__init__.py`, which
+   is the integration's central per-message handler.
+3. **Dispatcher signal** to fan out updates. The signal name is
+   produced by the `connection_rate_signal(entry)` helper so producers
+   and consumers stay in sync.
+4. **Consumers subscribe via `async_dispatcher_connect`** in
+   `async_added_to_hass`, registered for cleanup via
+   `self.async_on_remove(...)`.
+
+Do NOT have multiple entities open their own MQTT subscriptions to
+compute overlapping derived state — that risks drift between them
+(different window edges, slightly different snapshots) and burns
+subscriptions for no benefit.
+
 ## NodeID-Based Unique IDs and Automatic Migration
 
 ### Why NodeID?
@@ -522,6 +572,35 @@ Always subscribe to LWT topic for availability:
 lwt_topic = f"tele/{mqtt_topic}/LWT"
 # Payloads: "Online" or "Offline"
 ```
+
+### 5. Adding a SENSOR subscriber breaks existing setup-entry tests
+
+Anything new that calls `mqtt.async_subscribe(...)` inside
+`async_setup_entry` (or a function it calls during setup) will trip
+~7 existing tests in `tests/test_init.py`, `test_init_coverage.py`,
+`test_init_extended.py`, and `test_coverage_98.py` with:
+
+```text
+homeassistant.exceptions.HomeAssistantError:
+Cannot subscribe to topic 'tele/SmartPool/SENSOR',
+make sure MQTT is set up correctly
+```
+
+These tests already mock `async_fetch_device_metadata` to skip the
+first MQTT subscribe. They need the same treatment for your new
+function:
+
+```python
+patch(
+    "custom_components.sugar_valley_neopool.<your_new_function>",
+    new_callable=AsyncMock,
+    return_value=None,
+),
+```
+
+For inspiration, see the `_setup_dynamic_disable_watch` mock that
+was added alongside these tests when the persistent SENSOR watch
+landed.
 
 <!-- BEGIN SHARED:repo-sync -->
 <!-- Synced by repo-sync on 2026-03-18 -->
@@ -944,6 +1023,18 @@ gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | gr
 ```
 
 The coverage percentage is the last column in the TOTAL line.
+
+**Coverage drift during a dev cycle:** A big feature commit can drop
+total coverage even when it adds tests, because the added code is
+larger than the added test surface. Watch `__init__.py` in particular
+— it tends to absorb new setup-entry hooks (e.g., `_setup_dynamic_disable_watch`,
+the connection-rate dispatcher wiring) whose callback bodies are easy
+to skip in unit tests. Before tagging, pull the per-file coverage
+table from the Tests workflow log, identify the largest absolute
+missed-statement count, and write a focused test there if it's
+project-internal logic. See the `TestSetupDynamicDisableWatch` class
+in `tests/test_init_v018.py` for an example of how to cover a
+SENSOR-watch callback without standing up real MQTT.
 
 ### Issue References in Release Notes
 
