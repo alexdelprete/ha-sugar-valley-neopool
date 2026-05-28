@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Throttle on cumulative connection counters and `controller_time`
-  actually takes effect**: NeoPool entities inherited HA's default
-  `should_poll = True`, so HA's ~30-second polling cycle called
+- **HA default polling no longer bypasses the throttle on cumulative
+  counters and `controller_time` (`should_poll` fix)**: NeoPool entities
+  inherited HA's default `should_poll = True`, so HA's ~30-second polling
+  cycle called
   `async_write_ha_state()` on its own schedule and silently bypassed the
   `min_update_interval` throttle introduced in v1.1.0. The connection
   cumulative counters were ending up at ~30s recorder cadence (matching
