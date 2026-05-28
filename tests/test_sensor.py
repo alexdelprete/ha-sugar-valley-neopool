@@ -8,6 +8,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from custom_components.sugar_valley_neopool.binary_sensor import (
+    NeoPoolBinarySensor,
+    NeoPoolBinarySensorEntityDescription,
+)
 from custom_components.sugar_valley_neopool.const import (
     JSON_PATH_CHLORINE_DATA,
     JSON_PATH_CONDUCTIVITY_DATA,
@@ -961,3 +965,207 @@ class TestConnectionRateSensor:
 
         sensor._handle_rate_update()
         assert sensor._attr_native_value is None
+
+
+class TestNoPollingByDefault:
+    """Regression tests for the v1.1.1 polling-bypass-throttle fix.
+
+    Before v1.1.1, NeoPool entities inherited HA's default `should_poll = True`,
+    so HA's ~30-second polling cycle called `async_write_ha_state()` on its own
+    schedule, bypassing the throttle in NeoPoolSensor.message_received. The
+    fix sets `_attr_should_poll = False` on the base class. These tests guard
+    against a future change silently re-enabling polling.
+    """
+
+    def test_binary_sensor_instance_does_not_poll(self, mock_config_entry: MagicMock) -> None:
+        """A concrete NeoPoolBinarySensor instance must report should_poll=False.
+
+        Same regression protection as the sensor tests below — ensures the
+        base-class disable propagates through every concrete subclass we ship.
+        """
+        desc = NeoPoolBinarySensorEntityDescription(
+            key="t",
+            name="t",
+            json_path="NeoPool.Modules.pH",
+        )
+        binary_sensor = NeoPoolBinarySensor(mock_config_entry, desc)
+        assert binary_sensor.should_poll is False
+
+    def test_sensor_instance_does_not_poll(self, mock_config_entry: MagicMock) -> None:
+        """A concrete NeoPoolSensor instance must report should_poll=False."""
+        desc = NeoPoolSensorEntityDescription(
+            key="t",
+            name="t",
+            json_path="NeoPool.Temperature",
+        )
+        sensor = NeoPoolSensor(mock_config_entry, desc)
+        assert sensor.should_poll is False
+
+    def test_cumulative_sensor_instance_does_not_poll(self, mock_config_entry: MagicMock) -> None:
+        """A concrete NeoPoolCumulativeSensor instance must report should_poll=False."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="t",
+            name="t",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        assert sensor.should_poll is False
+
+
+class TestCumulativeRecorderFallback:
+    """Tests for the v1.1.1 recorder-fallback restore in NeoPoolCumulativeSensor.
+
+    Catches v1.0.x → v1.1.0 upgrades where the prior entity instance wasn't a
+    RestoreEntity, so the restore-state cache has nothing — but the recorder
+    DB does. The fallback queries the recorder for the most recent state and
+    seeds the cumulative from it.
+    """
+
+    @pytest.mark.asyncio
+    async def test_recorder_fallback_used_when_restore_state_empty(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """RestoreEntity returns None → recorder lookup runs, seeds cumulative."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        # Pretend recorder is loaded and returns a prior state
+        mock_hass.config.components = {"recorder"}
+        prior_state = MagicMock()
+        prior_state.state = "42000"
+
+        async def fake_get_instance_run(_fn, _hass, _n, _entity_id):
+            return {"sensor.test_cum": [prior_state]}
+
+        recorder_instance = MagicMock()
+        recorder_instance.async_add_executor_job = fake_get_instance_run
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch(
+                "custom_components.sugar_valley_neopool.sensor.recorder_get_instance",
+                return_value=recorder_instance,
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()
+
+        assert sensor._cumulative == 42000.0
+        assert sensor._attr_native_value == 42000.0
+
+    @pytest.mark.asyncio
+    async def test_recorder_fallback_skipped_when_recorder_not_loaded(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """No recorder integration → fallback returns None, cumulative stays 0."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        mock_hass.config.components = set()  # no recorder
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()
+
+        assert sensor._cumulative == 0.0
+
+    @pytest.mark.asyncio
+    async def test_restore_state_preferred_over_recorder(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """RestoreEntity returns a value → recorder lookup is NOT invoked."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        restore_state = MagicMock()
+        restore_state.state = "1234"
+
+        recorder_called = False
+
+        def recorder_should_not_be_called(*_a, **_k):
+            nonlocal recorder_called
+            recorder_called = True
+            return MagicMock()
+
+        with (
+            patch.object(
+                NeoPoolCumulativeSensor,
+                "async_get_last_state",
+                return_value=restore_state,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.sensor.recorder_get_instance",
+                side_effect=recorder_should_not_be_called,
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()
+
+        assert sensor._cumulative == 1234.0
+        assert recorder_called is False
+
+    @pytest.mark.asyncio
+    async def test_recorder_fallback_handles_no_history(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Recorder returns empty dict → cumulative stays 0."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        mock_hass.config.components = {"recorder"}
+
+        async def fake_empty(*_a, **_k):
+            return {}
+
+        recorder_instance = MagicMock()
+        recorder_instance.async_add_executor_job = fake_empty
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch(
+                "custom_components.sugar_valley_neopool.sensor.recorder_get_instance",
+                return_value=recorder_instance,
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()
+
+        assert sensor._cumulative == 0.0

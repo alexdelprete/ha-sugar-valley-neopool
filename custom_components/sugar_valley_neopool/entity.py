@@ -20,6 +20,15 @@ class NeoPoolEntity(Entity):
     """Base class for NeoPool entities."""
 
     _attr_has_entity_name = True
+    # All NeoPool entities are MQTT-push driven (state arrives via SENSOR
+    # telemetry handled in each entity's `message_received` callback) or
+    # dispatcher-push driven (the connection rate/problem entities). HA's
+    # default ~30-second polling cycle would otherwise call
+    # `async_write_ha_state()` regardless of our own throttling logic,
+    # silently bypassing `min_update_interval` on cumulative sensors and
+    # `controller_time`. Disable polling here so the throttle in
+    # `NeoPoolSensor.message_received` is actually authoritative.
+    _attr_should_poll = False
 
     def __init__(
         self,

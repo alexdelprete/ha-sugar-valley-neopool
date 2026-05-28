@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-28
+
+### Fixed
+
+- **Throttle on cumulative connection counters and `controller_time`
+  actually takes effect**: NeoPool entities inherited HA's default
+  `should_poll = True`, so HA's ~30-second polling cycle called
+  `async_write_ha_state()` on its own schedule and silently bypassed the
+  `min_update_interval` throttle introduced in v1.1.0. The connection
+  cumulative counters were ending up at ~30s recorder cadence (matching
+  the polling interval) instead of the intended hourly. Fix: set
+  `_attr_should_poll = False` on `NeoPoolEntity` (the base class for
+  every NeoPool entity). All NeoPool entities are MQTT-push driven, so
+  polling was redundant anyway. After upgrade, the connection counters
+  will write to the recorder at most once per hour as designed, and
+  `controller_time` at most once per 5 minutes.
+- **Cumulative entities now recover their last value across v1.0.x → v1.1.0
+  upgrades**: when v1.1.0 swapped the `NeoPoolSensor` (no `RestoreEntity`
+  mixin) for the new `NeoPoolCumulativeSensor` (which is a
+  `RestoreEntity`), the restore-state cache had nothing for these
+  entities — so the cumulative restarted from 0 on the first v1.1.0
+  startup, leaving a visible drop in the entity history graph.
+  `NeoPoolCumulativeSensor.async_added_to_hass` now has a two-tier
+  restore: first try `RestoreEntity` (the fast path, works for v1.1.0+
+  restarts), then fall back to a recorder query for the most recent
+  recorded state of the entity_id. The recorder fallback is gracefully
+  skipped if the `recorder` integration isn't loaded, or if no prior
+  history exists. Anyone hitting this in the future during a similar
+  class-swap upgrade won't see their cumulative reset.
+
 ## [1.1.0] - 2026-05-27
 
 ### Changed

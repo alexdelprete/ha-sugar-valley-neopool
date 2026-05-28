@@ -6,6 +6,10 @@ from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.components.recorder import (
+    get_instance as recorder_get_instance,
+    history as recorder_history,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -639,17 +643,78 @@ class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
         self._last_raw: float | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Restore cumulative from prior HA session, then subscribe to SENSOR."""
-        # Restore cumulative from prior state before subscribing so the first
-        # SENSOR message doesn't briefly publish 0.
+        """Restore cumulative from prior HA session, then subscribe to SENSOR.
+
+        Two-tier restore: first try RestoreEntity (works whenever the entity
+        was previously a RestoreEntity at shutdown — i.e. all post-v1.1.0
+        restarts). If that returns nothing usable, fall back to querying
+        the recorder for the most recent state of this entity_id. The
+        fallback catches the v1.0.x → v1.1.0 upgrade where the prior
+        instance was NOT a RestoreEntity, so the restore-state cache
+        doesn't have anything to give us.
+        """
+        # Tier 1: RestoreEntity (the fast path, also the common path)
         last_state = await self.async_get_last_state()
-        if last_state and last_state.state not in (None, "", "unknown", "unavailable"):
-            try:
-                self._cumulative = float(last_state.state)
-            except (TypeError, ValueError):
-                self._cumulative = 0.0
+        restored_value = self._extract_float_state(last_state)
+
+        # Tier 2: recorder fallback for pre-RestoreEntity prior instances
+        if restored_value is None:
+            restored_value = await self._restore_from_recorder()
+
+        if restored_value is not None:
+            self._cumulative = restored_value
+            _LOGGER.debug("Cumulative entity %s restored to %s", self.entity_id, restored_value)
         self._attr_native_value = self._cumulative
         await super().async_added_to_hass()
+
+    @staticmethod
+    def _extract_float_state(state: Any) -> float | None:
+        """Return state.state as float, or None if missing / non-numeric."""
+        if state is None or state.state in (None, "", "unknown", "unavailable"):
+            return None
+        try:
+            return float(state.state)
+        except (TypeError, ValueError):
+            return None
+
+    async def _restore_from_recorder(self) -> float | None:
+        """Query the recorder for the most recent state of this entity_id.
+
+        Used when RestoreEntity returns nothing — typically because the
+        previous instance was a different class without the RestoreEntity
+        mixin (e.g. v1.0.x → v1.1.0 upgrade where the entity used to be
+        a plain NeoPoolSensor). Returns None if the recorder integration
+        isn't loaded, the entity has no history, or the recorded state
+        isn't numeric.
+        """
+        if "recorder" not in self.hass.config.components:
+            return None
+
+        try:
+            states = await recorder_get_instance(self.hass).async_add_executor_job(
+                recorder_history.get_last_state_changes,
+                self.hass,
+                1,
+                self.entity_id,
+            )
+        except Exception as err:  # noqa: BLE001 — defensive, recorder API may raise
+            _LOGGER.debug("Recorder fallback for %s failed: %s", self.entity_id, err)
+            return None
+
+        if not states or self.entity_id not in states:
+            return None
+        entity_states = states[self.entity_id]
+        if not entity_states:
+            return None
+        value = self._extract_float_state(entity_states[-1])
+        if value is not None:
+            _LOGGER.warning(
+                "Restored cumulative for %s from recorder (RestoreEntity had "
+                "nothing — likely a v1.0.x → v1.1.0 upgrade): %s",
+                self.entity_id,
+                value,
+            )
+        return value
 
     def _compute_value(self, payload: dict[str, Any], raw_value: Any) -> Any:
         """Update the cumulative with the delta vs last raw value."""
