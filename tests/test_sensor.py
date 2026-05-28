@@ -1169,3 +1169,127 @@ class TestCumulativeRecorderFallback:
             await sensor.async_added_to_hass()
 
         assert sensor._cumulative == 0.0
+
+
+class TestCumulativeDefensiveBranches:
+    """Coverage for defensive branches in NeoPoolCumulativeSensor + rate sensor.
+
+    These paths are intentionally hard to hit in normal operation but exist
+    so the integration degrades gracefully — they're worth a test each so
+    they don't regress silently.
+    """
+
+    def test_extract_float_state_returns_none_for_non_numeric(
+        self, mock_config_entry: MagicMock
+    ) -> None:
+        """`_extract_float_state` swallows non-numeric strings and returns None."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        state = MagicMock()
+        state.state = "not-a-number"
+        assert sensor._extract_float_state(state) is None
+
+    @pytest.mark.asyncio
+    async def test_recorder_fallback_handles_executor_exception(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Recorder raising in the executor → fallback returns None, no crash."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        mock_hass.config.components = {"recorder"}
+
+        async def raises(*_a, **_k):
+            raise RuntimeError("recorder DB error")
+
+        recorder_instance = MagicMock()
+        recorder_instance.async_add_executor_job = raises
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch(
+                "custom_components.sugar_valley_neopool.sensor.recorder_get_instance",
+                return_value=recorder_instance,
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()  # must not raise
+
+        assert sensor._cumulative == 0.0
+
+    @pytest.mark.asyncio
+    async def test_recorder_fallback_handles_empty_entity_states_list(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Recorder returns dict with empty list for our entity_id → None."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_cum"
+
+        mock_hass.config.components = {"recorder"}
+
+        async def empty_list(*_a, **_k):
+            return {"sensor.test_cum": []}
+
+        recorder_instance = MagicMock()
+        recorder_instance.async_add_executor_job = empty_list
+
+        with (
+            patch.object(NeoPoolCumulativeSensor, "async_get_last_state", return_value=None),
+            patch(
+                "custom_components.sugar_valley_neopool.sensor.recorder_get_instance",
+                return_value=recorder_instance,
+            ),
+            patch(
+                "homeassistant.components.mqtt.async_subscribe",
+                side_effect=lambda *_a, **_k: MagicMock(),
+            ),
+        ):
+            await sensor.async_added_to_hass()
+
+        assert sensor._cumulative == 0.0
+
+    def test_compute_value_returns_none_for_non_numeric_raw(
+        self, mock_config_entry: MagicMock
+    ) -> None:
+        """`_compute_value` returns None when safe_float can't parse the raw."""
+        desc = NeoPoolCumulativeSensorEntityDescription(
+            key="cum",
+            name="Cum",
+            json_path="NeoPool.Connection.MBRequests",
+        )
+        sensor = NeoPoolCumulativeSensor(mock_config_entry, desc)
+        # Pass garbage that safe_float can't parse
+        assert sensor._compute_value({}, "not-a-number") is None
+
+    def test_rate_sensor_handle_update_skips_when_tracker_missing(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Defensive: if runtime_data.connection_rate_tracker is None, skip."""
+        mock_config_entry.runtime_data.connection_rate_tracker = None
+        sensor = NeoPoolConnectionRateSensor(mock_config_entry)
+        sensor.hass = mock_hass
+        sensor.entity_id = "sensor.test_rate"
+        sensor.async_write_ha_state = MagicMock()
+
+        sensor._handle_rate_update()
+        # Must not write state, must not crash
+        sensor.async_write_ha_state.assert_not_called()
