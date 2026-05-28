@@ -12,5 +12,5 @@
   "loggers": ["custom_components.sugar_valley_neopool"],
   "mqtt": ["+/tele/+/SENSOR"],
   "requirements": [],
-  "version": "1.1.1"
+  "version": "1.1.2"
 }
