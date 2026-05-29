@@ -15,8 +15,7 @@
 # `neopool_` with your slug throughout this file.
 #
 # Migrated from the YAML package? Your entity IDs are still `neopool_mqtt_*`
-# — use the original lovelace files in the HA-NeoPool-MQTT-Package repo
-# instead of this one.
+# — use `ha_neopool_lovelace_responsive_migrated.yaml` (same folder) instead.
 
   - type: custom:masonry-layout
     icon: mdi:pool
