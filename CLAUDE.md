@@ -603,7 +603,7 @@ was added alongside these tests when the persistent SENSOR watch
 landed.
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-03-18 -->
+<!-- Synced by repo-sync on 2026-05-29 -->
 
 ## Context7 for Documentation
 
@@ -883,7 +883,7 @@ The GitHub *release body* (what shows on the release page) may be edited via
 `gh release edit vX.Y.Z --notes-file docs/releases/vX.Y.Z.md` to fix typos, add
 cross-references to companion files that landed on `main` shortly after the release,
 or clarify scope — as long as the edit doesn't misrepresent what's actually in the
-v1.0.x ZIP. When you do this, also update the matching `docs/releases/vX.Y.Z.md` so
+released ZIP. When you do this, also update the matching `docs/releases/vX.Y.Z.md` so
 the file and the live release body stay in sync.
 
 **Master branch = Next Release** - All commits target the next version with version bumped
@@ -1024,18 +1024,6 @@ gh run view <run_id> --repo alexdelprete/ha-sugar-valley-neopool --log 2>&1 | gr
 
 The coverage percentage is the last column in the TOTAL line.
 
-**Coverage drift during a dev cycle:** A big feature commit can drop
-total coverage even when it adds tests, because the added code is
-larger than the added test surface. Watch `__init__.py` in particular
-— it tends to absorb new setup-entry hooks (e.g., `_setup_dynamic_disable_watch`,
-the connection-rate dispatcher wiring) whose callback bodies are easy
-to skip in unit tests. Before tagging, pull the per-file coverage
-table from the Tests workflow log, identify the largest absolute
-missed-statement count, and write a focused test there if it's
-project-internal logic. See the `TestSetupDynamicDisableWatch` class
-in `tests/test_init_v018.py` for an example of how to cover a
-SENSOR-watch callback without standing up real MQTT.
-
 ### Issue References in Release Notes
 
 When a release fixes a specific GitHub issue:
@@ -1100,6 +1088,20 @@ When a release fixes a specific GitHub issue:
 - Create documentation files without user request
 
 <!-- END SHARED:repo-sync -->
+
+## Release Prep Notes (Sugar Valley)
+
+**Coverage drift during a dev cycle:** A big feature commit can drop
+total coverage even when it adds tests, because the added code is
+larger than the added test surface. Watch `__init__.py` in particular
+— it tends to absorb new setup-entry hooks (e.g., `_setup_dynamic_disable_watch`,
+the connection-rate dispatcher wiring) whose callback bodies are easy
+to skip in unit tests. Before tagging, pull the per-file coverage
+table from the Tests workflow log, identify the largest absolute
+missed-statement count, and write a focused test there if it's
+project-internal logic. See the `TestSetupDynamicDisableWatch` class
+in `tests/test_init_v018.py` for an example of how to cover a
+SENSOR-watch callback without standing up real MQTT.
 
 ## Companion YAML Package Repo
 
