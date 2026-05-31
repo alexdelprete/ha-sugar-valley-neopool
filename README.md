@@ -17,6 +17,9 @@ Home Assistant custom integration for **Sugar Valley NeoPool** controllers
 connected via **Tasmota MQTT**. Provides comprehensive monitoring and control
 of your pool system through Home Assistant.
 
+> 💬 **Community support & discussion:** join the official
+> [Sugar Valley NeoPool topic on the Home Assistant Community forum][forum].
+
 ## Features
 
 ### Sensors
@@ -1094,3 +1097,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [buymecoffee]: https://www.buymeacoffee.com/alexdelprete
 [buymecoffee-button]: https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=alexdelprete&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff
 [issues]: https://github.com/alexdelprete/ha-sugar-valley-neopool/issues
+[forum]: https://community.home-assistant.io/t/sugar-valley-neopool-home-assistant-integration/1012365
