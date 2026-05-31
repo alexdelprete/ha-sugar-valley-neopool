@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Documentation
+
+- **Clarified that AUX1–4 control requires the Tasmota Berry NeoPool
+  command extension** (ESP32). `NPAux<n>` is not a built-in Tasmota
+  command — by design, not a bug, per the NeoPool driver author. Without
+  the extension, AUX state reads work but toggles are ignored by the
+  firmware. Reworded the `NPAux<n>` entry in
+  `docs/TASMOTA_NEOPOOL_DRIVER_REFERENCE.md` (previously framed as a
+  "firmware quirk" with a `Power<gpio>`/`NPWrite` workaround) and added a
+  note to the README AUX switches feature.
+
 ## [1.1.2] - 2026-05-31
 
 ### Fixed

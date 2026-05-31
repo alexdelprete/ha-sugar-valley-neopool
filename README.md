@@ -51,6 +51,12 @@ of your pool system through Home Assistant.
 ### Controls
 
 - **Switches** - Filtration, Light, AUX1-AUX4 relays
+
+  > **AUX1–4 control requires the Tasmota Berry NeoPool command
+  > extension** (ESP32). `NPAux<n>` is not a built-in Tasmota command —
+  > by design, not a bug. Without the extension, AUX state reads work but
+  > toggles are ignored by the firmware. See
+  > [Adding user-defined NeoPool commands](https://tasmota.github.io/docs/NeoPool/#esp32-adding-user-defined-neopool-commands-to-tasmota).
 - **Selects** - Filtration mode/speed, Boost mode
 - **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Chlorine setpoint,
   Ionization setpoint

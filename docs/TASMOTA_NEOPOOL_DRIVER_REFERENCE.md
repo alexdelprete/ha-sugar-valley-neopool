@@ -304,8 +304,10 @@ register on the NeoPool hardware. The only writable CD register is
 `MBF_PAR_CD_RELAY_GPIO` (0x040E), which is the relay-GPIO assignment
 for the brine pump.
 
-**No `NPAux<n>` commands exist either.** AUX relays cannot be toggled
-through a dedicated NeoPool command — see Known firmware quirks below.
+**No built-in `NPAux<n>` commands either.** AUX relays cannot be toggled
+through a *built-in* NeoPool command — by design, `NPAux<n>` is provided
+by the user via the Tasmota Berry NeoPool command extension. See Known
+firmware quirks below.
 
 ## Conductivity deep dive
 
@@ -497,12 +499,21 @@ exposed to JSON.
 
 ## Known firmware quirks
 
-1. **`NPAux<n>` commands do not exist** in `kNPCommands`. HA
-   integrations that send `cmnd/SmartPool/NPAux1..4` will see state
-   reads work (from `NeoPool.Relay.Aux[]`) but the commands are
-   silently ignored by firmware. Correct mechanism: send
-   `cmnd/SmartPool/Power<gpio>` (Tasmota core relay control) or use
-   `NPWrite` to set the bit in `MBF_RELAY_STATE` directly.
+1. **`NPAux<n>` is not a built-in command** in `kNPCommands` — **by
+   design, not a bug.** The NeoPool driver author (curzon01)
+   [confirms](https://github.com/alexdelprete/HA-NeoPool-MQTT-Package/discussions/30)
+   that `NPAux<n>` is intentionally never compiled into Tasmota
+   firmware; it must be **provided by the user** via the Tasmota Berry
+   NeoPool command extension (ESP32). With the extension installed,
+   `cmnd/SmartPool/NPAux1..4` works exactly as the integration's AUX
+   switches expect. Without it, state reads still work (from
+   `NeoPool.Relay.Aux[]`) but write commands are ignored by firmware —
+   that's a missing precondition on the device, not a defect in the
+   package or the HA integration. See the Tasmota docs:
+   [Adding user-defined NeoPool commands](https://tasmota.github.io/docs/NeoPool/#esp32-adding-user-defined-neopool-commands-to-tasmota).
+   Low-level alternatives that don't need the extension are
+   `cmnd/SmartPool/Power<gpio>` (Tasmota core relay control) or `NPWrite`
+   to set the bit in `MBF_RELAY_STATE` directly.
 
 2. **`NPConductivity` does not exist.** There is no setpoint
    register, so no setter command. Conductivity is read-only
