@@ -1300,9 +1300,13 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
             data_schema=vol.Schema(
                 {
                     # 1. Recovery script (runs when device goes offline after threshold)
+                    # Use suggested_value (not default) so clearing the EntitySelector
+                    # actually unsets the option. With default=, voluptuous resurrects
+                    # the saved value when the field is submitted empty, making the
+                    # script impossible to clear via the UI.
                     vol.Optional(
                         CONF_RECOVERY_SCRIPT,
-                        default=recovery_script,
+                        description={"suggested_value": recovery_script},
                     ): EntitySelector(
                         EntitySelectorConfig(domain="script"),
                     ),

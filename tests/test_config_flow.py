@@ -15,6 +15,7 @@ from custom_components.sugar_valley_neopool.config_flow import (
     get_topics_from_config,
 )
 from custom_components.sugar_valley_neopool.const import (
+    CONF_CONNECTION_ERROR_RATE_THRESHOLD,
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_REPAIR_NOTIFICATION,
@@ -580,6 +581,47 @@ class TestOptionsFlowDirect:
             CONF_OFFLINE_TIMEOUT: 300,
             CONF_RECOVERY_SCRIPT: "script.pool_recovery",
         }
+
+    async def test_options_flow_schema_allows_clearing_recovery_script(self) -> None:
+        """Clearing the recovery script via the form must remove it from options.
+
+        Regression: vol.Optional(CONF_RECOVERY_SCRIPT, default=...) caused
+        voluptuous to resurrect the saved value whenever the EntitySelector
+        was cleared. The fix uses description={"suggested_value": ...}.
+
+        This test exercises the actual voluptuous schema, which is where the
+        bug lived — direct async_step_init(user_input) calls bypass the form
+        validation that resurrects the default.
+        """
+        mock_entry = self._create_mock_config_entry()
+        # Start from a state where a recovery script is already configured.
+        mock_entry.options = {
+            **mock_entry.options,
+            CONF_RECOVERY_SCRIPT: "script.pool_recovery",
+        }
+
+        flow = NeoPoolOptionsFlow()
+        flow.hass = MagicMock()
+        with patch.object(
+            type(flow), "config_entry", new_callable=PropertyMock, return_value=mock_entry
+        ):
+            form = await flow.async_step_init(None)
+
+        schema = form["data_schema"]
+        # Simulate what HA sends when the user CLEARS the EntitySelector:
+        # the key is absent from the form data. The other (required) fields
+        # are still submitted with valid values.
+        form_data = {
+            CONF_ENABLE_REPAIR_NOTIFICATION: True,
+            CONF_FAILURES_THRESHOLD: 3,
+            CONF_OFFLINE_TIMEOUT: 300,
+            CONF_CONNECTION_ERROR_RATE_THRESHOLD: 5.0,
+            # CONF_RECOVERY_SCRIPT deliberately absent
+        }
+        validated = schema(form_data)
+
+        # With the buggy default=, validated would contain "script.pool_recovery".
+        assert validated.get(CONF_RECOVERY_SCRIPT, "") in ("", None)
 
 
 # =============================================================================

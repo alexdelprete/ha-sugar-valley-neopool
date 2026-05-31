@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Recovery script can now be cleared via the Options flow**: the
+  recovery-script `EntitySelector` used `vol.Optional(..., default=...)`,
+  which made voluptuous resurrect the previously-saved value whenever the
+  field was submitted empty — so clearing the script in the UI never stuck
+  and the old script kept running. Switched to
+  `description={"suggested_value": ...}`, which pre-fills the form for
+  display without re-injecting the value when the field is left blank.
+  Clearing the field now correctly unsets the option.
+
 ## [1.1.1] - 2026-05-28
 
 ### Fixed
