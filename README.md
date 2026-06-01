@@ -1069,6 +1069,21 @@ Please ensure all CI checks pass before requesting a review.
 
 <!-- END SHARED:repo-sync:contributing -->
 
+## AI-assisted development
+
+This integration is built by Alessandro ([@alexdelprete][repo-owner]) &
+Claude — a human and an LLM working together. Architecture decisions, design
+trade-offs, the NeoPool/Tasmota domain grounding (Modbus register quirks,
+firmware behaviour, what each entity should actually represent), and the
+"what should this actually do?" calls are mine. A large share of the typing,
+refactors, test scaffolding, and tedious MQTT/entity-registry plumbing was
+done by [Claude Code][claude-code].
+
+Every line is reviewed and tested — CI runs `ruff` lint + a 97%+ coverage
+test suite + HACS/hassfest validation on every push, and releases are
+version-gated. This note is here because transparency about how software is
+made matters more than pretending otherwise.
+
 ## Coffee
 
 _If you like this integration, I'll gladly accept some quality coffee,
@@ -1098,3 +1113,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [buymecoffee-button]: https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=%E2%98%95&slug=alexdelprete&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff
 [issues]: https://github.com/alexdelprete/ha-sugar-valley-neopool/issues
 [forum]: https://community.home-assistant.io/t/sugar-valley-neopool-home-assistant-integration/1012365
+[repo-owner]: https://github.com/alexdelprete
+[claude-code]: https://claude.com/claude-code
