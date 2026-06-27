@@ -148,3 +148,35 @@ class TestAsyncSetupEntry:
 
         assert len(added_entities) == 1
         assert isinstance(added_entities[0], NeoPoolLight)
+
+
+class TestNeoPoolLightEdges:
+    """Edge-case coverage for the light platform."""
+
+    @pytest.mark.asyncio
+    async def test_invalid_payload_ignored(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """A non-JSON SENSOR payload is ignored without raising."""
+        light = NeoPoolLight(mock_config_entry)
+        light.hass = mock_hass
+        light.async_write_ha_state = MagicMock()
+
+        sensor_callback = None
+
+        async def capture_callback(hass, topic, callback, **kwargs):
+            nonlocal sensor_callback
+            if "SENSOR" in topic:
+                sensor_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=capture_callback,
+        ):
+            await light.async_added_to_hass()
+
+        mock_msg = MagicMock()
+        mock_msg.payload = "not json {{{"
+        sensor_callback(mock_msg)  # must not raise
+        assert light._attr_is_on is None

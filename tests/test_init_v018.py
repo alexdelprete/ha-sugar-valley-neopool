@@ -2042,3 +2042,48 @@ class TestResultWatch:
         assert mock_publish.await_count == len(CONFIG_REGISTERS)
         topics = {call.args[1] for call in mock_publish.await_args_list}
         assert all(t == "cmnd/MyPool/NPRead" for t in topics)
+
+
+class TestResultWatchEdges:
+    """Edge-case coverage for the stat/RESULT watch."""
+
+    async def _cb(self, hass: HomeAssistant):
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
+        captured = {}
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            captured["cb"] = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_result_watch(hass, entry)
+        return entry, captured["cb"]
+
+    @pytest.mark.asyncio
+    async def test_invalid_json_ignored(self, hass: HomeAssistant) -> None:
+        """Malformed RESULT JSON is ignored without raising."""
+        entry, cb = await self._cb(hass)
+        msg = MagicMock()
+        msg.payload = "not json {{{"
+        cb(msg)
+        assert entry.runtime_data.register_state == {}
+
+    @pytest.mark.asyncio
+    async def test_non_dict_payload_ignored(self, hass: HomeAssistant) -> None:
+        """A JSON array/scalar (not an object) is ignored."""
+        entry, cb = await self._cb(hass)
+        msg = MagicMock()
+        msg.payload = json.dumps([1, 2, 3])
+        cb(msg)
+        assert entry.runtime_data.register_state == {}
+
+    @pytest.mark.asyncio
+    async def test_unparseable_address_ignored(self, hass: HomeAssistant) -> None:
+        """An NPRead whose Address can't be parsed is dropped."""
+        entry, cb = await self._cb(hass)
+        msg = MagicMock()
+        msg.payload = json.dumps({"NPRead": {"Address": "bogus", "Data": 1}})
+        cb(msg)
+        assert entry.runtime_data.register_state == {}

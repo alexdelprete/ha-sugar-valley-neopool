@@ -612,3 +612,50 @@ class TestNeoPoolRegisterByteNumber:
         with patch.object(pct, "_write_register", new_callable=AsyncMock) as mock_w:
             await pct.async_set_native_value(50.0)
             mock_w.assert_not_awaited()
+
+
+class TestNeoPoolRegisterNumberGating:
+    """Covers the register-number SENSOR gating + dispatcher subscription."""
+
+    @pytest.mark.asyncio
+    async def test_gating_tracked_and_handle_update(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """async_added_to_hass wires gating (heating+temperature) and the signal."""
+        desc = next(d for d in REGISTER_NUMBER_DESCRIPTIONS if d.key == "heating_temp")
+        num = NeoPoolRegisterNumber(mock_config_entry, desc)
+        num.hass = mock_hass
+        num.async_write_ha_state = MagicMock()
+
+        sensor_cb = None
+
+        async def capture(hass, topic, cb, **kwargs):
+            nonlocal sensor_cb
+            if "SENSOR" in topic:
+                sensor_cb = cb
+            return MagicMock()
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+            patch(
+                "custom_components.sugar_valley_neopool.number.async_dispatcher_connect",
+                return_value=MagicMock(),
+            ),
+        ):
+            await num.async_added_to_hass()
+
+        # Both gating paths present -> available gate satisfied.
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Relay": {"Heating": 1}, "Temperature": 25.0}})
+        sensor_cb(msg)
+        assert num._gating_ok is True
+
+        # Missing heating relay -> gate fails.
+        msg.payload = json.dumps({"NeoPool": {"Temperature": 25.0}})
+        sensor_cb(msg)
+        assert num._gating_ok is False
+
+        # The dispatcher-driven refresh writes state.
+        num.async_write_ha_state.reset_mock()
+        num._handle_register_update()
+        num.async_write_ha_state.assert_called_once()

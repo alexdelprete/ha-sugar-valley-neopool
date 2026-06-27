@@ -239,3 +239,46 @@ class TestNeoPoolMQTTEntity:
                 qos=0,
                 retain=False,
             )
+
+
+class TestWriteRegister:
+    """Tests for the NeoPoolMQTTEntity._write_register helper."""
+
+    @pytest.mark.asyncio
+    async def test_write_register_with_save(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """_write_register publishes NPWrite then NPSave by default."""
+        entity = NeoPoolMQTTEntity(mock_config_entry, "x")
+        entity.hass = mock_hass
+
+        with patch(
+            "homeassistant.components.mqtt.async_publish",
+            new_callable=AsyncMock,
+        ) as mock_publish:
+            await entity._write_register(0x0417, 1)
+
+        assert mock_publish.await_count == 2
+        mock_publish.assert_any_await(
+            mock_hass, "cmnd/SmartPool/NPWrite", "0x0417 1", qos=0, retain=False
+        )
+        mock_publish.assert_any_await(mock_hass, "cmnd/SmartPool/NPSave", "", qos=0, retain=False)
+
+    @pytest.mark.asyncio
+    async def test_write_register_no_save(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """With save=False only NPWrite is published (no NPSave)."""
+        entity = NeoPoolMQTTEntity(mock_config_entry, "x")
+        entity.hass = mock_hass
+
+        with patch(
+            "homeassistant.components.mqtt.async_publish",
+            new_callable=AsyncMock,
+        ) as mock_publish:
+            await entity._write_register(0x042D, 255, save=False)
+
+        assert mock_publish.await_count == 1
+        mock_publish.assert_awaited_once_with(
+            mock_hass, "cmnd/SmartPool/NPWrite", "0x042D 255", qos=0, retain=False
+        )

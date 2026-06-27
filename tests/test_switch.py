@@ -485,3 +485,43 @@ class TestNeoPoolRegisterBitSwitch:
         with patch.object(sw, "_write_register", new_callable=AsyncMock) as mock_w:
             await sw.async_turn_on()
             mock_w.assert_not_awaited()
+
+
+class TestNeoPoolRegisterSwitchEdges:
+    """Edge coverage: invalid payload guard + dispatcher-driven refresh."""
+
+    @pytest.mark.asyncio
+    async def test_invalid_payload_and_handle_update(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Invalid SENSOR payload is ignored; _handle_register_update writes state."""
+        desc = REGISTER_SWITCH_DESCRIPTIONS[0]  # uv_mode
+        sw = NeoPoolRegisterSwitch(mock_config_entry, desc)
+        sw.hass = mock_hass
+        sw.async_write_ha_state = MagicMock()
+
+        sensor_cb = None
+
+        async def capture(hass, topic, cb, **kwargs):
+            nonlocal sensor_cb
+            if "SENSOR" in topic:
+                sensor_cb = cb
+            return MagicMock()
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+            patch(
+                "custom_components.sugar_valley_neopool.switch.async_dispatcher_connect",
+                return_value=MagicMock(),
+            ),
+        ):
+            await sw.async_added_to_hass()
+
+        msg = MagicMock()
+        msg.payload = "not json {{{"
+        sensor_cb(msg)  # must not raise
+        assert sw._gating_ok is False
+
+        sw.async_write_ha_state.reset_mock()
+        sw._handle_register_update()
+        sw.async_write_ha_state.assert_called_once()
