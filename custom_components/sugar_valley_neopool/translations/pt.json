@@ -86,7 +86,7 @@
     "error": {
       "invalid_topic": "Formato de tópico MQTT inválido",
       "invalid_yaml_topic": "Não é possível ler deste tópico MQTT. Por favor, verifique se o tópico está correto e o dispositivo está online.",
-      "cannot_connect": "Não foi possível receber mensagens deste tópico MQTT. Verifique o nome do tópico e se o seu dispositivo está online.",
+      "cannot_connect": "Não foi possível receber mensagens deste tópico MQTT. Verifique o nome do tópico e se o seu dispositivo está online. Se o tópico estiver correto, o dispositivo pode publicar telemetria com pouca frequência — defina 'TelePeriod 10' no console do Tasmota e tente novamente.",
       "no_entities_found": "Nenhuma entidade migrável encontrada com este prefixo. Verifique que:\n1. O prefixo corresponde à sua configuração YAML\n2. As entidades existem no Home Assistant\n3. As entidades ainda não pertencem a esta integração",
       "confirmation_required": "Deve marcar a caixa de confirmação para prosseguir com a migração.",
       "nodeid_configuration_failed": "Falha ao configurar o NodeID no dispositivo."

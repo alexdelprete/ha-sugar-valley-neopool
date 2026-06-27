@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Topic validation no longer times out on devices with the default
+  Tasmota `TelePeriod` (issue #18)**: manual setup, manual discovery, and
+  reconfigure validate a topic by waiting for a `tele/{topic}/SENSOR`
+  message, but Tasmota's default `TelePeriod` is 300s and SENSOR is
+  published non-retained — so a perfectly correct topic almost always
+  failed with "Could not receive messages from this MQTT topic".
+  `_validate_yaml_topic` now publishes an immediate telemetry trigger
+  (reusing `_trigger_telemetry`) right after subscribing, so validation
+  succeeds within seconds regardless of `TelePeriod`. The
+  `cannot_connect` error string also gained a fallback hint to set
+  `TelePeriod 10` in the Tasmota console (all 10 languages). Reported by
+  @megaherb.
+
 ### Documentation
 
 - **Clarified that AUX1–4 control requires the Tasmota Berry NeoPool

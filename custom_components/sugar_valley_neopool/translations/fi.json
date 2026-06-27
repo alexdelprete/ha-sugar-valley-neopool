@@ -86,7 +86,7 @@
     "error": {
       "invalid_topic": "Virheellinen MQTT-aihemuoto",
       "invalid_yaml_topic": "Tästä MQTT-aiheesta ei voida lukea. Varmista, että aihe on oikein ja laite on verkossa.",
-      "cannot_connect": "Viestejä ei voitu vastaanottaa tästä MQTT-aiheesta. Tarkista aiheen nimi ja että laitteesi on verkossa.",
+      "cannot_connect": "Viestejä ei voitu vastaanottaa tästä MQTT-aiheesta. Tarkista aiheen nimi ja että laitteesi on verkossa. Jos aihe on oikein, laitteesi saattaa julkaista telemetriaa harvoin – aseta 'TelePeriod 10' Tasmota-konsolissa ja yritä uudelleen.",
       "no_entities_found": "Tällä etuliitteellä ei löytynyt siirrettäviä entiteettejä. Tarkista, että:\n1. Etuliite vastaa YAML-kokoonpanoasi\n2. Entiteetit ovat olemassa Home Assistantissa\n3. Entiteetit eivät jo kuulu tähän integraatioon",
       "confirmation_required": "Sinun on valittava vahvistusruutu jatkaaksesi siirtoa.",
       "yaml_still_active": "Entiteetit ovat vielä aktiivisia. Poista ensin YAML-paketti ja käynnistä Home Assistant uudelleen.",

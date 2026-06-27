@@ -749,6 +749,7 @@ class TestValidateYamlTopic:
         """Test successful validation of YAML topic."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         captured_callback = None
 
@@ -781,10 +782,48 @@ class TestValidateYamlTopic:
         assert result["nodeid"] == "ABC123"
         assert "payload" in result
 
+    async def test_validate_yaml_topic_triggers_telemetry(self, mock_hass: MagicMock) -> None:
+        """Validation forces an immediate telemetry burst (issue #18).
+
+        Tasmota's default TelePeriod is 300s and SENSOR is non-retained, so
+        validation must nudge the device instead of waiting passively.
+        """
+        flow = NeoPoolConfigFlow()
+        flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
+
+        captured_callback = None
+
+        async def mock_subscribe(hass, topic, callback, **kwargs):
+            nonlocal captured_callback
+            captured_callback = callback
+            return MagicMock()
+
+        with patch(
+            "homeassistant.components.mqtt.async_subscribe",
+            side_effect=mock_subscribe,
+        ):
+            validate_task = asyncio.create_task(
+                flow._validate_yaml_topic("SmartPool", timeout_seconds=5)
+            )
+
+            await asyncio.sleep(0.1)
+
+            mock_msg = MagicMock()
+            mock_msg.payload = '{"NeoPool": {"Powerunit": {"NodeID": "ABC123"}}}'
+            if captured_callback:
+                captured_callback(mock_msg)
+
+            result = await validate_task
+
+        assert result["valid"] is True
+        flow._trigger_telemetry.assert_awaited_once_with("SmartPool")
+
     async def test_validate_yaml_topic_timeout(self, mock_hass: MagicMock) -> None:
         """Test validation times out when no message received."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         with patch(
             "homeassistant.components.mqtt.async_subscribe",
@@ -799,6 +838,7 @@ class TestValidateYamlTopic:
         """Test validation fails for non-NeoPool payload."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         captured_callback = None
 
@@ -831,6 +871,7 @@ class TestValidateYamlTopic:
         """Test validation handles invalid JSON."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         captured_callback = None
 

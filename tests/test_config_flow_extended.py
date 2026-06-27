@@ -558,6 +558,7 @@ class TestValidateYamlTopicExtended:
         """Test validation with bytes payload."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         captured_callback = None
 
@@ -590,6 +591,7 @@ class TestValidateYamlTopicExtended:
         """Test validation when NodeID is missing."""
         flow = NeoPoolConfigFlow()
         flow.hass = mock_hass
+        flow._trigger_telemetry = AsyncMock()
 
         captured_callback = None
 

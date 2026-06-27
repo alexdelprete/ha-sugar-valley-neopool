@@ -559,6 +559,7 @@ class TestAutoDetectTimeout:
         """Test topic validation returns invalid on timeout."""
         flow = NeoPoolConfigFlow()
         flow.hass = hass
+        flow._trigger_telemetry = AsyncMock()
 
         async def mock_subscribe(hass, topic, callback, **kwargs):
             return MagicMock()

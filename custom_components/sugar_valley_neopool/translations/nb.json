@@ -86,7 +86,7 @@
     "error": {
       "invalid_topic": "Ugyldig MQTT-emneformat",
       "invalid_yaml_topic": "Kan ikke lese fra dette MQTT-emnet. Verifiser at emnet er korrekt og at enheten er online.",
-      "cannot_connect": "Kunne ikke motta meldinger fra dette MQTT-emnet. Verifiser emnenavnet og at enheten din er online.",
+      "cannot_connect": "Kunne ikke motta meldinger fra dette MQTT-emnet. Verifiser emnenavnet og at enheten din er online. Hvis emnet er riktig, kan enheten publisere telemetri sjelden – sett 'TelePeriod 10' i Tasmota-konsollen og prøv igjen.",
       "no_entities_found": "Ingen migrerbare entiteter funnet med dette prefikset. Sjekk at:\n1. Prefikset samsvarer med YAML-konfigurasjonen din\n2. Entitetene eksisterer i Home Assistant\n3. Entitetene ikke allerede eies av denne integrasjonen",
       "confirmation_required": "Du må krysse av bekreftelsesavkrysningsboksen for å fortsette med migreringen.",
       "yaml_still_active": "Entiteter er fortsatt aktive. Vennligst fjern YAML-pakken og start Home Assistant på nytt først.",

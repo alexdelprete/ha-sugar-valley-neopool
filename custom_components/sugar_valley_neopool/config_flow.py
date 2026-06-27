@@ -945,6 +945,12 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         try:
+            # Force an immediate telemetry burst so validation does not have
+            # to wait for Tasmota's TelePeriod (default 300s). SENSOR is
+            # published non-retained, so without this nudge a correct topic
+            # almost always times out (see issue #18). Subscribe-then-trigger
+            # ordering avoids missing the response.
+            await self._trigger_telemetry(topic)
             # Wait for message or timeout
             await asyncio.wait_for(event.wait(), timeout=timeout_seconds)
         except TimeoutError:

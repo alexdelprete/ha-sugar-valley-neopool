@@ -86,7 +86,7 @@
     "error": {
       "invalid_topic": "Vigane MQTT teema formaat",
       "invalid_yaml_topic": "Sellelt MQTT teemalt ei saa lugeda. Palun veenduge, et teema on õige ja seade on võrgus.",
-      "cannot_connect": "Sellelt MQTT teemalt ei õnnestunud sõnumeid vastu võtta. Kontrollige teema nime ja kas teie seade on võrgus.",
+      "cannot_connect": "Sellelt MQTT teemalt ei õnnestunud sõnumeid vastu võtta. Kontrollige teema nime ja kas teie seade on võrgus. Kui teema on õige, võib seade telemeetriat harva avaldada – määrake Tasmota konsoolis 'TelePeriod 10' ja proovige uuesti.",
       "no_entities_found": "Selle prefiksiga migreeritavaid olemeid ei leitud. Kontrollige, et:\n1. Prefiks vastab teie YAML konfiguratsioonile\n2. Olemid eksisteerivad Home Assistantis\n3. Olemid ei kuulu juba sellele integratsioonile",
       "confirmation_required": "Migratsiooni jätkamiseks peate märkima kinnituse ruudu.",
       "yaml_still_active": "Olemid on veel aktiivsed. Palun eemaldage esmalt YAML pakett ja taaskäivitage Home Assistant.",

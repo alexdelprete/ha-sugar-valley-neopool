@@ -86,7 +86,7 @@
     "error": {
       "invalid_topic": "Formato topic MQTT non valido",
       "invalid_yaml_topic": "Impossibile leggere da questo topic MQTT. Verifica che il topic sia corretto e che il dispositivo sia online.",
-      "cannot_connect": "Impossibile ricevere messaggi da questo topic MQTT. Verifica il nome del topic e che il dispositivo sia online.",
+      "cannot_connect": "Impossibile ricevere messaggi da questo topic MQTT. Verifica il nome del topic e che il dispositivo sia online. Se il topic è corretto, il dispositivo potrebbe pubblicare la telemetria di rado: imposta 'TelePeriod 10' nella console Tasmota, quindi riprova.",
       "no_entities_found": "Nessuna entità migrabile trovata con questo prefisso. Verifica che:\n1. Il prefisso corrisponde alla tua configurazione YAML\n2. Le entità esistono in Home Assistant\n3. Le entità non sono già di proprietà di questa integrazione",
       "confirmation_required": "Devi selezionare la casella di conferma per procedere con la migrazione.",
       "yaml_still_active": "Le entità sono ancora attive. Rimuovi prima il pacchetto YAML e riavvia Home Assistant.",
