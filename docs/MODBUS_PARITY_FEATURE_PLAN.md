@@ -1,9 +1,13 @@
 # Feature Parity Plan — svasek Modbus Integration → our MQTT/Tasmota Integration
 
-**Status:** Draft / on hold — write-ACK design **resolved** with @curzon01
-(discussion #16, 2026-06-26); SENSOR-emit of config registers still open.
+**Status:** Groups 1–3 implemented on CI-green PR #20 (branch
+`feature/milestone1-light-command-layer`; Lint/Tests/Validate pass, coverage
+97%). Remaining: Group 4 (timers) + non-feature follow-ups (dashboards,
+CHANGELOG/release notes for the breaking light change, localize new
+translations). #10 parked. Write-ACK design resolved with @curzon01
+(discussion #16); SENSOR-emit of config registers still open.
 **Created:** 2026-06-16
-**Updated:** 2026-06-26 (incorporated @curzon01's write-ACK answer)
+**Updated:** 2026-06-27 (Groups 1–3 implemented, CI green at 97% coverage)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
