@@ -1,7 +1,7 @@
 # Sugar Valley NeoPool - Home Assistant Integration
 
 <!-- BEGIN SHARED:repo-sync:badges -->
-<!-- Synced by repo-sync on 2026-05-27 -->
+<!-- Synced by repo-sync on 2026-06-27 -->
 
 [![GitHub Release](https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/alexdelprete)
@@ -124,7 +124,7 @@ the device is recognized regardless of how SO157 is set afterward.
 No manual configuration of SO157 is required.
 
 <!-- BEGIN SHARED:repo-sync:installation -->
-<!-- Synced by repo-sync on 2026-05-27 -->
+<!-- Synced by repo-sync on 2026-06-27 -->
 
 ## Installation
 
@@ -1051,7 +1051,7 @@ mypy custom_components/sugar_valley_neopool --ignore-missing-imports
   version validation
 
 <!-- BEGIN SHARED:repo-sync:contributing -->
-<!-- Synced by repo-sync on 2026-05-27 -->
+<!-- Synced by repo-sync on 2026-06-27 -->
 
 ## Contributing
 
@@ -1060,7 +1060,7 @@ Contributions are welcome! Please follow these steps:
 1. Fork the repository
 1. Create a feature branch (`git checkout -b feature/my-feature`)
 1. Make your changes
-1. Run linting: `uvx pre-commit run --all-files`
+1. Run linting: `pre-commit run --all-files`
 1. Commit your changes (`git commit -m "feat: add my feature"`)
 1. Push to your branch (`git push origin feature/my-feature`)
 1. Open a Pull Request
@@ -1092,7 +1092,7 @@ but please don't feel obliged._ :)
 [![BuyMeCoffee][buymecoffee-button]][buymecoffee]
 
 <!-- BEGIN SHARED:repo-sync:license -->
-<!-- Synced by repo-sync on 2026-05-27 -->
+<!-- Synced by repo-sync on 2026-06-27 -->
 
 ## License
 
