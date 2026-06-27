@@ -29,12 +29,16 @@ from custom_components.sugar_valley_neopool import (
     _disable_unavailable_module_entities,
     _disable_unavailable_relay_entities,
     _migrate_to_canonical_nodeid,
+    _parse_register_int,
+    _read_config_registers,
     _refresh_entity_disable_state,
     _setup_dynamic_disable_watch,
+    _setup_result_watch,
     _update_device_registry_metadata,
     _wait_for_any_nodeid,
     async_fetch_device_metadata,
     async_migrate_masked_unique_ids,
+    config_register_signal,
     connection_rate_signal,
     get_device_info,
 )
@@ -44,7 +48,9 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_NODEID,
     CONF_NODEID_HASHED,
     CONF_NODEID_REAL,
+    CONFIG_REGISTERS,
     DOMAIN,
+    REG_UV_MODE,
 )
 from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker
 from homeassistant.core import HomeAssistant
@@ -1938,3 +1944,101 @@ class TestSetupDynamicDisableWatch:
         captured_cb(msg)  # must not raise
 
         assert entry.runtime_data.connection_rate_tracker.samples_count == 0
+
+
+class TestResultWatch:
+    """Tests for the stat/RESULT config-register read layer."""
+
+    def test_parse_register_int(self) -> None:
+        """Int parsing accepts hex strings, decimal strings, and ints."""
+        assert _parse_register_int("0x0417") == 0x0417
+        assert _parse_register_int("1047") == 1047
+        assert _parse_register_int(0x0417) == 0x0417
+        assert _parse_register_int("nonsense") is None
+        assert _parse_register_int(None) is None
+        assert _parse_register_int(True) is None  # bools are not register values
+
+    @pytest.mark.asyncio
+    async def test_result_watch_caches_npread(self, hass: HomeAssistant) -> None:
+        """An NPRead RESULT updates register_state and dispatches the signal."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        dispatched: list[str] = []
+
+        def capture_signal(_hass, signal, *_args):
+            dispatched.append(signal)
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_result_watch(hass, entry)
+
+        # Real Tasmota format: single-register NPRead returns a scalar Data and a
+        # decimal Address (1063 == 0x0427 == REG_UV_MODE).
+        msg = MagicMock()
+        msg.payload = json.dumps({"NPRead": {"Address": REG_UV_MODE, "Data": 1}})
+        with patch(
+            "custom_components.sugar_valley_neopool.async_dispatcher_send",
+            side_effect=capture_signal,
+        ):
+            captured_cb(msg)
+
+        assert entry.runtime_data.register_state[REG_UV_MODE] == 1
+        assert dispatched == [config_register_signal(entry)]
+
+        # NPReadL-style list Data is also accepted (first element used), and the
+        # Address may arrive as a hex string rather than a decimal int.
+        msg.payload = json.dumps({"NPRead": {"Address": f"0x{REG_UV_MODE:04X}", "Data": [0]}})
+        with patch(
+            "custom_components.sugar_valley_neopool.async_dispatcher_send",
+            side_effect=capture_signal,
+        ):
+            captured_cb(msg)
+
+        assert entry.runtime_data.register_state[REG_UV_MODE] == 0
+
+    @pytest.mark.asyncio
+    async def test_result_watch_ignores_non_npread(self, hass: HomeAssistant) -> None:
+        """A non-NPRead RESULT (e.g. a command echo) is ignored."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_result_watch(hass, entry)
+
+        msg = MagicMock()
+        msg.payload = json.dumps({"NPBoost": "OFF"})
+        captured_cb(msg)  # must not raise
+        assert entry.runtime_data.register_state == {}
+
+    @pytest.mark.asyncio
+    async def test_read_config_registers_publishes_each(self, hass: HomeAssistant) -> None:
+        """Startup read fires one NPRead per configured register."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
+
+        with patch(
+            "homeassistant.components.mqtt.async_publish",
+            new_callable=AsyncMock,
+        ) as mock_publish:
+            await _read_config_registers(hass, entry)
+
+        assert mock_publish.await_count == len(CONFIG_REGISTERS)
+        topics = {call.args[1] for call in mock_publish.await_args_list}
+        assert all(t == "cmnd/MyPool/NPRead" for t in topics)

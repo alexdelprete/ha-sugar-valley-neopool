@@ -339,6 +339,15 @@
       },
       "auto_time_sync": {
         "name": "Auto Time Sync"
+      },
+      "uv_mode": {
+        "name": "UV Mode"
+      },
+      "climate_mode": {
+        "name": "Climate Mode"
+      },
+      "smart_antifreeze": {
+        "name": "Smart Antifreeze"
       }
     },
     "select": {
@@ -370,6 +379,15 @@
       },
       "chlorine_setpoint": {
         "name": "Chlorine Setpoint"
+      },
+      "heating_temp": {
+        "name": "Heating Temperature"
+      },
+      "intelligent_min_time": {
+        "name": "Intelligent Min Filtration Time"
+      },
+      "ph_activation_delay": {
+        "name": "pH Pump Activation Delay"
       }
     },
     "button": {

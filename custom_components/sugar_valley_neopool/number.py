@@ -12,9 +12,17 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import PERCENTAGE, UnitOfElectricPotential
+from homeassistant.const import (
+    PERCENTAGE,
+    EntityCategory,
+    UnitOfElectricPotential,
+    UnitOfTemperature,
+    UnitOfTime,
+)
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
+from . import config_register_signal
 from .const import (
     CMD_CHLORINE,
     CMD_HYDROLYSIS,
@@ -22,13 +30,28 @@ from .const import (
     CMD_PH_MAX,
     CMD_PH_MIN,
     CMD_REDOX,
+    HEATING_TEMP_MAX,
+    HEATING_TEMP_MIN,
+    HEATING_TEMP_STEP,
+    INTELLIGENT_MIN_TIME_MAX,
+    INTELLIGENT_MIN_TIME_MIN,
+    INTELLIGENT_MIN_TIME_STEP,
     JSON_PATH_CHLORINE_SETPOINT,
     JSON_PATH_HYDROLYSIS_SETPOINT,
     JSON_PATH_IONIZATION_MAX,
     JSON_PATH_IONIZATION_SETPOINT,
+    JSON_PATH_PH_DATA,
     JSON_PATH_PH_MAX,
     JSON_PATH_PH_MIN,
     JSON_PATH_REDOX_SETPOINT,
+    JSON_PATH_RELAY_HEATING,
+    JSON_PATH_TEMPERATURE,
+    PH_ACTIVATION_DELAY_MAX,
+    PH_ACTIVATION_DELAY_MIN,
+    PH_ACTIVATION_DELAY_STEP,
+    REG_HEATING_TEMP,
+    REG_INTELLIGENT_FILT_MIN_TIME,
+    REG_RELAY_ACTIVATION_DELAY,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, parse_json_payload, safe_float
@@ -136,6 +159,59 @@ NUMBER_DESCRIPTIONS: tuple[NeoPoolNumberEntityDescription, ...] = (
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolRegisterNumberEntityDescription(NumberEntityDescription):
+    """Describes a NeoPool config-register number (state read via NPRead)."""
+
+    register: int
+    # SENSOR JSON paths that must all be present for availability.
+    gating_paths: tuple[str, ...]
+
+
+REGISTER_NUMBER_DESCRIPTIONS: tuple[NeoPoolRegisterNumberEntityDescription, ...] = (
+    NeoPoolRegisterNumberEntityDescription(
+        key="heating_temp",
+        translation_key="heating_temp",
+        name="Heating Temperature",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        native_min_value=HEATING_TEMP_MIN,
+        native_max_value=HEATING_TEMP_MAX,
+        native_step=HEATING_TEMP_STEP,
+        mode=NumberMode.SLIDER,
+        register=REG_HEATING_TEMP,
+        gating_paths=(JSON_PATH_RELAY_HEATING, JSON_PATH_TEMPERATURE),
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolRegisterNumberEntityDescription(
+        key="intelligent_min_time",
+        translation_key="intelligent_min_time",
+        name="Intelligent Min Filtration Time",
+        native_unit_of_measurement=UnitOfTime.MINUTES,
+        native_min_value=INTELLIGENT_MIN_TIME_MIN,
+        native_max_value=INTELLIGENT_MIN_TIME_MAX,
+        native_step=INTELLIGENT_MIN_TIME_STEP,
+        mode=NumberMode.BOX,
+        register=REG_INTELLIGENT_FILT_MIN_TIME,
+        gating_paths=(JSON_PATH_RELAY_HEATING, JSON_PATH_TEMPERATURE),
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolRegisterNumberEntityDescription(
+        key="ph_activation_delay",
+        translation_key="ph_activation_delay",
+        name="pH Pump Activation Delay",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        native_min_value=PH_ACTIVATION_DELAY_MIN,
+        native_max_value=PH_ACTIVATION_DELAY_MAX,
+        native_step=PH_ACTIVATION_DELAY_STEP,
+        mode=NumberMode.BOX,
+        register=REG_RELAY_ACTIVATION_DELAY,
+        gating_paths=(JSON_PATH_PH_DATA,),
+        entity_category=EntityCategory.CONFIG,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -144,7 +220,12 @@ async def async_setup_entry(
     """Set up NeoPool numbers based on a config entry."""
     _LOGGER.debug("Setting up NeoPool numbers")
 
-    numbers = [NeoPoolNumber(entry, description) for description in NUMBER_DESCRIPTIONS]
+    numbers: list[NumberEntity] = [
+        NeoPoolNumber(entry, description) for description in NUMBER_DESCRIPTIONS
+    ]
+    numbers.extend(
+        NeoPoolRegisterNumber(entry, description) for description in REGISTER_NUMBER_DESCRIPTIONS
+    )
 
     async_add_entities(numbers)
     _LOGGER.info("Added %d NeoPool numbers", len(numbers))
@@ -226,3 +307,79 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
             self.entity_description.key,
             payload,
         )
+
+
+class NeoPoolRegisterNumber(NeoPoolMQTTEntity, NumberEntity):
+    """A number backed by a config register read via NPRead / written via NPWrite.
+
+    State lives in runtime_data.register_state (populated by the startup NPRead
+    and kept current by the write-ACK). Availability self-gates on the presence
+    of the configured SENSOR keys.
+    """
+
+    entity_description: NeoPoolRegisterNumberEntityDescription
+
+    def __init__(
+        self,
+        config_entry: NeoPoolConfigEntry,
+        description: NeoPoolRegisterNumberEntityDescription,
+    ) -> None:
+        """Initialize the register-backed number."""
+        super().__init__(config_entry, description.key)
+        self.entity_description = description
+        self._gating_ok = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to LWT, the config-register signal, and SENSOR gating."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                config_register_signal(self._config_entry),
+                self._handle_register_update,
+            )
+        )
+
+        sensor_topic = f"tele/{self.mqtt_topic}/SENSOR"
+
+        @callback
+        def message_received(msg: mqtt.ReceiveMessage) -> None:
+            payload = parse_json_payload(msg.payload)
+            if payload is None:
+                return
+            self._gating_ok = all(
+                get_nested_value(payload, path) is not None
+                for path in self.entity_description.gating_paths
+            )
+            self.async_write_ha_state()
+
+        await self._subscribe_topic(sensor_topic, message_received)
+
+    @callback
+    def _handle_register_update(self) -> None:
+        """React to a config-register cache update."""
+        self.async_write_ha_state()
+
+    @property
+    def _register_value(self) -> int | None:
+        """Return the cached raw register value, if known."""
+        return self._config_entry.runtime_data.register_state.get(self.entity_description.register)
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the cached register value."""
+        return self._register_value
+
+    @property
+    def available(self) -> bool:
+        """Available when online, gating keys present, and a value is cached."""
+        return super().available and self._gating_ok and self._register_value is not None
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Write the new value to the register (raw integer)."""
+        int_value = int(value)
+        await self._write_register(self.entity_description.register, int_value)
+        self._config_entry.runtime_data.register_state[self.entity_description.register] = int_value
+        self.async_write_ha_state()
+        _LOGGER.debug("Set %s to %s", self.entity_description.key, int_value)

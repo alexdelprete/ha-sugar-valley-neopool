@@ -170,17 +170,54 @@ CMD_ESCAPE: Final = "NPEscape"
 
 # Generic register access commands (built-in Tasmota NeoPool driver commands).
 # Used for registers/actions that have no dedicated NPxxx command.
+CMD_NPREAD: Final = "NPRead"
 CMD_NPWRITE: Final = "NPWrite"
 CMD_NPSAVE: Final = "NPSave"
 
 # Tasmota SetOption157 command (used only during setup for NodeID acquisition)
 CMD_SETOPTION157: Final = "SetOption157"
 
-# Modbus register addresses for actions without a dedicated NPxxx command.
-# Written via NPWrite. See docs/MODBUS_PARITY_FEATURE_PLAN.md for the full map.
+# Modbus register addresses for actions/settings without a dedicated NPxxx
+# command. Read via NPRead, written via NPWrite. See
+# docs/MODBUS_PARITY_FEATURE_PLAN.md for the full map.
 # MBF_RESET_USER_COUNTERS (0x02F2): writing any value resets the hydrolysis
 # cell partial/user runtime counters in one atomic controller operation.
 REG_RESET_USER_COUNTERS: Final = 0x02F2
+
+# Group 2 config registers (not present in the SENSOR payload). State is read
+# on demand with NPRead and kept current by the write-ACK; values are cached in
+# runtime_data.register_state. Encodings per the Sugar Valley MODBUS register
+# description.
+REG_HEATING_TEMP: Final = 0x0416  # heating target temperature setpoint
+REG_CLIMA_ONOFF: Final = 0x0417  # climate/thermal control on/off (0/1)
+REG_SMART_ANTI_FREEZE: Final = 0x041A  # smart antifreeze enable (0/1)
+REG_INTELLIGENT_FILT_MIN_TIME: Final = 0x041D  # intelligent mode min minutes
+REG_UV_MODE: Final = 0x0427  # UV lamp mode on/off (0/1)
+REG_RELAY_ACTIVATION_DELAY: Final = 0x0433  # pH pump activation delay (seconds)
+
+# Registers read once at startup (and refreshed by write-ACK) to populate the
+# Group 2 config entities. Read individually for robust NPRead response parsing.
+CONFIG_REGISTERS: Final[tuple[int, ...]] = (
+    REG_HEATING_TEMP,
+    REG_CLIMA_ONOFF,
+    REG_SMART_ANTI_FREEZE,
+    REG_INTELLIGENT_FILT_MIN_TIME,
+    REG_UV_MODE,
+    REG_RELAY_ACTIVATION_DELAY,
+)
+
+# Group 2 number entity bounds (raw register units).
+# NOTE: heating-temp scaling and the pH-delay range are not yet hardware-verified
+# (see docs/MODBUS_PARITY_FEATURE_PLAN.md). Adjust once confirmed with @curzon01.
+HEATING_TEMP_MIN: Final = 15
+HEATING_TEMP_MAX: Final = 40
+HEATING_TEMP_STEP: Final = 1
+INTELLIGENT_MIN_TIME_MIN: Final = 120  # 2 hours
+INTELLIGENT_MIN_TIME_MAX: Final = 1440  # 24 hours
+INTELLIGENT_MIN_TIME_STEP: Final = 10
+PH_ACTIVATION_DELAY_MIN: Final = 0
+PH_ACTIVATION_DELAY_MAX: Final = 300
+PH_ACTIVATION_DELAY_STEP: Final = 5
 
 # JSON paths for sensor data extraction
 JSON_PATH_TYPE: Final = "NeoPool.Type"

@@ -10,8 +10,10 @@ import pytest
 
 from custom_components.sugar_valley_neopool.const import CMD_AUX1, CMD_FILTRATION
 from custom_components.sugar_valley_neopool.switch import (
+    REGISTER_SWITCH_DESCRIPTIONS,
     SWITCH_DESCRIPTIONS,
     NeoPoolAutoTimeSyncSwitch,
+    NeoPoolRegisterSwitch,
     NeoPoolSwitch,
     NeoPoolSwitchEntityDescription,
     async_setup_entry,
@@ -264,10 +266,15 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        # SWITCH_DESCRIPTIONS command switches + the HA-side auto-time-sync switch.
-        assert len(added_entities) == len(SWITCH_DESCRIPTIONS) + 1
+        # Command switches + auto-time-sync switch + register-backed config switches.
+        assert len(added_entities) == (
+            len(SWITCH_DESCRIPTIONS) + 1 + len(REGISTER_SWITCH_DESCRIPTIONS)
+        )
         assert sum(isinstance(e, NeoPoolSwitch) for e in added_entities) == len(SWITCH_DESCRIPTIONS)
         assert any(isinstance(e, NeoPoolAutoTimeSyncSwitch) for e in added_entities)
+        assert sum(isinstance(e, NeoPoolRegisterSwitch) for e in added_entities) == len(
+            REGISTER_SWITCH_DESCRIPTIONS
+        )
 
 
 class TestNeoPoolAutoTimeSyncSwitch:
@@ -328,3 +335,86 @@ class TestNeoPoolAutoTimeSyncSwitch:
 
         assert switch.is_on is True
         assert mock_config_entry.runtime_data.auto_time_sync is True
+
+
+class TestNeoPoolRegisterSwitch:
+    """Tests for register-backed config switches (UV/climate/antifreeze)."""
+
+    def _make(self, entry: MagicMock) -> tuple[NeoPoolRegisterSwitch, Any]:
+        desc = REGISTER_SWITCH_DESCRIPTIONS[0]  # uv_mode
+        return NeoPoolRegisterSwitch(entry, desc), desc
+
+    def test_is_on_from_register_state(self, mock_config_entry: MagicMock) -> None:
+        """is_on reflects the cached register value (None when unknown)."""
+        sw, desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        assert sw.is_on is None
+        mock_config_entry.runtime_data.register_state[desc.register] = 1
+        assert sw.is_on is True
+        mock_config_entry.runtime_data.register_state[desc.register] = 0
+        assert sw.is_on is False
+
+    def test_available_requires_gating_and_value(self, mock_config_entry: MagicMock) -> None:
+        """Availability needs online + gating keys present + a cached value."""
+        sw, desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        sw._attr_available = True  # LWT online
+        sw._gating_ok = False
+        assert sw.available is False
+        sw._gating_ok = True
+        assert sw.available is False  # value not cached yet
+        mock_config_entry.runtime_data.register_state[desc.register] = 1
+        assert sw.available is True
+
+    @pytest.mark.asyncio
+    async def test_turn_on_off_writes_register(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Toggling writes the register and optimistically updates the cache."""
+        sw, desc = self._make(mock_config_entry)
+        sw.hass = mock_hass
+        sw.async_write_ha_state = MagicMock()
+        mock_config_entry.runtime_data.register_state.clear()
+
+        with patch.object(sw, "_write_register", new_callable=AsyncMock) as mock_w:
+            await sw.async_turn_on()
+            mock_w.assert_awaited_once_with(desc.register, 1)
+            assert mock_config_entry.runtime_data.register_state[desc.register] == 1
+
+            await sw.async_turn_off()
+            assert mock_config_entry.runtime_data.register_state[desc.register] == 0
+
+    @pytest.mark.asyncio
+    async def test_gating_tracked_from_sensor(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """The SENSOR watch flips _gating_ok on gating-key presence."""
+        sw, _desc = self._make(mock_config_entry)  # uv_mode gates on Relay.UV
+        sw.hass = mock_hass
+        sw.async_write_ha_state = MagicMock()
+
+        sensor_cb = None
+
+        async def capture(hass, topic, cb, **kwargs):
+            nonlocal sensor_cb
+            if "SENSOR" in topic:
+                sensor_cb = cb
+            return MagicMock()
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+            patch(
+                "custom_components.sugar_valley_neopool.switch.async_dispatcher_connect",
+                return_value=MagicMock(),
+            ),
+        ):
+            await sw.async_added_to_hass()
+
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Relay": {"UV": 0}}})
+        sensor_cb(msg)
+        assert sw._gating_ok is True
+
+        msg.payload = json.dumps({"NeoPool": {"Other": 1}})
+        sensor_cb(msg)
+        assert sw._gating_ok is False

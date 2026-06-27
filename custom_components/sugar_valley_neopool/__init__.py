@@ -17,6 +17,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CMD_NPREAD,
     CMD_TIME,
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
@@ -28,6 +29,7 @@ from .const import (
     CONF_NODEID_REAL,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
+    CONFIG_REGISTERS,
     CONNECTION_ERROR_RATE_WINDOW_SECONDS,
     DEFAULT_DEVICE_NAME,
     DEFAULT_ENABLE_REPAIR_NOTIFICATION,
@@ -43,6 +45,7 @@ from .const import (
     PLATFORMS,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
+    TOPIC_RESULT,
     YAML_ENTITIES_TO_DELETE,
     YAML_TO_INTEGRATION_KEY_MAP,
 )
@@ -74,6 +77,15 @@ def connection_rate_signal(entry: ConfigEntry) -> str:
     ConnectionRateTracker.
     """
     return f"{DOMAIN}_connection_rate_updated_{entry.entry_id}"
+
+
+def config_register_signal(entry: ConfigEntry) -> str:
+    """Return the dispatcher signal name for config-register cache updates.
+
+    Fired by the stat/RESULT watch whenever a Group 2 config register value is
+    read or confirmed; consumed by the register-backed switch/number entities.
+    """
+    return f"{DOMAIN}_config_register_updated_{entry.entry_id}"
 
 
 @dataclass
@@ -109,6 +121,11 @@ class NeoPoolData:
     # watch in _setup_dynamic_disable_watch.
     auto_time_sync: bool = False
     last_time_sync_ts: float | None = None
+    # Cache of Group 2 config registers (address -> raw value). These are not in
+    # the SENSOR payload; populated by a startup NPRead and kept current by the
+    # write-ACK. The stat/RESULT watch updates this and fans out via
+    # config_register_signal.
+    register_state: dict[int, int] = field(default_factory=dict)
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -185,6 +202,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Disable g/h-labeled entities when the controller is in % display mode
     _disable_unavailable_mode_entities(hass, entry)
+
+    # Subscribe to stat/RESULT and request the Group 2 config registers (not in
+    # SENSOR) so the register-backed entities have state on first render.
+    # Subscribe before reading so the responses are captured.
+    await _setup_result_watch(hass, entry)
+    await _read_config_registers(hass, entry)
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -1047,6 +1070,93 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
     unsub = await mqtt.async_subscribe(hass, sensor_topic, on_sensor, qos=1)
     entry.async_on_unload(unsub)
     _LOGGER.debug("Dynamic disable watch subscribed to %s", sensor_topic)
+
+
+def _parse_register_int(value: Any) -> int | None:
+    """Parse an int from an NPRead RESULT field (int, hex string, or decimal str).
+
+    Used for both the Address and the Data value: per the Tasmota docs an
+    NPRead address comes back as a decimal int (e.g. 1046 == 0x0416) while
+    other commands may use hex strings (e.g. "0x040F"); Data for a single
+    register is a scalar that can likewise be an int or a hex string.
+    """
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str):
+        try:
+            return int(value, 16) if value.lower().startswith("0x") else int(value)
+        except ValueError:
+            return None
+    return None
+
+
+async def _setup_result_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Subscribe to stat/RESULT and cache Group 2 config-register values.
+
+    Tasmota answers every command on stat/{topic}/RESULT with a JSON object
+    keyed by the command name. We watch for NPRead responses and store the
+    value in runtime_data.register_state, fanning out via config_register_signal
+    so the register-backed entities update. This is on-demand request/response,
+    not polling: reads are only issued at startup (and writes echo their state).
+
+    Per the Tasmota docs a single-register NPRead returns a scalar Data, e.g.
+    ``{"NPRead":{"Address":1046,"Data":28}}``; a multi-register read (NPReadL)
+    returns a Data list. Both shapes are handled.
+    """
+    mqtt_topic = entry.runtime_data.mqtt_topic
+    result_topic = TOPIC_RESULT.format(device=mqtt_topic)
+    signal = config_register_signal(entry)
+
+    @callback
+    def on_result(msg: mqtt.ReceiveMessage) -> None:
+        try:
+            payload = json.loads(
+                msg.payload.decode("utf-8")
+                if isinstance(msg.payload, (bytes, bytearray))
+                else msg.payload
+            )
+        except json.JSONDecodeError, UnicodeDecodeError:
+            return
+        if not isinstance(payload, dict):
+            return
+
+        npread = payload.get("NPRead")
+        if not isinstance(npread, dict):
+            return
+        address = _parse_register_int(npread.get("Address"))
+        data = npread.get("Data")
+        if isinstance(data, list):
+            data = data[0] if data else None
+        value = _parse_register_int(data)
+        if address is None or value is None:
+            return
+        entry.runtime_data.register_state[address] = value
+        async_dispatcher_send(hass, signal)
+
+    unsub = await mqtt.async_subscribe(hass, result_topic, on_result, qos=1)
+    entry.async_on_unload(unsub)
+    _LOGGER.debug("Result watch subscribed to %s", result_topic)
+
+
+async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Issue a one-time NPRead for each Group 2 config register.
+
+    Responses arrive asynchronously on stat/RESULT and populate
+    runtime_data.register_state via _setup_result_watch. Reads are sent
+    individually for robust response parsing.
+    """
+    mqtt_topic = entry.runtime_data.mqtt_topic
+    for address in CONFIG_REGISTERS:
+        await mqtt.async_publish(
+            hass,
+            f"cmnd/{mqtt_topic}/{CMD_NPREAD}",
+            f"0x{address:04X}",
+            qos=1,
+            retain=False,
+        )
+    _LOGGER.debug("Requested %d config registers via NPRead", len(CONFIG_REGISTERS))
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:

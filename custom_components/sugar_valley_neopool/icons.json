@@ -190,6 +190,15 @@
       },
       "auto_time_sync": {
         "default": "mdi:clock-sync-outline"
+      },
+      "uv_mode": {
+        "default": "mdi:weather-sunny"
+      },
+      "climate_mode": {
+        "default": "mdi:thermostat"
+      },
+      "smart_antifreeze": {
+        "default": "mdi:snowflake"
       }
     },
     "select": {
@@ -221,6 +230,15 @@
       },
       "chlorine_setpoint": {
         "default": "mdi:water-outline"
+      },
+      "heating_temp": {
+        "default": "mdi:thermometer"
+      },
+      "intelligent_min_time": {
+        "default": "mdi:timer-cog-outline"
+      },
+      "ph_activation_delay": {
+        "default": "mdi:timer-sand"
       }
     },
     "button": {

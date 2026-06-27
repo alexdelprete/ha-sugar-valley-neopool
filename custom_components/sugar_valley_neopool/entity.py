@@ -11,7 +11,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import Entity
 
 from . import NeoPoolConfigEntry, get_device_info
-from .const import PAYLOAD_ONLINE
+from .const import CMD_NPSAVE, CMD_NPWRITE, PAYLOAD_ONLINE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -132,3 +132,14 @@ class NeoPoolMQTTEntity(NeoPoolEntity):
             payload,
             topic,
         )
+
+    async def _write_register(self, address: int, value: int, save: bool = True) -> None:
+        """Write a Modbus register via NPWrite and optionally persist it.
+
+        Used for config registers that have no dedicated NPxxx command. The
+        controller echoes the new state back (immediate SENSOR for relays/
+        settings, or the NPWrite RESULT), so no read-back poll is needed.
+        """
+        await self._publish_command(CMD_NPWRITE, f"0x{address:04X} {value}")
+        if save:
+            await self._publish_command(CMD_NPSAVE, "")

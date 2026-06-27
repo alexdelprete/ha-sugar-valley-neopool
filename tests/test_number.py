@@ -21,8 +21,10 @@ from custom_components.sugar_valley_neopool.const import (
 )
 from custom_components.sugar_valley_neopool.number import (
     NUMBER_DESCRIPTIONS,
+    REGISTER_NUMBER_DESCRIPTIONS,
     NeoPoolNumber,
     NeoPoolNumberEntityDescription,
+    NeoPoolRegisterNumber,
     async_setup_entry,
 )
 from homeassistant.components.number import NumberDeviceClass, NumberMode
@@ -501,5 +503,49 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(NUMBER_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolNumber) for e in added_entities)
+        # Command numbers + register-backed config numbers.
+        assert len(added_entities) == len(NUMBER_DESCRIPTIONS) + len(REGISTER_NUMBER_DESCRIPTIONS)
+        assert sum(isinstance(e, NeoPoolNumber) for e in added_entities) == len(NUMBER_DESCRIPTIONS)
+
+
+class TestNeoPoolRegisterNumber:
+    """Tests for register-backed config numbers (heating/intelligent/pH delay)."""
+
+    def _make(self, entry: MagicMock) -> tuple[NeoPoolRegisterNumber, Any]:
+        desc = REGISTER_NUMBER_DESCRIPTIONS[0]  # heating_temp
+        return NeoPoolRegisterNumber(entry, desc), desc
+
+    def test_native_value_from_register_state(self, mock_config_entry: MagicMock) -> None:
+        """native_value reflects the cached register value (None when unknown)."""
+        num, desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        assert num.native_value is None
+        mock_config_entry.runtime_data.register_state[desc.register] = 28
+        assert num.native_value == 28
+
+    def test_available_requires_gating_and_value(self, mock_config_entry: MagicMock) -> None:
+        """Availability needs online + gating keys present + a cached value."""
+        num, desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        num._attr_available = True
+        num._gating_ok = False
+        assert num.available is False
+        num._gating_ok = True
+        assert num.available is False
+        mock_config_entry.runtime_data.register_state[desc.register] = 28
+        assert num.available is True
+
+    @pytest.mark.asyncio
+    async def test_set_value_writes_register(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Setting a value writes the integer register and updates the cache."""
+        num, desc = self._make(mock_config_entry)
+        num.hass = mock_hass
+        num.async_write_ha_state = MagicMock()
+        mock_config_entry.runtime_data.register_state.clear()
+
+        with patch.object(num, "_write_register", new_callable=AsyncMock) as mock_w:
+            await num.async_set_native_value(30.0)
+            mock_w.assert_awaited_once_with(desc.register, 30)
+            assert mock_config_entry.runtime_data.register_state[desc.register] == 30
