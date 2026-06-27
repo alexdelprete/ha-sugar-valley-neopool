@@ -199,6 +199,12 @@
       },
       "smart_antifreeze": {
         "default": "mdi:snowflake"
+      },
+      "hydro_cover_reduction": {
+        "default": "mdi:window-shutter"
+      },
+      "hydro_temp_shutdown": {
+        "default": "mdi:thermometer-off"
       }
     },
     "select": {
@@ -239,6 +245,12 @@
       },
       "ph_activation_delay": {
         "default": "mdi:timer-sand"
+      },
+      "hydro_cover_reduction_pct": {
+        "default": "mdi:percent-outline"
+      },
+      "hydro_shutdown_temp": {
+        "default": "mdi:thermometer-low"
       }
     },
     "button": {

@@ -30,6 +30,7 @@ from custom_components.sugar_valley_neopool.const import (
 from custom_components.sugar_valley_neopool.entity import NeoPoolEntity, NeoPoolMQTTEntity
 from custom_components.sugar_valley_neopool.number import (
     NUMBER_DESCRIPTIONS,
+    REGISTER_BYTE_NUMBER_DESCRIPTIONS,
     REGISTER_NUMBER_DESCRIPTIONS,
     NeoPoolNumber,
     async_setup_entry as number_setup,
@@ -45,6 +46,7 @@ from custom_components.sugar_valley_neopool.sensor import (
     async_setup_entry as sensor_setup,
 )
 from custom_components.sugar_valley_neopool.switch import (
+    REGISTER_BIT_SWITCH_DESCRIPTIONS,
     REGISTER_SWITCH_DESCRIPTIONS,
     SWITCH_DESCRIPTIONS,
     NeoPoolSwitch,
@@ -211,8 +213,13 @@ class TestSwitchPlatform:
 
         await switch_setup(hass, mock_config_entry, capture_entities)
 
-        # +1 auto-time-sync switch, + register-backed config switches.
-        assert len(entities) == (len(SWITCH_DESCRIPTIONS) + 1 + len(REGISTER_SWITCH_DESCRIPTIONS))
+        # +1 auto-time-sync switch, + register switches, + bit-packed switches.
+        assert len(entities) == (
+            len(SWITCH_DESCRIPTIONS)
+            + 1
+            + len(REGISTER_SWITCH_DESCRIPTIONS)
+            + len(REGISTER_BIT_SWITCH_DESCRIPTIONS)
+        )
 
     def test_all_switches_have_commands(self) -> None:
         """Test all switch descriptions have command."""
@@ -337,8 +344,12 @@ class TestNumberPlatform:
 
         await number_setup(hass, mock_config_entry, capture_entities)
 
-        # Command numbers + register-backed config numbers.
-        assert len(entities) == len(NUMBER_DESCRIPTIONS) + len(REGISTER_NUMBER_DESCRIPTIONS)
+        # Command numbers + register numbers + byte-packed register numbers.
+        assert len(entities) == (
+            len(NUMBER_DESCRIPTIONS)
+            + len(REGISTER_NUMBER_DESCRIPTIONS)
+            + len(REGISTER_BYTE_NUMBER_DESCRIPTIONS)
+        )
 
     def test_all_numbers_have_limits(self) -> None:
         """Test all number descriptions have min/max values."""

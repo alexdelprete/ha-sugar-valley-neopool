@@ -8,11 +8,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.sugar_valley_neopool.const import CMD_AUX1, CMD_FILTRATION
+from custom_components.sugar_valley_neopool.const import (
+    CMD_AUX1,
+    CMD_FILTRATION,
+    MASK_HIDRO_COVER_ENABLE,
+    MASK_HIDRO_TEMP_SHUTDOWN_ENABLE,
+    REG_HIDRO_COVER_ENABLE,
+)
 from custom_components.sugar_valley_neopool.switch import (
+    REGISTER_BIT_SWITCH_DESCRIPTIONS,
     REGISTER_SWITCH_DESCRIPTIONS,
     SWITCH_DESCRIPTIONS,
     NeoPoolAutoTimeSyncSwitch,
+    NeoPoolRegisterBitSwitch,
     NeoPoolRegisterSwitch,
     NeoPoolSwitch,
     NeoPoolSwitchEntityDescription,
@@ -266,14 +274,17 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        # Command switches + auto-time-sync switch + register-backed config switches.
+        # Command switches + auto-time-sync + register switches + bit switches.
         assert len(added_entities) == (
-            len(SWITCH_DESCRIPTIONS) + 1 + len(REGISTER_SWITCH_DESCRIPTIONS)
+            len(SWITCH_DESCRIPTIONS)
+            + 1
+            + len(REGISTER_SWITCH_DESCRIPTIONS)
+            + len(REGISTER_BIT_SWITCH_DESCRIPTIONS)
         )
         assert sum(isinstance(e, NeoPoolSwitch) for e in added_entities) == len(SWITCH_DESCRIPTIONS)
         assert any(isinstance(e, NeoPoolAutoTimeSyncSwitch) for e in added_entities)
-        assert sum(isinstance(e, NeoPoolRegisterSwitch) for e in added_entities) == len(
-            REGISTER_SWITCH_DESCRIPTIONS
+        assert sum(isinstance(e, NeoPoolRegisterBitSwitch) for e in added_entities) == len(
+            REGISTER_BIT_SWITCH_DESCRIPTIONS
         )
 
 
@@ -418,3 +429,59 @@ class TestNeoPoolRegisterSwitch:
         msg.payload = json.dumps({"NeoPool": {"Other": 1}})
         sensor_cb(msg)
         assert sw._gating_ok is False
+
+
+class TestNeoPoolRegisterBitSwitch:
+    """Tests for bit-packed config switches (cover-reduction / temp-shutdown)."""
+
+    def _make(self, entry: MagicMock, key: str) -> NeoPoolRegisterBitSwitch:
+        desc = next(d for d in REGISTER_BIT_SWITCH_DESCRIPTIONS if d.key == key)
+        return NeoPoolRegisterBitSwitch(entry, desc)
+
+    def test_is_on_reads_bit(self, mock_config_entry: MagicMock) -> None:
+        """is_on reflects only the entity's own bit of the shared register."""
+        sw = self._make(mock_config_entry, "hydro_cover_reduction")
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        assert sw.is_on is None
+        rs[REG_HIDRO_COVER_ENABLE] = MASK_HIDRO_TEMP_SHUTDOWN_ENABLE  # other bit only
+        assert sw.is_on is False
+        rs[REG_HIDRO_COVER_ENABLE] = MASK_HIDRO_COVER_ENABLE
+        assert sw.is_on is True
+
+    @pytest.mark.asyncio
+    async def test_turn_on_preserves_sibling_bit(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Toggling one bit must not clobber the sibling bit in the register."""
+        sw = self._make(mock_config_entry, "hydro_cover_reduction")
+        sw.hass = mock_hass
+        sw.async_write_ha_state = MagicMock()
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        # Temp-shutdown already enabled; cover-reduction off.
+        rs[REG_HIDRO_COVER_ENABLE] = MASK_HIDRO_TEMP_SHUTDOWN_ENABLE
+
+        with patch.object(sw, "_write_register", new_callable=AsyncMock) as mock_w:
+            await sw.async_turn_on()
+            expected = MASK_HIDRO_TEMP_SHUTDOWN_ENABLE | MASK_HIDRO_COVER_ENABLE
+            mock_w.assert_awaited_once_with(REG_HIDRO_COVER_ENABLE, expected)
+            assert rs[REG_HIDRO_COVER_ENABLE] == expected
+
+            await sw.async_turn_off()
+            # Cover bit cleared, temp-shutdown bit preserved.
+            assert rs[REG_HIDRO_COVER_ENABLE] == MASK_HIDRO_TEMP_SHUTDOWN_ENABLE
+
+    @pytest.mark.asyncio
+    async def test_no_write_when_value_uncached(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Without a cached register value, a blind RMW write is skipped."""
+        sw = self._make(mock_config_entry, "hydro_temp_shutdown")
+        sw.hass = mock_hass
+        sw.async_write_ha_state = MagicMock()
+        mock_config_entry.runtime_data.register_state.clear()
+
+        with patch.object(sw, "_write_register", new_callable=AsyncMock) as mock_w:
+            await sw.async_turn_on()
+            mock_w.assert_not_awaited()

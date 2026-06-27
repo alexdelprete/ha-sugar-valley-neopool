@@ -20,11 +20,15 @@ from .const import (
     CMD_AUX4,
     CMD_FILTRATION,
     JSON_PATH_FILTRATION_STATE,
+    JSON_PATH_HYDROLYSIS_DATA,
     JSON_PATH_RELAY_AUX,
     JSON_PATH_RELAY_HEATING,
     JSON_PATH_RELAY_UV,
     JSON_PATH_TEMPERATURE,
+    MASK_HIDRO_COVER_ENABLE,
+    MASK_HIDRO_TEMP_SHUTDOWN_ENABLE,
     REG_CLIMA_ONOFF,
+    REG_HIDRO_COVER_ENABLE,
     REG_SMART_ANTI_FREEZE,
     REG_UV_MODE,
 )
@@ -130,6 +134,35 @@ REGISTER_SWITCH_DESCRIPTIONS: tuple[NeoPoolRegisterSwitchEntityDescription, ...]
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolRegisterBitSwitchEntityDescription(NeoPoolRegisterSwitchEntityDescription):
+    """A config-register switch that toggles a single bit (read-modify-write)."""
+
+    bit_mask: int
+
+
+REGISTER_BIT_SWITCH_DESCRIPTIONS: tuple[NeoPoolRegisterBitSwitchEntityDescription, ...] = (
+    NeoPoolRegisterBitSwitchEntityDescription(
+        key="hydro_cover_reduction",
+        translation_key="hydro_cover_reduction",
+        name="Hydrolysis Cover Reduction",
+        register=REG_HIDRO_COVER_ENABLE,
+        bit_mask=MASK_HIDRO_COVER_ENABLE,
+        gating_paths=(JSON_PATH_HYDROLYSIS_DATA,),
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolRegisterBitSwitchEntityDescription(
+        key="hydro_temp_shutdown",
+        translation_key="hydro_temp_shutdown",
+        name="Hydrolysis Temperature Shutdown",
+        register=REG_HIDRO_COVER_ENABLE,
+        bit_mask=MASK_HIDRO_TEMP_SHUTDOWN_ENABLE,
+        gating_paths=(JSON_PATH_HYDROLYSIS_DATA, JSON_PATH_TEMPERATURE),
+        entity_category=EntityCategory.CONFIG,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -144,6 +177,10 @@ async def async_setup_entry(
     switches.append(NeoPoolAutoTimeSyncSwitch(entry))
     switches.extend(
         NeoPoolRegisterSwitch(entry, description) for description in REGISTER_SWITCH_DESCRIPTIONS
+    )
+    switches.extend(
+        NeoPoolRegisterBitSwitch(entry, description)
+        for description in REGISTER_BIT_SWITCH_DESCRIPTIONS
     )
 
     async_add_entities(switches)
@@ -343,4 +380,42 @@ class NeoPoolRegisterSwitch(NeoPoolMQTTEntity, SwitchEntity):
         """Turn the switch off (write 0)."""
         await self._write_register(self.entity_description.register, 0)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = 0
+        self.async_write_ha_state()
+
+
+class NeoPoolRegisterBitSwitch(NeoPoolRegisterSwitch):
+    """A switch toggling a single bit of a shared config register.
+
+    Reuses the register-switch subscription/gating/availability logic but reads
+    and writes a single bit via read-modify-write so the sibling field in the
+    same register (e.g. the temperature-shutdown bit) is preserved.
+    """
+
+    entity_description: NeoPoolRegisterBitSwitchEntityDescription
+
+    @property
+    def is_on(self) -> bool | None:
+        """Return True if the entity's bit is set."""
+        value = self._register_value
+        return None if value is None else bool(value & self.entity_description.bit_mask)
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Set the entity's bit (preserving the rest of the register)."""
+        await self._set_bit(state=True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Clear the entity's bit (preserving the rest of the register)."""
+        await self._set_bit(state=False)
+
+    async def _set_bit(self, *, state: bool) -> None:
+        """Read-modify-write the single bit; no-op if the value isn't cached."""
+        current = self._register_value
+        if current is None:
+            # Entity is unavailable without a cached value; guard against
+            # clobbering the sibling field on a blind write.
+            return
+        mask = self.entity_description.bit_mask
+        new_value = current | mask if state else current & ~mask
+        await self._write_register(self.entity_description.register, new_value)
+        self._config_entry.runtime_data.register_state[self.entity_description.register] = new_value
         self.async_write_ha_state()

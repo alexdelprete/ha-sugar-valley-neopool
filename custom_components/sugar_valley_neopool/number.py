@@ -33,10 +33,17 @@ from .const import (
     HEATING_TEMP_MAX,
     HEATING_TEMP_MIN,
     HEATING_TEMP_STEP,
+    HIDRO_COVER_REDUCTION_MAX,
+    HIDRO_COVER_REDUCTION_MIN,
+    HIDRO_COVER_REDUCTION_STEP,
+    HIDRO_SHUTDOWN_TEMP_MAX,
+    HIDRO_SHUTDOWN_TEMP_MIN,
+    HIDRO_SHUTDOWN_TEMP_STEP,
     INTELLIGENT_MIN_TIME_MAX,
     INTELLIGENT_MIN_TIME_MIN,
     INTELLIGENT_MIN_TIME_STEP,
     JSON_PATH_CHLORINE_SETPOINT,
+    JSON_PATH_HYDROLYSIS_DATA,
     JSON_PATH_HYDROLYSIS_SETPOINT,
     JSON_PATH_IONIZATION_MAX,
     JSON_PATH_IONIZATION_SETPOINT,
@@ -50,8 +57,11 @@ from .const import (
     PH_ACTIVATION_DELAY_MIN,
     PH_ACTIVATION_DELAY_STEP,
     REG_HEATING_TEMP,
+    REG_HIDRO_COVER_REDUCTION,
     REG_INTELLIGENT_FILT_MIN_TIME,
     REG_RELAY_ACTIVATION_DELAY,
+    SHIFT_HIDRO_COVER_REDUCTION,
+    SHIFT_HIDRO_SHUTDOWN_TEMP,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, parse_json_payload, safe_float
@@ -212,6 +222,46 @@ REGISTER_NUMBER_DESCRIPTIONS: tuple[NeoPoolRegisterNumberEntityDescription, ...]
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolRegisterByteNumberEntityDescription(NeoPoolRegisterNumberEntityDescription):
+    """A config-register number stored in one byte of a shared register."""
+
+    byte_shift: int  # 0 for the low byte, 8 for the high byte
+
+
+REGISTER_BYTE_NUMBER_DESCRIPTIONS: tuple[NeoPoolRegisterByteNumberEntityDescription, ...] = (
+    NeoPoolRegisterByteNumberEntityDescription(
+        key="hydro_cover_reduction_pct",
+        translation_key="hydro_cover_reduction_pct",
+        name="Hydrolysis Cover Reduction",
+        native_unit_of_measurement=PERCENTAGE,
+        native_min_value=HIDRO_COVER_REDUCTION_MIN,
+        native_max_value=HIDRO_COVER_REDUCTION_MAX,
+        native_step=HIDRO_COVER_REDUCTION_STEP,
+        mode=NumberMode.SLIDER,
+        register=REG_HIDRO_COVER_REDUCTION,
+        byte_shift=SHIFT_HIDRO_COVER_REDUCTION,
+        gating_paths=(JSON_PATH_HYDROLYSIS_DATA,),
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolRegisterByteNumberEntityDescription(
+        key="hydro_shutdown_temp",
+        translation_key="hydro_shutdown_temp",
+        name="Hydrolysis Shutdown Temperature",
+        device_class=NumberDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        native_min_value=HIDRO_SHUTDOWN_TEMP_MIN,
+        native_max_value=HIDRO_SHUTDOWN_TEMP_MAX,
+        native_step=HIDRO_SHUTDOWN_TEMP_STEP,
+        mode=NumberMode.BOX,
+        register=REG_HIDRO_COVER_REDUCTION,
+        byte_shift=SHIFT_HIDRO_SHUTDOWN_TEMP,
+        gating_paths=(JSON_PATH_HYDROLYSIS_DATA, JSON_PATH_TEMPERATURE),
+        entity_category=EntityCategory.CONFIG,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -225,6 +275,10 @@ async def async_setup_entry(
     ]
     numbers.extend(
         NeoPoolRegisterNumber(entry, description) for description in REGISTER_NUMBER_DESCRIPTIONS
+    )
+    numbers.extend(
+        NeoPoolRegisterByteNumber(entry, description)
+        for description in REGISTER_BYTE_NUMBER_DESCRIPTIONS
     )
 
     async_add_entities(numbers)
@@ -383,3 +437,37 @@ class NeoPoolRegisterNumber(NeoPoolMQTTEntity, NumberEntity):
         self._config_entry.runtime_data.register_state[self.entity_description.register] = int_value
         self.async_write_ha_state()
         _LOGGER.debug("Set %s to %s", self.entity_description.key, int_value)
+
+
+class NeoPoolRegisterByteNumber(NeoPoolRegisterNumber):
+    """A number stored in one byte (low or high) of a shared config register.
+
+    Reuses the register-number subscription/gating/availability logic but reads
+    and writes a single byte via read-modify-write so the sibling byte in the
+    same register (e.g. the cover-% vs shutdown-temp fields of 0x042D) is
+    preserved.
+    """
+
+    entity_description: NeoPoolRegisterByteNumberEntityDescription
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the byte field of the cached register value."""
+        value = self._register_value
+        if value is None:
+            return None
+        return (value >> self.entity_description.byte_shift) & 0xFF
+
+    async def async_set_native_value(self, value: float) -> None:
+        """Read-modify-write the byte field; no-op if the value isn't cached."""
+        current = self._register_value
+        if current is None:
+            # Entity is unavailable without a cached value; guard against
+            # clobbering the sibling byte on a blind write.
+            return
+        shift = self.entity_description.byte_shift
+        new_value = (current & ~(0xFF << shift)) | ((int(value) & 0xFF) << shift)
+        await self._write_register(self.entity_description.register, new_value)
+        self._config_entry.runtime_data.register_state[self.entity_description.register] = new_value
+        self.async_write_ha_state()
+        _LOGGER.debug("Set %s to %s", self.entity_description.key, int(value))

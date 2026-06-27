@@ -348,6 +348,12 @@
       },
       "smart_antifreeze": {
         "name": "Smart Antifreeze"
+      },
+      "hydro_cover_reduction": {
+        "name": "Hydrolysis Cover Reduction"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Hydrolysis Temperature Shutdown"
       }
     },
     "select": {
@@ -388,6 +394,12 @@
       },
       "ph_activation_delay": {
         "name": "pH Pump Activation Delay"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Hydrolysis Cover Reduction"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Hydrolysis Shutdown Temperature"
       }
     },
     "button": {

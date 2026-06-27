@@ -195,8 +195,20 @@ REG_INTELLIGENT_FILT_MIN_TIME: Final = 0x041D  # intelligent mode min minutes
 REG_UV_MODE: Final = 0x0427  # UV lamp mode on/off (0/1)
 REG_RELAY_ACTIVATION_DELAY: Final = 0x0433  # pH pump activation delay (seconds)
 
+# Group 3 bit-packed hydrolysis cover registers (bit layout confirmed against
+# the Sugar Valley MODBUS register description). Both the cover-reduction and
+# temperature-shutdown features share these two registers, so writes must be
+# read-modify-write to avoid clobbering the sibling field. Keep the cover-%
+# decoding in lock-step with the companion YAML package repo (CLAUDE.md).
+REG_HIDRO_COVER_ENABLE: Final = 0x042C  # bit0 cover-reduction, bit1 temp-shutdown
+REG_HIDRO_COVER_REDUCTION: Final = 0x042D  # bits0-7 cover %, bits8-15 shutdown °C
+MASK_HIDRO_COVER_ENABLE: Final = 0x0001  # MBMSK_HIDRO_COVER_ENABLE
+MASK_HIDRO_TEMP_SHUTDOWN_ENABLE: Final = 0x0002  # MBMSK_HIDRO_TEMPERATURE_SHUTDOWN_ENABLE
+SHIFT_HIDRO_COVER_REDUCTION: Final = 0  # bits 0-7
+SHIFT_HIDRO_SHUTDOWN_TEMP: Final = 8  # bits 8-15
+
 # Registers read once at startup (and refreshed by write-ACK) to populate the
-# Group 2 config entities. Read individually for robust NPRead response parsing.
+# config entities. Read individually for robust NPRead response parsing.
 CONFIG_REGISTERS: Final[tuple[int, ...]] = (
     REG_HEATING_TEMP,
     REG_CLIMA_ONOFF,
@@ -204,6 +216,8 @@ CONFIG_REGISTERS: Final[tuple[int, ...]] = (
     REG_INTELLIGENT_FILT_MIN_TIME,
     REG_UV_MODE,
     REG_RELAY_ACTIVATION_DELAY,
+    REG_HIDRO_COVER_ENABLE,
+    REG_HIDRO_COVER_REDUCTION,
 )
 
 # Group 2 number entity bounds (raw register units).
@@ -218,6 +232,16 @@ INTELLIGENT_MIN_TIME_STEP: Final = 10
 PH_ACTIVATION_DELAY_MIN: Final = 0
 PH_ACTIVATION_DELAY_MAX: Final = 300
 PH_ACTIVATION_DELAY_STEP: Final = 5
+
+# Group 3 number bounds (raw byte fields of 0x042D, units percent and °C).
+# NOTE: the shutdown-temperature range is a sensible default, not yet
+# hardware-verified; cover reduction is a straightforward 0-100 %.
+HIDRO_COVER_REDUCTION_MIN: Final = 0
+HIDRO_COVER_REDUCTION_MAX: Final = 100
+HIDRO_COVER_REDUCTION_STEP: Final = 5
+HIDRO_SHUTDOWN_TEMP_MIN: Final = 5
+HIDRO_SHUTDOWN_TEMP_MAX: Final = 30
+HIDRO_SHUTDOWN_TEMP_STEP: Final = 1
 
 # JSON paths for sensor data extraction
 JSON_PATH_TYPE: Final = "NeoPool.Type"

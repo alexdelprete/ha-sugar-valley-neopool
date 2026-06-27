@@ -18,12 +18,16 @@ from custom_components.sugar_valley_neopool.const import (
     JSON_PATH_CHLORINE_SETPOINT,
     JSON_PATH_IONIZATION_MAX,
     JSON_PATH_IONIZATION_SETPOINT,
+    REG_HIDRO_COVER_REDUCTION,
+    SHIFT_HIDRO_SHUTDOWN_TEMP,
 )
 from custom_components.sugar_valley_neopool.number import (
     NUMBER_DESCRIPTIONS,
+    REGISTER_BYTE_NUMBER_DESCRIPTIONS,
     REGISTER_NUMBER_DESCRIPTIONS,
     NeoPoolNumber,
     NeoPoolNumberEntityDescription,
+    NeoPoolRegisterByteNumber,
     NeoPoolRegisterNumber,
     async_setup_entry,
 )
@@ -503,9 +507,16 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        # Command numbers + register-backed config numbers.
-        assert len(added_entities) == len(NUMBER_DESCRIPTIONS) + len(REGISTER_NUMBER_DESCRIPTIONS)
+        # Command numbers + register numbers + byte-packed register numbers.
+        assert len(added_entities) == (
+            len(NUMBER_DESCRIPTIONS)
+            + len(REGISTER_NUMBER_DESCRIPTIONS)
+            + len(REGISTER_BYTE_NUMBER_DESCRIPTIONS)
+        )
         assert sum(isinstance(e, NeoPoolNumber) for e in added_entities) == len(NUMBER_DESCRIPTIONS)
+        assert sum(isinstance(e, NeoPoolRegisterByteNumber) for e in added_entities) == len(
+            REGISTER_BYTE_NUMBER_DESCRIPTIONS
+        )
 
 
 class TestNeoPoolRegisterNumber:
@@ -549,3 +560,55 @@ class TestNeoPoolRegisterNumber:
             await num.async_set_native_value(30.0)
             mock_w.assert_awaited_once_with(desc.register, 30)
             assert mock_config_entry.runtime_data.register_state[desc.register] == 30
+
+
+class TestNeoPoolRegisterByteNumber:
+    """Tests for byte-packed config numbers (cover-% / shutdown-temp of 0x042D)."""
+
+    def _make(self, entry: MagicMock, key: str) -> NeoPoolRegisterByteNumber:
+        desc = next(d for d in REGISTER_BYTE_NUMBER_DESCRIPTIONS if d.key == key)
+        return NeoPoolRegisterByteNumber(entry, desc)
+
+    def test_native_value_extracts_byte(self, mock_config_entry: MagicMock) -> None:
+        """Each number reads only its own byte of the shared register."""
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        # high byte (shutdown temp) = 12, low byte (cover %) = 40 -> 0x0C28
+        rs[REG_HIDRO_COVER_REDUCTION] = (12 << SHIFT_HIDRO_SHUTDOWN_TEMP) | 40
+
+        pct = self._make(mock_config_entry, "hydro_cover_reduction_pct")
+        temp = self._make(mock_config_entry, "hydro_shutdown_temp")
+        assert pct.native_value == 40
+        assert temp.native_value == 12
+
+    @pytest.mark.asyncio
+    async def test_set_value_preserves_sibling_byte(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Writing one byte must not clobber the sibling byte of the register."""
+        temp = self._make(mock_config_entry, "hydro_shutdown_temp")
+        temp.hass = mock_hass
+        temp.async_write_ha_state = MagicMock()
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        rs[REG_HIDRO_COVER_REDUCTION] = (12 << SHIFT_HIDRO_SHUTDOWN_TEMP) | 40  # temp 12, % 40
+
+        with patch.object(temp, "_write_register", new_callable=AsyncMock) as mock_w:
+            await temp.async_set_native_value(15.0)
+            expected = (15 << SHIFT_HIDRO_SHUTDOWN_TEMP) | 40  # temp 15, % preserved
+            mock_w.assert_awaited_once_with(REG_HIDRO_COVER_REDUCTION, expected)
+            assert rs[REG_HIDRO_COVER_REDUCTION] == expected
+
+    @pytest.mark.asyncio
+    async def test_no_write_when_value_uncached(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Without a cached register value, a blind RMW write is skipped."""
+        pct = self._make(mock_config_entry, "hydro_cover_reduction_pct")
+        pct.hass = mock_hass
+        pct.async_write_ha_state = MagicMock()
+        mock_config_entry.runtime_data.register_state.clear()
+
+        with patch.object(pct, "_write_register", new_callable=AsyncMock) as mock_w:
+            await pct.async_set_native_value(50.0)
+            mock_w.assert_not_awaited()
