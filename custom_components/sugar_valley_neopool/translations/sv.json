@@ -310,9 +310,6 @@
       "filtration": {
         "name": "Filtrering"
       },
-      "light": {
-        "name": "Ljus"
-      },
       "aux1": {
         "name": "AUX1"
       },
@@ -363,6 +360,11 @@
       },
       "sync_controller_time": {
         "name": "Synkronisera styrenhetens tid"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Ljus"
       }
     }
   }

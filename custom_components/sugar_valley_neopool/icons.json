@@ -176,9 +176,6 @@
       "filtration": {
         "default": "mdi:pump"
       },
-      "light": {
-        "default": "mdi:lightbulb"
-      },
       "aux1": {
         "default": "mdi:toggle-switch"
       },
@@ -190,6 +187,9 @@
       },
       "aux4": {
         "default": "mdi:toggle-switch"
+      },
+      "auto_time_sync": {
+        "default": "mdi:clock-sync-outline"
       }
     },
     "select": {
@@ -229,6 +229,14 @@
       },
       "sync_controller_time": {
         "default": "mdi:clock-check-outline"
+      },
+      "reset_cell_runtime": {
+        "default": "mdi:counter"
+      }
+    },
+    "light": {
+      "light": {
+        "default": "mdi:lightbulb"
       }
     }
   }

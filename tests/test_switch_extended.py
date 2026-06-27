@@ -25,7 +25,7 @@ class TestSwitchDescriptionsExtended:
 
     def test_switch_count(self) -> None:
         """Test correct number of switches."""
-        assert len(SWITCH_DESCRIPTIONS) == 6  # filtration, light, aux1-4
+        assert len(SWITCH_DESCRIPTIONS) == 5  # filtration, aux1-4
 
 
 class TestNeoPoolSwitchExtended:

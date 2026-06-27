@@ -7,7 +7,9 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
+from homeassistant.const import STATE_ON, EntityCategory
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CMD_AUX1,
@@ -15,12 +17,10 @@ from .const import (
     CMD_AUX3,
     CMD_AUX4,
     CMD_FILTRATION,
-    CMD_LIGHT,
     JSON_PATH_FILTRATION_STATE,
-    JSON_PATH_LIGHT,
     JSON_PATH_RELAY_AUX,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
 if TYPE_CHECKING:
@@ -52,13 +52,6 @@ SWITCH_DESCRIPTIONS: tuple[NeoPoolSwitchEntityDescription, ...] = (
         name="Filtration",
         json_path=JSON_PATH_FILTRATION_STATE,
         command=CMD_FILTRATION,
-    ),
-    NeoPoolSwitchEntityDescription(
-        key="light",
-        translation_key="light",
-        name="Light",
-        json_path=JSON_PATH_LIGHT,
-        command=CMD_LIGHT,
     ),
     NeoPoolSwitchEntityDescription(
         key="aux1",
@@ -99,7 +92,10 @@ async def async_setup_entry(
     """Set up NeoPool switches based on a config entry."""
     _LOGGER.debug("Setting up NeoPool switches")
 
-    switches = [NeoPoolSwitch(entry, description) for description in SWITCH_DESCRIPTIONS]
+    switches: list[SwitchEntity] = [
+        NeoPoolSwitch(entry, description) for description in SWITCH_DESCRIPTIONS
+    ]
+    switches.append(NeoPoolAutoTimeSyncSwitch(entry))
 
     async_add_entities(switches)
     _LOGGER.info("Added %d NeoPool switches", len(switches))
@@ -174,3 +170,47 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
             self.entity_description.payload_off,
         )
         _LOGGER.debug("Turned off switch %s", self.entity_description.key)
+
+
+class NeoPoolAutoTimeSyncSwitch(NeoPoolEntity, SwitchEntity, RestoreEntity):
+    """HA-side toggle that keeps the controller clock synced to Home Assistant.
+
+    This is not a device command: it only flips a flag the central SENSOR
+    watch reads. When on, the watch resyncs the controller via NPTime whenever
+    its clock drifts beyond the threshold. State is restored across restarts
+    via RestoreEntity (deliberately kept out of entry.options to avoid
+    reloading the integration on every toggle).
+    """
+
+    _attr_translation_key = "auto_time_sync"
+    _attr_name = "Auto Time Sync"
+    _attr_icon = "mdi:clock-sync-outline"
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, config_entry: NeoPoolConfigEntry) -> None:
+        """Initialize the auto time-sync switch."""
+        super().__init__(config_entry, "auto_time_sync")
+        # Pure HA-side setting: always operable, no device availability gating.
+        self._attr_available = True
+        self._attr_is_on = config_entry.runtime_data.auto_time_sync
+
+    async def async_added_to_hass(self) -> None:
+        """Restore the last known on/off state across restarts."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None:
+            is_on = last_state.state == STATE_ON
+            self._attr_is_on = is_on
+            self._config_entry.runtime_data.auto_time_sync = is_on
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        """Enable auto time-sync."""
+        self._attr_is_on = True
+        self._config_entry.runtime_data.auto_time_sync = True
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        """Disable auto time-sync."""
+        self._attr_is_on = False
+        self._config_entry.runtime_data.auto_time_sync = False
+        self.async_write_ha_state()

@@ -8,9 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from custom_components.sugar_valley_neopool.const import CMD_AUX1, CMD_FILTRATION, CMD_LIGHT
+from custom_components.sugar_valley_neopool.const import CMD_AUX1, CMD_FILTRATION
 from custom_components.sugar_valley_neopool.switch import (
     SWITCH_DESCRIPTIONS,
+    NeoPoolAutoTimeSyncSwitch,
     NeoPoolSwitch,
     NeoPoolSwitchEntityDescription,
     async_setup_entry,
@@ -33,12 +34,9 @@ class TestSwitchDescriptions:
         assert desc.payload_on == "1"
         assert desc.payload_off == "0"
 
-    def test_light_switch_description(self) -> None:
-        """Test light switch description."""
-        desc = next(d for d in SWITCH_DESCRIPTIONS if d.key == "light")
-
-        assert desc.json_path == "NeoPool.Light"
-        assert desc.command == CMD_LIGHT
+    def test_light_no_longer_a_switch(self) -> None:
+        """The pool light moved to the light platform; not a switch anymore."""
+        assert all(d.key != "light" for d in SWITCH_DESCRIPTIONS)
 
     def test_aux_switches_exist(self) -> None:
         """Test aux switch descriptions exist."""
@@ -212,43 +210,6 @@ class TestNeoPoolSwitch:
         assert switch._attr_is_on is True
 
     @pytest.mark.asyncio
-    async def test_switch_light_state(
-        self, mock_config_entry: MagicMock, mock_hass: MagicMock
-    ) -> None:
-        """Test light switch state from MQTT."""
-        desc = NeoPoolSwitchEntityDescription(
-            key="light",
-            name="Light",
-            json_path="NeoPool.Light",
-            command=CMD_LIGHT,
-        )
-
-        switch = NeoPoolSwitch(mock_config_entry, desc)
-        switch.hass = mock_hass
-        switch.entity_id = "switch.light"
-        switch.async_write_ha_state = MagicMock()
-
-        sensor_callback = None
-
-        async def capture_callback(hass, topic, callback, **kwargs):
-            nonlocal sensor_callback
-            if "SENSOR" in topic:
-                sensor_callback = callback
-            return MagicMock()
-
-        with patch(
-            "homeassistant.components.mqtt.async_subscribe",
-            side_effect=capture_callback,
-        ):
-            await switch.async_added_to_hass()
-
-        mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Light": 0}})
-        sensor_callback(mock_msg)
-
-        assert switch._attr_is_on is False
-
-    @pytest.mark.asyncio
     async def test_switch_handles_missing_path(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
@@ -303,5 +264,67 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(SWITCH_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolSwitch) for e in added_entities)
+        # SWITCH_DESCRIPTIONS command switches + the HA-side auto-time-sync switch.
+        assert len(added_entities) == len(SWITCH_DESCRIPTIONS) + 1
+        assert sum(isinstance(e, NeoPoolSwitch) for e in added_entities) == len(SWITCH_DESCRIPTIONS)
+        assert any(isinstance(e, NeoPoolAutoTimeSyncSwitch) for e in added_entities)
+
+
+class TestNeoPoolAutoTimeSyncSwitch:
+    """Tests for the HA-side auto time-sync switch."""
+
+    def test_initialization(self, mock_config_entry: MagicMock) -> None:
+        """Switch initializes from the runtime_data flag and is always available."""
+        mock_config_entry.runtime_data.auto_time_sync = False
+        switch = NeoPoolAutoTimeSyncSwitch(mock_config_entry)
+
+        assert switch._attr_unique_id == "neopool_mqtt_ABC123_auto_time_sync"
+        assert switch._attr_available is True
+        assert switch.is_on is False
+
+    @pytest.mark.asyncio
+    async def test_turn_on_off_updates_runtime_flag(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Toggling sets both the entity state and the shared runtime flag."""
+        mock_config_entry.runtime_data.auto_time_sync = False
+        switch = NeoPoolAutoTimeSyncSwitch(mock_config_entry)
+        switch.hass = mock_hass
+        switch.async_write_ha_state = MagicMock()
+
+        await switch.async_turn_on()
+        assert switch.is_on is True
+        assert mock_config_entry.runtime_data.auto_time_sync is True
+
+        await switch.async_turn_off()
+        assert switch.is_on is False
+        assert mock_config_entry.runtime_data.auto_time_sync is False
+
+    @pytest.mark.asyncio
+    async def test_restores_last_state(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """On add, the switch restores its last on/off state across restarts."""
+        mock_config_entry.runtime_data.auto_time_sync = False
+        switch = NeoPoolAutoTimeSyncSwitch(mock_config_entry)
+        switch.hass = mock_hass
+        switch.async_write_ha_state = MagicMock()
+
+        last_state = MagicMock()
+        last_state.state = "on"
+
+        with (
+            patch(
+                "homeassistant.helpers.restore_state.RestoreEntity.async_added_to_hass",
+                new_callable=AsyncMock,
+            ),
+            patch.object(
+                NeoPoolAutoTimeSyncSwitch,
+                "async_get_last_state",
+                new=AsyncMock(return_value=last_state),
+            ),
+        ):
+            await switch.async_added_to_hass()
+
+        assert switch.is_on is True
+        assert mock_config_entry.runtime_data.auto_time_sync is True

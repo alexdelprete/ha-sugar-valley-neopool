@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from homeassistant.components.button import ButtonEntity, ButtonEntityDescription
 from homeassistant.const import EntityCategory
 
-from .const import CMD_ESCAPE, CMD_TIME
+from .const import CMD_ESCAPE, CMD_NPSAVE, CMD_NPWRITE, CMD_TIME, REG_RESET_USER_COUNTERS
 from .entity import NeoPoolMQTTEntity
 
 if TYPE_CHECKING:
@@ -58,7 +58,10 @@ async def async_setup_entry(
     """Set up NeoPool buttons based on a config entry."""
     _LOGGER.debug("Setting up NeoPool buttons")
 
-    buttons = [NeoPoolButton(entry, description) for description in BUTTON_DESCRIPTIONS]
+    buttons: list[ButtonEntity] = [
+        NeoPoolButton(entry, description) for description in BUTTON_DESCRIPTIONS
+    ]
+    buttons.append(NeoPoolResetCellRuntimeButton(entry))
 
     async_add_entities(buttons)
     _LOGGER.info("Added %d NeoPool buttons", len(buttons))
@@ -87,3 +90,33 @@ class NeoPoolButton(NeoPoolMQTTEntity, ButtonEntity):
             self.entity_description.payload,
         )
         _LOGGER.debug("Pressed button %s", self.entity_description.key)
+
+
+class NeoPoolResetCellRuntimeButton(NeoPoolMQTTEntity, ButtonEntity):
+    """Button that resets the hydrolysis cell partial/user runtime counters.
+
+    There is no dedicated NeoPool command for this, so it writes the
+    MBF_RESET_USER_COUNTERS register (0x02F2) via NPWrite and persists with
+    NPSave. The controller resets all user counters (cell partial, ION, UV) in
+    one atomic operation. Disabled by default and gated to advanced users since
+    it clears wear-tracking history; only relevant when a hydrolysis module is
+    present.
+    """
+
+    _attr_translation_key = "reset_cell_runtime"
+    _attr_name = "Reset Cell Runtime"
+    _attr_icon = "mdi:counter"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, config_entry: NeoPoolConfigEntry) -> None:
+        """Initialize the reset button."""
+        super().__init__(config_entry, "reset_cell_runtime")
+        # Buttons have no state to track.
+        self._attr_available = True
+
+    async def async_press(self) -> None:
+        """Reset the user counters: NPWrite the register, then persist."""
+        await self._publish_command(CMD_NPWRITE, f"0x{REG_RESET_USER_COUNTERS:04X} 1")
+        await self._publish_command(CMD_NPSAVE, "")
+        _LOGGER.debug("Reset hydrolysis cell runtime counters")

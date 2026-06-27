@@ -309,9 +309,6 @@
       "filtration": {
         "name": "Filtração"
       },
-      "light": {
-        "name": "Luz"
-      },
       "aux1": {
         "name": "AUX1"
       },
@@ -362,6 +359,11 @@
       },
       "sync_controller_time": {
         "name": "Sincronizar hora do controlador"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Luz"
       }
     }
   }

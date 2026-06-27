@@ -1765,6 +1765,67 @@ class TestSetupDynamicDisableWatch:
         assert entry.runtime_data.connection_rate_tracker.samples_count == 1
         assert dispatched == [connection_rate_signal(entry)]
 
+    async def _run_time_sync(
+        self, hass: HomeAssistant, *, auto: bool, last_ts: float | None
+    ) -> MagicMock:
+        """Drive on_sensor with a far-drifted controller time; return publish mock."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="MyPool",
+            nodeid="ABC123",
+            auto_time_sync=auto,
+            last_time_sync_ts=last_ts,
+            connection_rate_tracker=ConnectionRateTracker(60.0),
+        )
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        msg = MagicMock()
+        # A controller clock far in the past -> drift well over the threshold.
+        msg.payload = json.dumps({"NeoPool": {"Time": "2000-01-01T00:00:00"}})
+
+        with patch(
+            "homeassistant.components.mqtt.async_publish",
+            new_callable=AsyncMock,
+        ) as mock_publish:
+            captured_cb(msg)
+        return mock_publish
+
+    @pytest.mark.asyncio
+    async def test_auto_time_sync_resyncs_on_drift(self, hass: HomeAssistant) -> None:
+        """When enabled and drifted past the threshold, an NPTime resync is sent."""
+        mock_publish = await self._run_time_sync(hass, auto=True, last_ts=None)
+        mock_publish.assert_called_once_with(
+            hass,
+            "cmnd/MyPool/NPTime",
+            "0",
+            qos=1,
+            retain=False,
+        )
+
+    @pytest.mark.asyncio
+    async def test_auto_time_sync_disabled_no_resync(self, hass: HomeAssistant) -> None:
+        """When the switch is off, no resync is sent even if drifted."""
+        mock_publish = await self._run_time_sync(hass, auto=False, last_ts=None)
+        mock_publish.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_auto_time_sync_respects_cooldown(self, hass: HomeAssistant) -> None:
+        """A recent resync (future-dated ts) is within cooldown -> skipped."""
+        # last_ts far in the future makes (now - last) negative, i.e. < cooldown.
+        mock_publish = await self._run_time_sync(hass, auto=True, last_ts=9999999999.0)
+        mock_publish.assert_not_called()
+
     @pytest.mark.asyncio
     async def test_on_sensor_detects_module_change_and_refreshes(self, hass: HomeAssistant) -> None:
         """Module set change triggers _refresh_entity_disable_state."""

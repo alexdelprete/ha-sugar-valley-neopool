@@ -23,6 +23,7 @@ PLATFORMS: Final[list[Platform]] = [
     Platform.SELECT,
     Platform.NUMBER,
     Platform.BUTTON,
+    Platform.LIGHT,
 ]
 
 # Configuration keys (data - changed via reconfigure)
@@ -73,6 +74,15 @@ MAX_CONNECTION_ERROR_RATE_THRESHOLD: Final = 100.0
 # 10 minutes is a sensible default that smooths over individual poll noise
 # while remaining responsive to actual connection issues.
 CONNECTION_ERROR_RATE_WINDOW_SECONDS: Final = 600.0
+
+# Auto time-sync: default state, how far the controller clock may drift from
+# Home Assistant before the watch pushes an NPTime resync, and a cooldown so a
+# single drift doesn't trigger repeated resyncs before the corrected time is
+# echoed back in the next SENSOR message. Only acts when the auto-sync switch
+# is on. 60 s drift keeps schedules accurate without resyncing on minor jitter.
+DEFAULT_AUTO_TIME_SYNC: Final = False
+TIME_SYNC_DRIFT_THRESHOLD_SECONDS: Final = 60
+TIME_SYNC_COOLDOWN_SECONDS: Final = 300
 
 # MQTT Topics - Tasmota NeoPool patterns
 TOPIC_SENSOR: Final = "tele/{device}/SENSOR"
@@ -158,8 +168,19 @@ CMD_CHLORINE: Final = "NPChlorine"
 CMD_TIME: Final = "NPTime"
 CMD_ESCAPE: Final = "NPEscape"
 
+# Generic register access commands (built-in Tasmota NeoPool driver commands).
+# Used for registers/actions that have no dedicated NPxxx command.
+CMD_NPWRITE: Final = "NPWrite"
+CMD_NPSAVE: Final = "NPSave"
+
 # Tasmota SetOption157 command (used only during setup for NodeID acquisition)
 CMD_SETOPTION157: Final = "SetOption157"
+
+# Modbus register addresses for actions without a dedicated NPxxx command.
+# Written via NPWrite. See docs/MODBUS_PARITY_FEATURE_PLAN.md for the full map.
+# MBF_RESET_USER_COUNTERS (0x02F2): writing any value resets the hydrolysis
+# cell partial/user runtime counters in one atomic controller operation.
+REG_RESET_USER_COUNTERS: Final = 0x02F2
 
 # JSON paths for sensor data extraction
 JSON_PATH_TYPE: Final = "NeoPool.Type"

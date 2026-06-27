@@ -310,9 +310,6 @@
       "filtration": {
         "name": "Filtreerimine"
       },
-      "light": {
-        "name": "Valgus"
-      },
       "aux1": {
         "name": "AUX1"
       },
@@ -363,6 +360,11 @@
       },
       "sync_controller_time": {
         "name": "Sünkroniseeri kontrolleri aeg"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Valgus"
       }
     }
   }

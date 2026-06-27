@@ -325,9 +325,6 @@
       "filtration": {
         "name": "Filtration"
       },
-      "light": {
-        "name": "Light"
-      },
       "aux1": {
         "name": "AUX1"
       },
@@ -339,6 +336,9 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "auto_time_sync": {
+        "name": "Auto Time Sync"
       }
     },
     "select": {
@@ -378,6 +378,14 @@
       },
       "sync_controller_time": {
         "name": "Sync Controller Time"
+      },
+      "reset_cell_runtime": {
+        "name": "Reset Cell Runtime"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Light"
       }
     }
   }

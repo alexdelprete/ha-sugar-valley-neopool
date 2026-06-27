@@ -209,7 +209,8 @@ class TestSwitchPlatform:
 
         await switch_setup(hass, mock_config_entry, capture_entities)
 
-        assert len(entities) == len(SWITCH_DESCRIPTIONS)
+        # +1 for the HA-side auto-time-sync switch (not description-driven).
+        assert len(entities) == len(SWITCH_DESCRIPTIONS) + 1
 
     def test_all_switches_have_commands(self) -> None:
         """Test all switch descriptions have command."""
@@ -426,7 +427,8 @@ class TestButtonPlatform:
 
         await button_setup(hass, mock_config_entry, capture_entities)
 
-        assert len(entities) == len(BUTTON_DESCRIPTIONS)
+        # +1 for the dedicated reset-cell-runtime button (not description-driven).
+        assert len(entities) == len(BUTTON_DESCRIPTIONS) + 1
 
     def test_button_always_available(self, mock_config_entry: MockConfigEntry) -> None:
         """Test button is always available."""

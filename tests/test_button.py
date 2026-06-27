@@ -10,9 +10,16 @@ from custom_components.sugar_valley_neopool.button import (
     BUTTON_DESCRIPTIONS,
     NeoPoolButton,
     NeoPoolButtonEntityDescription,
+    NeoPoolResetCellRuntimeButton,
     async_setup_entry,
 )
-from custom_components.sugar_valley_neopool.const import CMD_ESCAPE, CMD_TIME
+from custom_components.sugar_valley_neopool.const import (
+    CMD_ESCAPE,
+    CMD_NPSAVE,
+    CMD_NPWRITE,
+    CMD_TIME,
+    REG_RESET_USER_COUNTERS,
+)
 from homeassistant.const import EntityCategory
 
 
@@ -182,14 +189,16 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(BUTTON_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolButton) for e in added_entities)
+        # BUTTON_DESCRIPTIONS + the dedicated reset-cell-runtime button.
+        assert len(added_entities) == len(BUTTON_DESCRIPTIONS) + 1
+        assert sum(isinstance(e, NeoPoolButton) for e in added_entities) == len(BUTTON_DESCRIPTIONS)
+        assert any(isinstance(e, NeoPoolResetCellRuntimeButton) for e in added_entities)
 
     @pytest.mark.asyncio
     async def test_setup_entry_button_keys_match(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test that created buttons match description keys."""
+        """Test that created description-driven buttons match description keys."""
         added_entities = []
 
         def async_add_entities(entities):
@@ -197,7 +206,27 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        entity_keys = {e.entity_description.key for e in added_entities}
+        entity_keys = {
+            e.entity_description.key for e in added_entities if isinstance(e, NeoPoolButton)
+        }
         description_keys = {d.key for d in BUTTON_DESCRIPTIONS}
 
         assert entity_keys == description_keys
+
+    @pytest.mark.asyncio
+    async def test_reset_cell_runtime_button(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Reset button writes the user-counter register then persists."""
+        button = NeoPoolResetCellRuntimeButton(mock_config_entry)
+        button.hass = mock_hass
+
+        assert button._attr_unique_id == "neopool_mqtt_ABC123_reset_cell_runtime"
+        assert button.entity_registry_enabled_default is False
+
+        with patch.object(button, "_publish_command", new_callable=AsyncMock) as mock_publish:
+            await button.async_press()
+
+        assert mock_publish.await_count == 2
+        mock_publish.assert_any_await(CMD_NPWRITE, f"0x{REG_RESET_USER_COUNTERS:04X} 1")
+        mock_publish.assert_any_await(CMD_NPSAVE, "")

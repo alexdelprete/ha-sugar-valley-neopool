@@ -17,6 +17,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    CMD_TIME,
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_ENABLE_REPAIR_NOTIFICATION,
@@ -35,10 +36,13 @@ from .const import (
     DEFAULT_RECOVERY_SCRIPT,
     DOMAIN,
     JSON_PATH_POWERUNIT_VERSION,
+    JSON_PATH_TIME,
     JSON_PATH_TYPE,
     MANUFACTURER,
     MODEL,
     PLATFORMS,
+    TIME_SYNC_COOLDOWN_SECONDS,
+    TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
     YAML_ENTITIES_TO_DELETE,
     YAML_TO_INTEGRATION_KEY_MAP,
 )
@@ -99,6 +103,12 @@ class NeoPoolData:
     # Populated lazily on first SENSOR message by _setup_dynamic_disable_watch
     # so the rate sensor / problem binary sensor can read .rate.
     connection_rate_tracker: ConnectionRateTracker | None = None
+    # Auto time-sync: live state of the HA-side switch (restored via
+    # RestoreEntity, not stored in options to avoid reload-on-toggle) and the
+    # timestamp of the last NPTime resync (cooldown guard). Read by the SENSOR
+    # watch in _setup_dynamic_disable_watch.
+    auto_time_sync: bool = False
+    last_time_sync_ts: float | None = None
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -611,6 +621,9 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
         ("binary_sensor", "relay_ph_state"),
         ("binary_sensor", "relay_filtration_state"),
         ("binary_sensor", "relay_light_state"),
+        # The pool light moved from the switch platform to a dedicated light
+        # entity (light.<name>_light). Drop the old switch so it doesn't linger.
+        ("switch", "light"),
     ]
 
     # Entities renamed in this version
@@ -958,6 +971,43 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
                     async_dispatcher_send(hass, rate_signal)
                 except (TypeError, ValueError) as err:
                     _LOGGER.debug("Failed to update connection rate tracker: %s", err)
+
+        # Auto time-sync: when the HA-side switch is on, resync the controller
+        # clock to Home Assistant if it has drifted beyond the threshold. Runs
+        # before the change short-circuit so it acts on every message. The
+        # cooldown prevents repeated resyncs before the corrected time echoes
+        # back in a later SENSOR message.
+        if entry.runtime_data.auto_time_sync:
+            controller_time = get_nested_value(payload, JSON_PATH_TIME)
+            parsed = (
+                dt_util.parse_datetime(controller_time)
+                if isinstance(controller_time, str)
+                else None
+            )
+            if parsed is not None:
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=dt_util.DEFAULT_TIME_ZONE)
+                now = dt_util.now()
+                drift = abs((parsed - now).total_seconds())
+                last = entry.runtime_data.last_time_sync_ts
+                now_ts = now.timestamp()
+                if drift > TIME_SYNC_DRIFT_THRESHOLD_SECONDS and (
+                    last is None or now_ts - last >= TIME_SYNC_COOLDOWN_SECONDS
+                ):
+                    entry.runtime_data.last_time_sync_ts = now_ts
+                    _LOGGER.info(
+                        "Controller clock drifted %.0f s; auto-syncing via NPTime",
+                        drift,
+                    )
+                    hass.async_create_task(
+                        mqtt.async_publish(
+                            hass,
+                            f"cmnd/{mqtt_topic}/{CMD_TIME}",
+                            "0",
+                            qos=1,
+                            retain=False,
+                        )
+                    )
 
         modules_data = get_nested_value(payload, "NeoPool.Modules")
         new_modules: set[str] = (
