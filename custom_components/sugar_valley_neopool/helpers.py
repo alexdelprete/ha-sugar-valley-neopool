@@ -109,7 +109,7 @@ def get_nested_value(data: dict[str, Any], path: str) -> Any | None:
                 value = value[int(key)]
             else:
                 return None
-    except (KeyError, IndexError, TypeError):
+    except KeyError, IndexError, TypeError:
         return None
     else:
         return value
@@ -130,7 +130,7 @@ def parse_runtime_duration(duration_str: str) -> float | None:
 
         total_hours = days * 24 + hours + minutes / 60 + seconds / 3600
         return round(total_hours, 2)
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         _LOGGER.warning("Failed to parse runtime duration: %s", duration_str)
         return None
 
@@ -167,7 +167,7 @@ def int_to_bool(value: str | int) -> bool:
     """Convert any positive integer to True."""
     try:
         return int(value) > 0
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return False
 
 
@@ -183,7 +183,7 @@ def safe_float(value: Any, default: float | None = None) -> float | None:
         return default
     try:
         return float(value)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return default
 
 
@@ -199,7 +199,7 @@ def safe_int(value: Any, default: int | None = None) -> int | None:
         return default
     try:
         return int(float(value))
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return default
 
 

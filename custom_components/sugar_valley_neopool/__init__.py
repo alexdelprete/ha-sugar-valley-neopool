@@ -938,7 +938,7 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
                 if isinstance(msg.payload, (bytes, bytearray))
                 else msg.payload
             )
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except json.JSONDecodeError, UnicodeDecodeError:
             return
 
         # Feed the connection rate tracker on every message regardless of
@@ -1664,7 +1664,7 @@ async def _wait_for_any_nodeid(
             if nodeid and str(nodeid).strip():
                 received_nodeid = str(nodeid)
                 event.set()
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except json.JSONDecodeError, UnicodeDecodeError:
             pass
 
     sensor_topic = f"tele/{mqtt_topic}/SENSOR"

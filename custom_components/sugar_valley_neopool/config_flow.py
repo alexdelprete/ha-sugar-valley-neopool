@@ -822,7 +822,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             payload = json.loads(discovery_info.payload)
             if "NeoPool" not in payload:
                 return self.async_abort(reason="not_neopool_device")
-        except (json.JSONDecodeError, TypeError):
+        except json.JSONDecodeError, TypeError:
             return self.async_abort(reason="invalid_discovery_info")
 
         # Store discovery info
@@ -894,7 +894,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     if "NeoPool" in payload:
                         detected_topic = parts[1]  # Extract device topic
                         event.set()
-                except (json.JSONDecodeError, TypeError):
+                except json.JSONDecodeError, TypeError:
                     pass
 
         # Subscribe to wildcard topic
@@ -932,7 +932,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                     result["payload"] = payload
                     result["nodeid"] = get_nested_value(payload, "NeoPool.Powerunit.NodeID")
                     event.set()
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 pass
 
         # Subscribe to YAML topic
@@ -1073,7 +1073,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 if nodeid and str(nodeid).strip():
                     received_nodeid = str(nodeid)
                     event.set()
-            except (json.JSONDecodeError, TypeError):
+            except json.JSONDecodeError, TypeError:
                 pass
 
         unsubscribe = await mqtt.async_subscribe(

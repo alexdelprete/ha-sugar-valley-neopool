@@ -674,7 +674,7 @@ class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
             return None
         try:
             return float(state.state)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             return None
 
     async def _restore_from_recorder(self) -> float | None:
