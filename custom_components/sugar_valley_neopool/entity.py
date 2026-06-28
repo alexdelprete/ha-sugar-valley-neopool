@@ -11,7 +11,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.entity import Entity
 
 from . import NeoPoolConfigEntry, get_device_info
-from .const import CMD_NPSAVE, CMD_NPWRITE, PAYLOAD_ONLINE
+from .const import CMD_NPEXEC, CMD_NPSAVE, CMD_NPWRITE, PAYLOAD_ONLINE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -133,13 +133,26 @@ class NeoPoolMQTTEntity(NeoPoolEntity):
             topic,
         )
 
-    async def _write_register(self, address: int, value: int, save: bool = True) -> None:
-        """Write a Modbus register via NPWrite and optionally persist it.
+    async def _write_register(
+        self,
+        address: int,
+        value: int,
+        save: bool = True,
+        execute: bool = False,
+    ) -> None:
+        """Write a Modbus register via NPWrite, optionally commit and persist.
 
         Used for config registers that have no dedicated NPxxx command. The
         controller echoes the new state back (immediate SENSOR for relays/
         settings, or the NPWrite RESULT), so no read-back poll is needed.
+
+        ``execute`` issues NPExec (MBF_RESTART_MODULES) after the write so the
+        change takes effect immediately — required for timer-block / relay-mode
+        registers (Group 4). ``save`` issues NPSave to persist to EEPROM; leave
+        it off for transient relay overrides to avoid EEPROM wear.
         """
         await self._publish_command(CMD_NPWRITE, f"0x{address:04X} {value}")
+        if execute:
+            await self._publish_command(CMD_NPEXEC, "")
         if save:
             await self._publish_command(CMD_NPSAVE, "")

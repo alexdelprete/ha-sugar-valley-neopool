@@ -14,14 +14,9 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import config_register_signal
 from .const import (
-    CMD_AUX1,
-    CMD_AUX2,
-    CMD_AUX3,
-    CMD_AUX4,
     CMD_FILTRATION,
     JSON_PATH_FILTRATION_STATE,
     JSON_PATH_HYDROLYSIS_DATA,
-    JSON_PATH_RELAY_AUX,
     JSON_PATH_RELAY_HEATING,
     JSON_PATH_RELAY_UV,
     JSON_PATH_TEMPERATURE,
@@ -65,34 +60,10 @@ SWITCH_DESCRIPTIONS: tuple[NeoPoolSwitchEntityDescription, ...] = (
         json_path=JSON_PATH_FILTRATION_STATE,
         command=CMD_FILTRATION,
     ),
-    NeoPoolSwitchEntityDescription(
-        key="aux1",
-        translation_key="aux1",
-        name="AUX1",
-        json_path=f"{JSON_PATH_RELAY_AUX}.0",
-        command=CMD_AUX1,
-    ),
-    NeoPoolSwitchEntityDescription(
-        key="aux2",
-        translation_key="aux2",
-        name="AUX2",
-        json_path=f"{JSON_PATH_RELAY_AUX}.1",
-        command=CMD_AUX2,
-    ),
-    NeoPoolSwitchEntityDescription(
-        key="aux3",
-        translation_key="aux3",
-        name="AUX3",
-        json_path=f"{JSON_PATH_RELAY_AUX}.2",
-        command=CMD_AUX3,
-    ),
-    NeoPoolSwitchEntityDescription(
-        key="aux4",
-        translation_key="aux4",
-        name="AUX4",
-        json_path=f"{JSON_PATH_RELAY_AUX}.3",
-        command=CMD_AUX4,
-    ),
+    # NOTE: AUX1-4 were here as switches publishing the Berry-only NPAux<n>
+    # command. They moved to register-driven "aux<n>_mode" select entities
+    # (auto/on/off) plus read-only "aux<n>" binary sensors, removing the Berry
+    # extension requirement. See select.py / binary_sensor.py.
 )
 
 
@@ -216,18 +187,7 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
             if payload is None:
                 return
 
-            # Handle array access in JSON path
-            json_path = self.entity_description.json_path
-            if ".Aux." in json_path and json_path[-1].isdigit():
-                base_path = json_path.rsplit(".", 1)[0]
-                index = int(json_path.rsplit(".", 1)[1])
-                array_value = get_nested_value(payload, base_path)
-                if isinstance(array_value, list) and len(array_value) > index:
-                    raw_value = array_value[index]
-                else:
-                    return
-            else:
-                raw_value = get_nested_value(payload, json_path)
+            raw_value = get_nested_value(payload, self.entity_description.json_path)
 
             if raw_value is None:
                 self._attr_is_on = None

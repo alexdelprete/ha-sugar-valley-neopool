@@ -33,6 +33,7 @@ from .const import (
     JSON_PATH_PH_TANK,
     JSON_PATH_REDOX_TANK,
     JSON_PATH_RELAY_ACID,
+    JSON_PATH_RELAY_AUX,
     JSON_PATH_RELAY_BASE,
     JSON_PATH_RELAY_CHLORINE,
     JSON_PATH_RELAY_CONDUCTIVITY,
@@ -160,6 +161,35 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         json_path=JSON_PATH_RELAY_VALVE,
         entity_registry_enabled_default=False,
     ),
+    # AUX relay physical-output state (read-only). The on/off control lives in
+    # the "aux<n>_mode" select entities; these expose the live relay state,
+    # which is the only way to see whether an AUX in "auto" mode is currently
+    # energized. Array access into NeoPool.Relay.Aux is handled in the message
+    # callback below.
+    NeoPoolBinarySensorEntityDescription(
+        key="aux1",
+        translation_key="aux1",
+        name="AUX1",
+        json_path=f"{JSON_PATH_RELAY_AUX}.0",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="aux2",
+        translation_key="aux2",
+        name="AUX2",
+        json_path=f"{JSON_PATH_RELAY_AUX}.1",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="aux3",
+        translation_key="aux3",
+        name="AUX3",
+        json_path=f"{JSON_PATH_RELAY_AUX}.2",
+    ),
+    NeoPoolBinarySensorEntityDescription(
+        key="aux4",
+        translation_key="aux4",
+        name="AUX4",
+        json_path=f"{JSON_PATH_RELAY_AUX}.3",
+    ),
     # Flow and tank level sensors
     NeoPoolBinarySensorEntityDescription(
         key="ph_fl1",
@@ -268,9 +298,10 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
             if payload is None:
                 return
 
-            # Handle array access in JSON path (e.g., "NeoPool.Relay.State.0")
+            # Handle array access in JSON path (e.g., "NeoPool.Relay.State.0"
+            # or "NeoPool.Relay.Aux.0").
             json_path = self.entity_description.json_path
-            if ".State." in json_path and json_path[-1].isdigit():
+            if (".State." in json_path or ".Aux." in json_path) and json_path[-1].isdigit():
                 # Extract array path and index
                 base_path = json_path.rsplit(".", 1)[0]
                 index = int(json_path.rsplit(".", 1)[1])

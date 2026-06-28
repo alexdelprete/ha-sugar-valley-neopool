@@ -9,7 +9,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from custom_components.sugar_valley_neopool.const import (
-    CMD_AUX1,
     CMD_FILTRATION,
     MASK_HIDRO_COVER_ENABLE,
     MASK_HIDRO_TEMP_SHUTDOWN_ENABLE,
@@ -48,13 +47,9 @@ class TestSwitchDescriptions:
         """The pool light moved to the light platform; not a switch anymore."""
         assert all(d.key != "light" for d in SWITCH_DESCRIPTIONS)
 
-    def test_aux_switches_exist(self) -> None:
-        """Test aux switch descriptions exist."""
-        aux_keys = ["aux1", "aux2", "aux3", "aux4"]
-        for key in aux_keys:
-            desc = next((d for d in SWITCH_DESCRIPTIONS if d.key == key), None)
-            assert desc is not None, f"Missing switch: {key}"
-            assert "Aux" in desc.json_path
+    def test_aux_no_longer_switches(self) -> None:
+        """AUX1-4 moved to mode selects + binary sensors; not switches anymore."""
+        assert all(not d.key.startswith("aux") for d in SWITCH_DESCRIPTIONS)
 
     def test_all_descriptions_have_command(self) -> None:
         """Test all descriptions have command field."""
@@ -180,44 +175,6 @@ class TestNeoPoolSwitch:
         # Filtration.State = 1 in sample payload
         assert switch._attr_is_on is True
         assert switch._attr_available is True
-
-    @pytest.mark.asyncio
-    async def test_switch_aux_array_access(
-        self, mock_config_entry: MagicMock, mock_hass: MagicMock
-    ) -> None:
-        """Test switch handles array access for aux relays."""
-        desc = NeoPoolSwitchEntityDescription(
-            key="aux1",
-            name="AUX1",
-            json_path="NeoPool.Relay.Aux.0",
-            command=CMD_AUX1,
-        )
-
-        switch = NeoPoolSwitch(mock_config_entry, desc)
-        switch.hass = mock_hass
-        switch.entity_id = "switch.aux1"
-        switch.async_write_ha_state = MagicMock()
-
-        sensor_callback = None
-
-        async def capture_callback(hass, topic, callback, **kwargs):
-            nonlocal sensor_callback
-            if "SENSOR" in topic:
-                sensor_callback = callback
-            return MagicMock()
-
-        with patch(
-            "homeassistant.components.mqtt.async_subscribe",
-            side_effect=capture_callback,
-        ):
-            await switch.async_added_to_hass()
-
-        mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": [1, 0, 0, 0]}}})
-        sensor_callback(mock_msg)
-
-        # Aux[0] = 1
-        assert switch._attr_is_on is True
 
     @pytest.mark.asyncio
     async def test_switch_handles_missing_path(

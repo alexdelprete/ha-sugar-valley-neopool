@@ -646,6 +646,13 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
         # The pool light moved from the switch platform to a dedicated light
         # entity (light.<name>_light). Drop the old switch so it doesn't linger.
         ("switch", "light"),
+        # AUX relays moved from the switch platform (Berry-only NPAux commands)
+        # to register-driven "aux<n>_mode" selects + read-only "aux<n>" binary
+        # sensors. Drop the old switches so they don't linger as unavailable.
+        ("switch", "aux1"),
+        ("switch", "aux2"),
+        ("switch", "aux3"),
+        ("switch", "aux4"),
     ]
 
     # Entities renamed in this version

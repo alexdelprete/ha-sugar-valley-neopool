@@ -293,6 +293,18 @@
       "relay_valve_state": {
         "name": "Relay Valve State"
       },
+      "aux1": {
+        "name": "AUX1"
+      },
+      "aux2": {
+        "name": "AUX2"
+      },
+      "aux3": {
+        "name": "AUX3"
+      },
+      "aux4": {
+        "name": "AUX4"
+      },
       "ph_fl1": {
         "name": "pH FL1"
       },
@@ -325,18 +337,6 @@
       "filtration": {
         "name": "Filtration"
       },
-      "aux1": {
-        "name": "AUX1"
-      },
-      "aux2": {
-        "name": "AUX2"
-      },
-      "aux3": {
-        "name": "AUX3"
-      },
-      "aux4": {
-        "name": "AUX4"
-      },
       "auto_time_sync": {
         "name": "Auto Time Sync"
       },
@@ -365,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Boost Mode"
+      },
+      "aux1_mode": {
+        "name": "AUX1 Mode",
+        "state": {
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "aux2_mode": {
+        "name": "AUX2 Mode",
+        "state": {
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "aux3_mode": {
+        "name": "AUX3 Mode",
+        "state": {
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "aux4_mode": {
+        "name": "AUX4 Mode",
+        "state": {
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
       }
     },
     "number": {

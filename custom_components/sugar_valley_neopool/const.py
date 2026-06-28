@@ -173,6 +173,10 @@ CMD_ESCAPE: Final = "NPEscape"
 CMD_NPREAD: Final = "NPRead"
 CMD_NPWRITE: Final = "NPWrite"
 CMD_NPSAVE: Final = "NPSave"
+# NPExec (MBF_RESTART_MODULES) commits register changes by restarting the
+# controller modules. Used after timer-block / relay-mode writes (Group 4) so
+# the change takes effect immediately. Built-in driver command (no Berry).
+CMD_NPEXEC: Final = "NPExec"
 
 # Tasmota SetOption157 command (used only during setup for NodeID acquisition)
 CMD_SETOPTION157: Final = "SetOption157"
@@ -207,6 +211,30 @@ MASK_HIDRO_TEMP_SHUTDOWN_ENABLE: Final = 0x0002  # MBMSK_HIDRO_TEMPERATURE_SHUTD
 SHIFT_HIDRO_COVER_REDUCTION: Final = 0  # bits 0-7
 SHIFT_HIDRO_SHUTDOWN_TEMP: Final = 8  # bits 8-15
 
+# Group 4b — register-based AUX relay control (replaces the Berry-only NPAux
+# commands). Each AUX relay has a 15-register timer block; the enable/mode word
+# at block-base +0 (MBV_TIMER_OFFMB_TIMER_ENABLE) drives the relay. Addresses
+# verified against @curzon01's xsns_83_neopool.ino (primary) and svasek's
+# python-neopool-modbus registers.py (secondary cross-check) — they agree. AUX
+# uses the "INT1" block. Driven with built-in NPWrite + NPExec (no Berry, and no
+# NPSave per toggle so a manual override does not wear the EEPROM and reverts on
+# power-cycle). Physical on/off echoes back in SENSOR NeoPool.Relay.Aux[n].
+REG_AUX1_MODE: Final = 0x04AC  # MBF_PAR_TIMER_BLOCK_AUX1_INT1 +0
+REG_AUX2_MODE: Final = 0x04BB  # MBF_PAR_TIMER_BLOCK_AUX2_INT1 +0
+REG_AUX3_MODE: Final = 0x04CA  # MBF_PAR_TIMER_BLOCK_AUX3_INT1 +0
+REG_AUX4_MODE: Final = 0x04D9  # MBF_PAR_TIMER_BLOCK_AUX4_INT1 +0
+
+# Timer enable/mode values (MBV_PAR_CTIMER_*). The user-facing AUX subset is
+# auto/on/off; disabled(0) and linked(2) are intentionally not exposed.
+AUX_MODE_AUTO: Final = 1  # MBV_PAR_CTIMER_ENABLED (timer/schedule controlled)
+AUX_MODE_ON: Final = 3  # MBV_PAR_CTIMER_ALWAYS_ON
+AUX_MODE_OFF: Final = 4  # MBV_PAR_CTIMER_ALWAYS_OFF
+AUX_MODE_MAP: Final[dict[int, str]] = {
+    AUX_MODE_AUTO: "auto",
+    AUX_MODE_ON: "on",
+    AUX_MODE_OFF: "off",
+}
+
 # Registers read once at startup (and refreshed by write-ACK) to populate the
 # config entities. Read individually for robust NPRead response parsing.
 CONFIG_REGISTERS: Final[tuple[int, ...]] = (
@@ -218,6 +246,10 @@ CONFIG_REGISTERS: Final[tuple[int, ...]] = (
     REG_RELAY_ACTIVATION_DELAY,
     REG_HIDRO_COVER_ENABLE,
     REG_HIDRO_COVER_REDUCTION,
+    REG_AUX1_MODE,
+    REG_AUX2_MODE,
+    REG_AUX3_MODE,
+    REG_AUX4_MODE,
 )
 
 # Group 2 number entity bounds (raw register units).
@@ -325,10 +357,12 @@ YAML_TO_INTEGRATION_KEY_MAP: Final[dict[str, str]] = {
     # Switches - YAML uses "_switch" suffix
     "filtration_switch": "filtration",
     "light_switch": "light",
-    "aux1_switch": "aux1",
-    "aux2_switch": "aux2",
-    "aux3_switch": "aux3",
-    "aux4_switch": "aux4",
+    # NOTE: aux1-4 are NOT mapped here. AUX control moved from the switch
+    # platform to per-AUX "<n>_mode" select entities (auto/on/off, register
+    # driven, no Berry) plus read-only "aux<n>" binary sensors. HA can't rename
+    # a YAML switch across domains into a select/binary_sensor, so the old
+    # switch.*_aux* entities are dropped by _cleanup_removed_entities and the new
+    # entities get their auto-generated IDs (same approach as the light move).
     # Button - YAML uses "_state" suffix
     "clear_error_state": "clear_error",
     # Sensors - hydrolysis naming differences

@@ -25,7 +25,8 @@ class TestSwitchDescriptionsExtended:
 
     def test_switch_count(self) -> None:
         """Test correct number of switches."""
-        assert len(SWITCH_DESCRIPTIONS) == 5  # filtration, aux1-4
+        # AUX1-4 moved to mode selects; only filtration remains a command switch.
+        assert len(SWITCH_DESCRIPTIONS) == 1  # filtration
 
 
 class TestNeoPoolSwitchExtended:

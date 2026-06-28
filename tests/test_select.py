@@ -17,7 +17,9 @@ from custom_components.sugar_valley_neopool.const import (
     FILTRATION_SPEED_MAP,
 )
 from custom_components.sugar_valley_neopool.select import (
+    AUX_MODE_SELECT_DESCRIPTIONS,
     SELECT_DESCRIPTIONS,
+    NeoPoolAuxModeSelect,
     NeoPoolSelect,
     NeoPoolSelectEntityDescription,
     async_setup_entry,
@@ -342,5 +344,5 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(SELECT_DESCRIPTIONS)
-        assert all(isinstance(e, NeoPoolSelect) for e in added_entities)
+        assert len(added_entities) == len(SELECT_DESCRIPTIONS) + len(AUX_MODE_SELECT_DESCRIPTIONS)
+        assert all(isinstance(e, (NeoPoolSelect, NeoPoolAuxModeSelect)) for e in added_entities)

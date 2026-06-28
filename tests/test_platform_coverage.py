@@ -36,6 +36,7 @@ from custom_components.sugar_valley_neopool.number import (
     async_setup_entry as number_setup,
 )
 from custom_components.sugar_valley_neopool.select import (
+    AUX_MODE_SELECT_DESCRIPTIONS,
     SELECT_DESCRIPTIONS,
     NeoPoolSelect,
     async_setup_entry as select_setup,
@@ -277,7 +278,7 @@ class TestSelectPlatform:
 
         await select_setup(hass, mock_config_entry, capture_entities)
 
-        assert len(entities) == len(SELECT_DESCRIPTIONS)
+        assert len(entities) == len(SELECT_DESCRIPTIONS) + len(AUX_MODE_SELECT_DESCRIPTIONS)
 
     def test_all_selects_have_options_map(self) -> None:
         """Test all select descriptions have options_map."""

@@ -271,25 +271,28 @@ class TestBinarySensorArrayEdgeCases:
         assert sensor._attr_is_on is None
 
 
-class TestSwitchArrayEdgeCases:
-    """Tests for switch array access edge cases."""
+class TestBinarySensorAuxArrayEdgeCases:
+    """Tests for AUX binary-sensor array access edge cases.
+
+    AUX moved from switches to read-only binary sensors that index into
+    NeoPool.Relay.Aux; the array-handling lives in the binary-sensor callback.
+    """
 
     @pytest.mark.asyncio
-    async def test_switch_aux_array_index_out_of_bounds(
+    async def test_aux_array_index_out_of_bounds(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test switch handles aux array index out of bounds."""
-        desc = NeoPoolSwitchEntityDescription(
+        """Out-of-bounds AUX index returns early without updating state."""
+        desc = NeoPoolBinarySensorEntityDescription(
             key="aux10",
             name="AUX10",
             json_path="NeoPool.Relay.Aux.10",  # Index 10 doesn't exist
-            command="NPAux10",
         )
 
-        switch = NeoPoolSwitch(mock_config_entry, desc)
-        switch.hass = mock_hass
-        switch.entity_id = "switch.aux10"
-        switch.async_write_ha_state = MagicMock()
+        sensor = NeoPoolBinarySensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.aux10"
+        sensor.async_write_ha_state = MagicMock()
 
         sensor_callback = None
 
@@ -303,33 +306,30 @@ class TestSwitchArrayEdgeCases:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=capture_callback,
         ):
-            await switch.async_added_to_hass()
+            await sensor.async_added_to_hass()
 
-        # Array only has 4 elements
         mock_msg = MagicMock()
         mock_msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": [1, 0, 0, 0]}}})
         sensor_callback(mock_msg)
 
-        # Should not update state since index is out of bounds
-        assert switch._attr_is_on is None
-        switch.async_write_ha_state.assert_not_called()
+        assert sensor._attr_is_on is None
+        sensor.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_switch_aux_empty_array(
+    async def test_aux_empty_array(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test switch handles empty aux array."""
-        desc = NeoPoolSwitchEntityDescription(
+        """Empty AUX array returns early without updating state."""
+        desc = NeoPoolBinarySensorEntityDescription(
             key="aux1",
             name="AUX1",
             json_path="NeoPool.Relay.Aux.0",
-            command="NPAux1",
         )
 
-        switch = NeoPoolSwitch(mock_config_entry, desc)
-        switch.hass = mock_hass
-        switch.entity_id = "switch.aux1"
-        switch.async_write_ha_state = MagicMock()
+        sensor = NeoPoolBinarySensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.aux1"
+        sensor.async_write_ha_state = MagicMock()
 
         sensor_callback = None
 
@@ -343,33 +343,30 @@ class TestSwitchArrayEdgeCases:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=capture_callback,
         ):
-            await switch.async_added_to_hass()
+            await sensor.async_added_to_hass()
 
-        # Empty array
         mock_msg = MagicMock()
         mock_msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": []}}})
         sensor_callback(mock_msg)
 
-        # Should not update state
-        assert switch._attr_is_on is None
-        switch.async_write_ha_state.assert_not_called()
+        assert sensor._attr_is_on is None
+        sensor.async_write_ha_state.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_switch_non_array_aux_path(
+    async def test_aux_array_value_present(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Test switch with Aux path but non-array value."""
-        desc = NeoPoolSwitchEntityDescription(
+        """A present AUX index reads its on/off state from the array."""
+        desc = NeoPoolBinarySensorEntityDescription(
             key="aux1",
             name="AUX1",
             json_path="NeoPool.Relay.Aux.0",
-            command="NPAux1",
         )
 
-        switch = NeoPoolSwitch(mock_config_entry, desc)
-        switch.hass = mock_hass
-        switch.entity_id = "switch.aux1"
-        switch.async_write_ha_state = MagicMock()
+        sensor = NeoPoolBinarySensor(mock_config_entry, desc)
+        sensor.hass = mock_hass
+        sensor.entity_id = "binary_sensor.aux1"
+        sensor.async_write_ha_state = MagicMock()
 
         sensor_callback = None
 
@@ -383,15 +380,14 @@ class TestSwitchArrayEdgeCases:
             "homeassistant.components.mqtt.async_subscribe",
             side_effect=capture_callback,
         ):
-            await switch.async_added_to_hass()
+            await sensor.async_added_to_hass()
 
-        # Aux is not an array
         mock_msg = MagicMock()
-        mock_msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": "not_array"}}})
+        mock_msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": [1, 0, 0, 0]}}})
         sensor_callback(mock_msg)
 
-        # Should not crash, should return early
-        assert switch._attr_is_on is None
+        assert sensor._attr_is_on is True
+        assert sensor._attr_available is True
 
 
 class TestSelectEdgeCases:

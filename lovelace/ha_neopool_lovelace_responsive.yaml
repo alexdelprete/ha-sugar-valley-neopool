@@ -355,23 +355,23 @@
                 entity: binary_sensor.neopool_relay_valve_state
                 name: Valve
       - type: vertical-stack
-        title: AUX Relays Switch
+        title: AUX Relays Mode
         cards:
           - type: grid
             columns: 2
             square: false
             cards:
               - type: tile
-                entity: switch.neopool_aux1
+                entity: select.neopool_aux1_mode
                 name: Aux1
               - type: tile
-                entity: switch.neopool_aux2
+                entity: select.neopool_aux2_mode
                 name: Aux2
               - type: tile
-                entity: switch.neopool_aux3
+                entity: select.neopool_aux3_mode
                 name: Aux3
               - type: tile
-                entity: switch.neopool_aux4
+                entity: select.neopool_aux4_mode
                 name: Aux4
       - type: vertical-stack
         title: Power Unit Info

@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     and **Temperature shutdown** (enable switch + threshold), which share the
     controller's bit-packed registers and are written without disturbing each
     other.
+- **AUX relays no longer require the Tasmota Berry extension.** AUX1–4 are now
+  controlled through their controller timer-block mode register with the
+  built-in `NPWrite`/`NPExec` commands, exposed as **AUX1–4 mode** selects
+  (`select.<name>_aux<n>_mode`) with options **Auto** (follow schedule), **On**
+  (force on), and **Off** (force off). The live relay output is exposed as
+  read-only **AUX1–4** binary sensors (`binary_sensor.<name>_aux<n>`). See the
+  breaking-change note below.
 
 ### Changed
 
@@ -44,6 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Update any automations, scripts, or dashboards that referenced the old
   switch entity. The bundled Lovelace dashboards (fresh and migrated variants)
   have already been updated.
+- **BREAKING: AUX1–4 moved from the `switch` platform to `select` (mode) +
+  `binary_sensor` (state).** The old AUX switches are removed automatically:
+  - Fresh installs: `switch.neopool_aux<n>` → `select.neopool_aux<n>_mode`
+    plus `binary_sensor.neopool_aux<n>`.
+  - Migrated installs: `switch.neopool_mqtt_aux<n>_switch` →
+    `select.neopool_mqtt_aux<n>_mode` plus `binary_sensor.neopool_mqtt_aux<n>`.
+
+  A plain switch could not represent the controller's three AUX states
+  (auto/on/off); forcing "off" via a switch would silently override the
+  relay's schedule. Update automations, scripts, or dashboards that toggled the
+  old AUX switches to set the select instead. The bundled Lovelace dashboards
+  (fresh and migrated variants) have already been updated.
 
 ## [1.1.3] - 2026-06-27
 

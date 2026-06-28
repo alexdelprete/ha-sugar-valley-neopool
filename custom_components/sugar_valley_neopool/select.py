@@ -8,8 +8,11 @@ from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
+from . import config_register_signal
 from .const import (
+    AUX_MODE_MAP,
     BOOST_MODE_MAP,
     CMD_BOOST,
     CMD_FILTRATION_MODE,
@@ -19,6 +22,11 @@ from .const import (
     JSON_PATH_FILTRATION_MODE,
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
+    JSON_PATH_RELAY_AUX,
+    REG_AUX1_MODE,
+    REG_AUX2_MODE,
+    REG_AUX3_MODE,
+    REG_AUX4_MODE,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, lookup_by_value, parse_json_payload, safe_int
@@ -87,6 +95,46 @@ SELECT_DESCRIPTIONS: tuple[NeoPoolSelectEntityDescription, ...] = (
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolAuxModeSelectEntityDescription(SelectEntityDescription):
+    """Describes a register-backed AUX relay mode select (auto/on/off)."""
+
+    register: int
+    aux_index: int  # 0-based index into NeoPool.Relay.Aux for availability gating
+
+
+AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] = (
+    NeoPoolAuxModeSelectEntityDescription(
+        key="aux1_mode",
+        translation_key="aux1_mode",
+        name="AUX1 Mode",
+        register=REG_AUX1_MODE,
+        aux_index=0,
+    ),
+    NeoPoolAuxModeSelectEntityDescription(
+        key="aux2_mode",
+        translation_key="aux2_mode",
+        name="AUX2 Mode",
+        register=REG_AUX2_MODE,
+        aux_index=1,
+    ),
+    NeoPoolAuxModeSelectEntityDescription(
+        key="aux3_mode",
+        translation_key="aux3_mode",
+        name="AUX3 Mode",
+        register=REG_AUX3_MODE,
+        aux_index=2,
+    ),
+    NeoPoolAuxModeSelectEntityDescription(
+        key="aux4_mode",
+        translation_key="aux4_mode",
+        name="AUX4 Mode",
+        register=REG_AUX4_MODE,
+        aux_index=3,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -95,7 +143,12 @@ async def async_setup_entry(
     """Set up NeoPool selects based on a config entry."""
     _LOGGER.debug("Setting up NeoPool selects")
 
-    selects = [NeoPoolSelect(entry, description) for description in SELECT_DESCRIPTIONS]
+    selects: list[SelectEntity] = [
+        NeoPoolSelect(entry, description) for description in SELECT_DESCRIPTIONS
+    ]
+    selects.extend(
+        NeoPoolAuxModeSelect(entry, description) for description in AUX_MODE_SELECT_DESCRIPTIONS
+    )
 
     async_add_entities(selects)
     _LOGGER.info("Added %d NeoPool selects", len(selects))
@@ -172,5 +225,92 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
             "Selected option %s (%d) for %s",
             option,
             int_value,
+            self.entity_description.key,
+        )
+
+
+class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
+    """AUX relay mode select (auto/on/off) backed by a timer-block register.
+
+    Replaces the Berry-only NPAux switches. The mode lives in the relay's
+    timer-block enable register (read on startup via NPRead, cached in
+    runtime_data.register_state, fanned out via config_register_signal); writes
+    go through NPWrite + NPExec (no NPSave, so a manual override is transient and
+    does not wear the EEPROM). Availability gates on the AUX entry being present
+    in the SENSOR NeoPool.Relay.Aux array, like the relay binary sensors.
+    """
+
+    entity_description: NeoPoolAuxModeSelectEntityDescription
+
+    def __init__(
+        self,
+        config_entry: NeoPoolConfigEntry,
+        description: NeoPoolAuxModeSelectEntityDescription,
+    ) -> None:
+        """Initialize the AUX mode select."""
+        super().__init__(config_entry, description.key)
+        self.entity_description = description
+        self._attr_options = list(AUX_MODE_MAP.values())
+        self._gating_ok = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to LWT, the config-register signal, and SENSOR gating."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                config_register_signal(self._config_entry),
+                self._handle_register_update,
+            )
+        )
+
+        sensor_topic = f"tele/{self.mqtt_topic}/SENSOR"
+
+        @callback
+        def message_received(msg: mqtt.ReceiveMessage) -> None:
+            payload = parse_json_payload(msg.payload)
+            if payload is None:
+                return
+            aux = get_nested_value(payload, JSON_PATH_RELAY_AUX)
+            self._gating_ok = isinstance(aux, list) and len(aux) > self.entity_description.aux_index
+            self.async_write_ha_state()
+
+        await self._subscribe_topic(sensor_topic, message_received)
+
+    @callback
+    def _handle_register_update(self) -> None:
+        """React to a config-register cache update."""
+        self.async_write_ha_state()
+
+    @property
+    def _register_value(self) -> int | None:
+        """Return the cached raw mode register value, if known."""
+        return self._config_entry.runtime_data.register_state.get(self.entity_description.register)
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current mode option, or None for unmapped modes."""
+        value = self._register_value
+        return None if value is None else AUX_MODE_MAP.get(value)
+
+    @property
+    def available(self) -> bool:
+        """Available when online, AUX present in SENSOR, and a mode is cached."""
+        return super().available and self._gating_ok and self._register_value is not None
+
+    async def async_select_option(self, option: str) -> None:
+        """Set the AUX mode (write mode value + NPExec, no persist)."""
+        mode = lookup_by_value(AUX_MODE_MAP, option)
+        if mode is None:
+            _LOGGER.warning("Invalid AUX mode %s for %s", option, self.entity_description.key)
+            return
+        await self._write_register(self.entity_description.register, mode, save=False, execute=True)
+        self._config_entry.runtime_data.register_state[self.entity_description.register] = mode
+        self.async_write_ha_state()
+        _LOGGER.debug(
+            "Set AUX mode %s (%d) for %s",
+            option,
+            mode,
             self.entity_description.key,
         )

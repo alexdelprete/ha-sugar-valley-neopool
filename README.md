@@ -53,14 +53,17 @@ of your pool system through Home Assistant.
 
 ### Controls
 
-- **Switches** - Filtration, Light, AUX1-AUX4 relays
+- **Switches** - Filtration, plus configuration switches (UV mode, climate,
+  smart antifreeze, hydrolysis cover reduction / temperature shutdown)
+- **Light** - Pool light (dedicated light entity)
+- **Selects** - Filtration mode/speed, Boost mode, and **AUX1–4 mode**
+  (Auto / On / Off)
 
-  > **AUX1–4 control requires the Tasmota Berry NeoPool command
-  > extension** (ESP32). `NPAux<n>` is not a built-in Tasmota command —
-  > by design, not a bug. Without the extension, AUX state reads work but
-  > toggles are ignored by the firmware. See
-  > [Adding user-defined NeoPool commands](https://tasmota.github.io/docs/NeoPool/#esp32-adding-user-defined-neopool-commands-to-tasmota).
-- **Selects** - Filtration mode/speed, Boost mode
+  > **No Berry extension required for AUX.** AUX relays are driven through their
+  > controller timer-block mode register using the built-in `NPWrite` / `NPExec`
+  > commands: **Auto** follows the controller schedule, **On** forces the relay
+  > on, **Off** forces it off. The live relay output is exposed separately as
+  > read-only `AUX1–4` binary sensors.
 - **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Chlorine setpoint,
   Ionization setpoint
 - **Buttons** - Clear error state, Sync controller time

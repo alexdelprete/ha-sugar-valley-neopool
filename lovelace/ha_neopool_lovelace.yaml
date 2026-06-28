@@ -136,47 +136,23 @@
                 icon: mdi:lightning-bolt-outline
                 name: Boost
           - type: custom:text-divider-row
-            text: AUX Relays Switch
+            text: AUX Relays Mode
           - type: grid
             columns: 4
             square: false
             cards:
-              - type: custom:mushroom-entity-card
-                entity: switch.neopool_aux1
+              - type: custom:mushroom-select-card
+                entity: select.neopool_aux1_mode
                 name: Aux1
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-                double_tap_action:
-                  action: none
-              - type: custom:mushroom-entity-card
-                entity: switch.neopool_aux2
+              - type: custom:mushroom-select-card
+                entity: select.neopool_aux2_mode
                 name: Aux2
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-                double_tap_action:
-                  action: none
-              - type: custom:mushroom-entity-card
-                entity: switch.neopool_aux3
+              - type: custom:mushroom-select-card
+                entity: select.neopool_aux3_mode
                 name: Aux3
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-                double_tap_action:
-                  action: none
-              - type: custom:mushroom-entity-card
-                entity: switch.neopool_aux4
+              - type: custom:mushroom-select-card
+                entity: select.neopool_aux4_mode
                 name: Aux4
-                tap_action:
-                  action: toggle
-                hold_action:
-                  action: more-info
-                double_tap_action:
-                  action: none
           - type: custom:text-divider-row
             text: Setpoints
           - type: grid
