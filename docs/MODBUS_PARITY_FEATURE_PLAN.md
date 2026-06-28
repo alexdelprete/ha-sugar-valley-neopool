@@ -1,17 +1,18 @@
 # Feature Parity Plan — svasek Modbus Integration → our MQTT/Tasmota Integration
 
-**Status:** Groups 1–3 implemented on CI-green PR #20 (branch
-`feature/milestone1-light-command-layer`; Lint/Tests/Validate pass, coverage
-97%). Remaining: Group 4 — now split into **4b (register-based AUX, do first,
-drops Berry requirement)** + **4a (timer scheduling)** — plus non-feature
-follow-ups (dashboards, CHANGELOG/release notes for the breaking light change,
-localize new translations). #10 parked. Write-ACK design resolved with @curzon01
-(discussion #16); SENSOR-emit of config registers still open. AUX control
-registers verified vs curzon01 driver + svasek `registers.py` (2026-06-28); AUX
-entity model decided = `select` (auto/on/off), see Group 4b.
+**Status:** Groups 1–4 implemented on `main` (Lint/Tests/Validate pass,
+coverage 97%, 869 tests). **Group 4b** (register-based AUX selects + read-only
+binary sensors, drops the Berry requirement) and **Group 4a** (`set_timer`
+service) landed 2026-06-28 (commits b59f663, f21eee5). Remaining: non-feature
+follow-ups only — localize the new English-only translations into the other 9
+languages, and **validate on-device** the AUX mode write (mode 3/4 + NPExec;
+function-code write at base+11 not done, may be needed if the relay doesn't
+switch) and the timer-block encoding before relying on the timer service.
+Item #10 (power/energy) parked. Write-ACK design resolved with @curzon01 in
+discussion #16; SENSOR-emit of config registers still open. Register addresses
+verified vs curzon01 driver (primary) + svasek `registers.py` (secondary).
 **Created:** 2026-06-16
-**Updated:** 2026-06-28 (Group 4 split into 4a/4b; AUX register addresses
-verified; AUX-as-select decision recorded)
+**Updated:** 2026-06-28 (Groups 4a + 4b implemented and CI-green on main)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
