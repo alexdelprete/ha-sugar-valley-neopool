@@ -136,6 +136,31 @@ class TestSetTimerService:
         assert ("cmnd/SmartPool/NPWriteL", f"0x{base + 5:04X} 86400") in sent
         assert ("cmnd/SmartPool/NPExec", "") in sent
         assert ("cmnd/SmartPool/NPSave", "") in sent
+        # filtration is controller-bound: no function-word write at base+11
+        assert all(addr != f"0x{base + 11:04X} 1" for _, addr in sent)
+
+    @pytest.mark.asyncio
+    async def test_aux_timer_writes_function_word(self, mock_config_entry: MagicMock) -> None:
+        """An AUX timer is bound by writing its function code at block +11.
+
+        Without this the block is inert (verified on-device); filtration/light
+        timers are controller-bound and omit it.
+        """
+        hass = MagicMock()
+        mock_config_entry.domain = DOMAIN
+        mock_config_entry.runtime_data.mqtt_topic = "SmartPool"
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        call = _make_call(hass, timer="aux4")
+
+        with _patch_registry(found=True), _publish_patch() as pub:
+            await _async_set_timer(call)
+
+        sent = [(c.args[1], c.args[2]) for c in pub.await_args_list]
+        base = 0x04D9  # aux4
+        # function word (base+11 = 0x04E4) bound to AUX4 code 0x4000 = 16384
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base + 11:04X} 16384") in sent
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base:04X} 1") in sent
+        assert ("cmnd/SmartPool/NPExec", "") in sent
 
     @pytest.mark.asyncio
     async def test_interval_wraps_over_midnight(self, mock_config_entry: MagicMock) -> None:

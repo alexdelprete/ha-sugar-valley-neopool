@@ -29,8 +29,10 @@ from .const import (
     DOMAIN,
     SECONDS_PER_DAY,
     TIMER_BLOCKS,
+    TIMER_FUNCTION_CODES,
     TIMER_MODE_MAP,
     TIMER_OFFSET_ENABLE,
+    TIMER_OFFSET_FUNCTION,
     TIMER_OFFSET_INTERVAL,
     TIMER_OFFSET_OFF,
     TIMER_OFFSET_ON,
@@ -94,12 +96,14 @@ async def _async_set_timer(call: ServiceCall) -> None:
         )
 
     mqtt_topic = entry.runtime_data.mqtt_topic
-    base = TIMER_BLOCKS[call.data[ATTR_TIMER]]
+    timer = call.data[ATTR_TIMER]
+    base = TIMER_BLOCKS[timer]
     start = _seconds_since_midnight(call.data[ATTR_START])
     stop = _seconds_since_midnight(call.data[ATTR_STOP])
     interval = (stop - start) % SECONDS_PER_DAY
     period = call.data[ATTR_PERIOD]
     mode = TIMER_MODE_MAP[call.data[ATTR_MODE]]
+    function_code = TIMER_FUNCTION_CODES.get(timer)
 
     async def _pub(command: str, payload: str) -> None:
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/{command}", payload, qos=1, retain=False)
@@ -111,6 +115,11 @@ async def _async_set_timer(call: ServiceCall) -> None:
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_OFF:04X} {stop}")
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_INTERVAL:04X} {interval}")
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_PERIOD:04X} {period}")
+    # AUX timers default to unbound (function word 0); without binding the block
+    # is inert (verified on-device). Filtration/light are bound by the
+    # controller's GPIO assignment, so function_code is None for them.
+    if function_code is not None:
+        await _pub(CMD_NPWRITE, f"0x{base + TIMER_OFFSET_FUNCTION:04X} {function_code}")
     await _pub(CMD_NPEXEC, "")
     await _pub(CMD_NPSAVE, "")
 

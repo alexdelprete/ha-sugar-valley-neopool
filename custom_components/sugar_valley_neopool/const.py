@@ -282,6 +282,19 @@ TIMER_OFFSET_ON: Final = 1  # 32-bit ON time (seconds since midnight)
 TIMER_OFFSET_OFF: Final = 3  # 32-bit OFF time (seconds since midnight)
 TIMER_OFFSET_PERIOD: Final = 5  # 32-bit repeat period (e.g. 86400 = daily)
 TIMER_OFFSET_INTERVAL: Final = 7  # 32-bit run duration (seconds)
+TIMER_OFFSET_FUNCTION: Final = 11  # 16-bit function word (relay binding)
+
+# Timers whose function word must be written to bind them to a relay before the
+# block takes effect. Verified on-device (2026-06-28): an AUX timer with a full
+# schedule written but function word=0 left the relay off; adding the function
+# code drove it. Filtration/light timers are bound by the controller's relay
+# GPIO assignment, so they are NOT auto-bound here.
+TIMER_FUNCTION_CODES: Final[dict[str, int]] = {
+    "aux1": AUX1_FUNCTION_CODE,
+    "aux2": AUX2_FUNCTION_CODE,
+    "aux3": AUX3_FUNCTION_CODE,
+    "aux4": AUX4_FUNCTION_CODE,
+}
 
 # Timer working modes (MBV_PAR_CTIMER_*) accepted by the set_timer service.
 TIMER_MODE_MAP: Final[dict[str, int]] = {
