@@ -114,7 +114,7 @@
           - type: horizontal-stack
             cards:
               - type: tile
-                entity: switch.neopool_light
+                entity: light.neopool_light
                 icon: mdi:light-recessed
                 name: Light
               - type: tile

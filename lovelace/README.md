@@ -32,7 +32,7 @@ All four files cover the same scope:
 - Sensors: temperature, pH, redox, hydrolysis (%) + (g/h), hydrolysis
   state / runtimes / polarity changes, pH state / pump, power-unit
   voltages, connection diagnostics.
-- Controls: filtration switch, light switch, AUX1–AUX4 switches, clear
+- Controls: filtration switch, light, AUX1–AUX4 switches, clear
   error button, sync controller time button.
 - Selects: filtration mode, filtration speed, boost mode.
 - Setpoints: pH min / max, redox, hydrolysis, chlorine, ionization.

@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Pool light as a dedicated `light` entity** (`light.<name>_light`). It
+  controls the same relay as before via `NPLight`, but as a proper light it
+  now works with light cards, light groups, and "turn on the lights" voice
+  intents. See the breaking-change note below.
+- **Automatic time-sync switch** (`switch.<name>_auto_time_sync`): when on,
+  the integration resyncs the controller clock (`NPTime`) whenever it drifts
+  more than 60s from Home Assistant. Off by default; state is restored across
+  restarts.
+- **Reset cell-runtime button** (`button.<name>_reset_cell_runtime`): clears
+  the hydrolysis cell partial/user runtime counters. Diagnostic and disabled
+  by default.
+- **Configuration controls for settings that are not in the SENSOR telemetry**,
+  read on demand from the controller and kept current by command
+  acknowledgments (a lightweight `NPRead`/`NPWrite` layer — no continuous
+  polling). Each entity self-gates on the relevant module/relay being present:
+  - Switches: **UV mode**, **Climate mode**, **Smart antifreeze**.
+  - Numbers: **Heating temperature**, **Intelligent minimum filtration time**,
+    **pH pump activation delay**.
+  - Hydrolysis cover handling: **Cover reduction** (enable switch + percentage)
+    and **Temperature shutdown** (enable switch + threshold), which share the
+    controller's bit-packed registers and are written without disturbing each
+    other.
+
+### Changed
+
+- **BREAKING: the pool light moved from the `switch` platform to the `light`
+  platform.** The old switch is removed automatically and replaced by a light
+  entity:
+  - Fresh installs: `switch.neopool_light` → `light.neopool_light`.
+  - Migrated installs: `switch.neopool_mqtt_light_switch` →
+    `light.neopool_mqtt_light`.
+
+  Update any automations, scripts, or dashboards that referenced the old
+  switch entity. The bundled Lovelace dashboards (fresh and migrated variants)
+  have already been updated.
+
 ## [1.1.3] - 2026-06-27
 
 ### Fixed

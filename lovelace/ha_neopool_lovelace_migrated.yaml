@@ -108,7 +108,7 @@
                 double_tap_action:
                   action: none
               - type: custom:mushroom-entity-card
-                entity: switch.neopool_mqtt_light_switch
+                entity: light.neopool_mqtt_light
                 icon: mdi:light-recessed
                 name: Light
                 tap_action:
