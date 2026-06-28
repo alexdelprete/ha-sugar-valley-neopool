@@ -130,7 +130,28 @@ parked** — the owner wants a different implementation, planned separately.
 | 8 | Hydro temp shutdown (enable+temp) | regs `0x042C`/`0x042D` (bit-packed) | `NPWrite` read-modify-write | `Modules.Hydrolysis` + `Temperature` | Yes |
 | 13 | Per-relay AUX/Light timers | timer blocks `0x0434+` (15-reg, 32-bit pairs) | `NPWriteL` + `NPExec` | relay assigned | Yes (heavy) |
 
-### Register reference (from `python-neopool-modbus` docs)
+### Register layout — source of truth (MANDATORY ordering)
+
+When implementing or verifying any register address, bit mask, scaling, or
+value range, consult sources in this order:
+
+1. **Primary: the original Tasmota NeoPool driver by @curzon01** —
+   `tasmota/tasmota_xsns_sensor/xsns_83_neopool.ino` in
+   [arendst/Tasmota](https://github.com/arendst/Tasmota) (register `#define`s,
+   `MBMSK_*` masks, `MBV_*` values, and the `NeoPoolShow()` emission logic).
+   Our distilled snapshot lives in
+   [docs/TASMOTA_NEOPOOL_DRIVER_REFERENCE.md](TASMOTA_NEOPOOL_DRIVER_REFERENCE.md).
+   This is the canonical definition because our integration talks to that exact
+   driver over MQTT.
+2. **Secondary cross-check: `svasek/python-neopool-modbus`** — a Python port of
+   the same driver. Use it to corroborate the primary source, never to override
+   it. If the two disagree, the Tasmota driver wins and the discrepancy is
+   worth raising with @curzon01.
+
+The register table below was sourced from the Python port and should be
+re-confirmed against the Tasmota driver source as each feature is implemented.
+
+### Register reference (cross-check from `python-neopool-modbus`; verify vs driver)
 
 | Register | Addr | Encoding | Access |
 |----------|------|----------|--------|
