@@ -2004,6 +2004,17 @@ class TestResultWatch:
 
         assert entry.runtime_data.register_state[REG_UV_MODE] == 0
 
+        # Devices with NPResult 1 return BOTH Address and Data as hex strings
+        # (confirmed on real hardware). _parse_register_int decodes them.
+        msg.payload = json.dumps({"NPRead": {"Address": "0x0427", "Data": "0x0002"}})
+        with patch(
+            "custom_components.sugar_valley_neopool.async_dispatcher_send",
+            side_effect=capture_signal,
+        ):
+            captured_cb(msg)
+
+        assert entry.runtime_data.register_state[REG_UV_MODE] == 2
+
     @pytest.mark.asyncio
     async def test_result_watch_ignores_non_npread(self, hass: HomeAssistant) -> None:
         """A non-NPRead RESULT (e.g. a command echo) is ignored."""

@@ -81,9 +81,19 @@ control state that is already in SENSOR (`NeoPool.Light`, `Filtration.State`,
 - For everything else → use the **`stat/RESULT` readback** as a true
   "change done" ACK.
 
-Implementation: subscribe to `stat/{topic}/RESULT` (constant `TOPIC_RESULT`
-already exists in `const.py`); after publishing a command, await a RESULT JSON
-containing the command key; treat the 3 echo-only commands via the SENSOR echo.
+Implementation: subscribe to the single-level wildcard **`stat/{topic}/+`**;
+after publishing a command, await a reply JSON containing the command key; treat
+the 3 echo-only commands via the SENSOR echo.
+
+> **On-device finding (2026-06-28):** the wildcard subscription is required, not
+> just `stat/{topic}/RESULT`. A real device with **`SetOption4 1`** routes
+> command replies to `stat/{topic}/<command>` (e.g. `stat/{topic}/NPRead`), so a
+> `/RESULT`-only subscription would miss every reply and the config entities
+> would never populate. The wildcard catches both SO4 modes; non-NPRead messages
+> are filtered by the JSON-key check. The same device had **`NPResult 1`**,
+> returning Address and Data as hex strings (`{"NPRead":{"Address":"0x0433",
+> "Data":"0x0002"}}`) — handled by `_parse_register_int`. Probing `0x0433`
+> accepted `0xFFFF` unclamped, confirming no firmware max (UX cap only).
 
 **Bonus — the read layer is lightweight, not heavy polling.** `NPRead` returns
 its value on the same `stat/RESULT` channel (`{"NPRead":...}`), so reading a

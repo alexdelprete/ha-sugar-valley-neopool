@@ -45,7 +45,6 @@ from .const import (
     PLATFORMS,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
-    TOPIC_RESULT,
     YAML_ENTITIES_TO_DELETE,
     YAML_TO_INTEGRATION_KEY_MAP,
 )
@@ -1093,20 +1092,31 @@ def _parse_register_int(value: Any) -> int | None:
 
 
 async def _setup_result_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
-    """Subscribe to stat/RESULT and cache Group 2 config-register values.
+    """Subscribe to the command result topic(s) and cache config registers.
 
-    Tasmota answers every command on stat/{topic}/RESULT with a JSON object
-    keyed by the command name. We watch for NPRead responses and store the
-    value in runtime_data.register_state, fanning out via config_register_signal
-    so the register-backed entities update. This is on-demand request/response,
-    not polling: reads are only issued at startup (and writes echo their state).
+    Tasmota answers every command with a JSON object keyed by the command name.
+    With the default ``SetOption4 0`` it goes to ``stat/{topic}/RESULT``; with
+    ``SetOption4 1`` it goes to ``stat/{topic}/<command>`` (e.g.
+    ``stat/{topic}/NPRead``). We therefore subscribe to the single-level
+    wildcard ``stat/{topic}/+`` so NPRead replies are captured regardless of the
+    SetOption4 setting; non-NPRead messages are ignored by the JSON-key check.
+    (Reading SetOption4 to pick a single topic doesn't help: its own reply is
+    SO4-routed too, so it has the same multi-topic bootstrap. stat traffic is
+    low-volume command responses, not telemetry, so the wildcard is cheap.)
 
-    Per the Tasmota docs a single-register NPRead returns a scalar Data, e.g.
-    ``{"NPRead":{"Address":1046,"Data":28}}``; a multi-register read (NPReadL)
-    returns a Data list. Both shapes are handled.
+    We store the value in runtime_data.register_state, fanning out via
+    config_register_signal so the register-backed entities update. This is
+    on-demand request/response, not polling: reads are only issued at startup
+    (and writes echo their state).
+
+    Data shapes handled: a single-register NPRead returns a scalar Data
+    (``{"NPRead":{"Address":1046,"Data":28}}``); a multi-register read (NPReadL)
+    returns a Data list. Address and Data may be decimal ints or hex strings
+    (``"0x0002"``) depending on the device's ``NPResult`` setting — both are
+    parsed by ``_parse_register_int``.
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
-    result_topic = TOPIC_RESULT.format(device=mqtt_topic)
+    result_topic = f"stat/{mqtt_topic}/+"
     signal = config_register_signal(entry)
 
     @callback

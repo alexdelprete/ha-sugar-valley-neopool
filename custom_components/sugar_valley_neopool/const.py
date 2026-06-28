@@ -221,8 +221,10 @@ CONFIG_REGISTERS: Final[tuple[int, ...]] = (
 )
 
 # Group 2 number entity bounds (raw register units).
-# NOTE: heating-temp scaling and the pH-delay range are not yet hardware-verified
-# (see docs/MODBUS_PARITY_FEATURE_PLAN.md). Adjust once confirmed with @curzon01.
+# heating-temp scaling confirmed x1 (raw degC) from the driver's own NPRead
+# example (0x0416 -> 28). pH-delay confirmed raw seconds (+10s system offset)
+# with NO firmware max — on-device probing of 0x0433 accepted up to 0xFFFF
+# unclamped — so the max below is a deliberate UX cap, not a device limit.
 HEATING_TEMP_MIN: Final = 15
 HEATING_TEMP_MAX: Final = 40
 HEATING_TEMP_STEP: Final = 1
@@ -230,7 +232,7 @@ INTELLIGENT_MIN_TIME_MIN: Final = 120  # 2 hours
 INTELLIGENT_MIN_TIME_MAX: Final = 1440  # 24 hours
 INTELLIGENT_MIN_TIME_STEP: Final = 10
 PH_ACTIVATION_DELAY_MIN: Final = 0
-PH_ACTIVATION_DELAY_MAX: Final = 300
+PH_ACTIVATION_DELAY_MAX: Final = 300  # UX cap (5 min); device accepts more
 PH_ACTIVATION_DELAY_STEP: Final = 5
 
 # Group 3 number bounds (raw byte fields of 0x042D, units percent and °C).
