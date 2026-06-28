@@ -2,12 +2,16 @@
 
 **Status:** Groups 1–3 implemented on CI-green PR #20 (branch
 `feature/milestone1-light-command-layer`; Lint/Tests/Validate pass, coverage
-97%). Remaining: Group 4 (timers) + non-feature follow-ups (dashboards,
-CHANGELOG/release notes for the breaking light change, localize new
-translations). #10 parked. Write-ACK design resolved with @curzon01
-(discussion #16); SENSOR-emit of config registers still open.
+97%). Remaining: Group 4 — now split into **4b (register-based AUX, do first,
+drops Berry requirement)** + **4a (timer scheduling)** — plus non-feature
+follow-ups (dashboards, CHANGELOG/release notes for the breaking light change,
+localize new translations). #10 parked. Write-ACK design resolved with @curzon01
+(discussion #16); SENSOR-emit of config registers still open. AUX control
+registers verified vs curzon01 driver + svasek `registers.py` (2026-06-28); AUX
+entity model decided = `select` (auto/on/off), see Group 4b.
 **Created:** 2026-06-16
-**Updated:** 2026-06-27 (Groups 1–3 implemented, CI green at 97% coverage)
+**Updated:** 2026-06-28 (Group 4 split into 4a/4b; AUX register addresses
+verified; AUX-as-select decision recorded)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
@@ -192,6 +196,15 @@ Timer block layout (each 15 registers): +0 enable/mode; +1..2 ON ts; +3..4 OFF
 ts; +5..6 period; +7..8 interval; +9..10 countdown; +11..12 function code;
 +13..14 work time. All multi-word values are 32-bit Low/High pairs.
 
+Enable/mode register (`+0`) values (`MBV_PAR_CTIMER_*`): `0`=disabled,
+`1`=enabled/auto, `2`=enabled+linked, `3`=always ON, `4`=always OFF.
+
+Full timer-block base map (12 timers, base `MBF_PAR_TIMER_BLOCK_BASE` 0x0434):
+filtration1 `0x0434`, filtration2 `0x0443`, filtration3 `0x0452`,
+aux1b `0x0461`, light `0x0470`, aux2b `0x047F`, aux3b `0x048E`, aux4b `0x049D`,
+aux1 `0x04AC`, aux2 `0x04BB`, aux3 `0x04CA`, aux4 `0x04D9`. AUX control uses the
+`aux<n>` (INT1) block; see Group 4b for the per-AUX function reg/code table.
+
 ---
 
 ## Implementation plan, grouped by difficulty / impact / importance
@@ -266,14 +279,71 @@ Do after Group 2; same read layer with read-modify-write bitmask care.
   register so siblings don't clobber each other. 2 switches + 2 numbers,
   gated on `Modules.Hydrolysis` (+`Temperature` for #8). ~1–1.5 days.
 
-### Group 4 — Per-relay timer scheduling (hard, separate milestone)
+### Group 4 — Per-relay timer scheduling + register-based AUX (hard, separate milestone)
+
+Split into two deliverables sharing the same timer-block register layer. Do
+**4b first** — it is smaller, safer, and removes the only Berry prerequisite in
+the integration.
+
+#### 4b — Register-based AUX control (drops the Berry requirement)
+
+Today AUX1–4 are exposed as **switches** that publish `NPAux<n>`, which is **not
+a built-in Tasmota command** — it requires the user-installed Berry NeoPool
+command extension (see [[reference_aux_npaux_berry]]). AUX can instead be driven
+through each relay's timer-block **enable/mode register** using only built-in
+commands (`NPWrite` + `NPExec`), exactly as svasek does over Modbus.
+
+Verified AUX control registers (curzon01 driver = primary; svasek
+`registers.py` = secondary cross-check — they agree). Each AUX uses its **INT1**
+timer block; the mode lives at block-base `+0`, the function code at `+11`:
+
+| Relay | Timer block (`+0` = mode) | Function reg (`+11`) | Function code |
+|-------|---------------------------|----------------------|---------------|
+| AUX1  | `0x04AC`                  | `0x04B7`             | `0x0800`      |
+| AUX2  | `0x04BB`                  | `0x04C6`             | `0x1000`      |
+| AUX3  | `0x04CA`                  | `0x04D5`             | `0x2000`      |
+| AUX4  | `0x04D9`                  | `0x04E4`             | `0x4000`      |
+
+Mode values (`MBV_PAR_CTIMER_*`): `0`=disabled, `1`=auto (timer-controlled),
+`2`=linked, `3`=always ON, `4`=always OFF.
+
+Write sequence (all built-in, no Berry, no `NPSave` per toggle — avoids EEPROM
+wear):
+
+- ON: `NPWrite 0x04AC 3` → `NPExec`
+- OFF: `NPWrite 0x04AC 4` → `NPExec`
+- AUTO (hand back to schedule): `NPWrite 0x04AC 1` → `NPExec`
+- (optionally `NPWrite 0x04B7 0x0800` once to assert the relay assignment)
+
+State read-back is **free**: the result echoes in SENSOR at
+`NeoPool.Relay.Aux[n]` (0/1), which the current AUX switch already parses — so
+no on-demand `NPRead` is needed for AUX state (write-ACK via SENSOR echo, same
+as `NPLight`/`NPFiltration`).
+
+**Decision — AUX entity model = `select`, not `switch` (resolved 2026-06-28):**
+the physical relay *output* is binary (`Relay.Aux[n]` 0/1), but the thing we
+*control* is the mode register, whose meaningful user-facing state space is
+**3 values: `auto` / `on` / `off`** (modes `1`/`3`/`4`). A binary switch cannot
+represent `auto`, so flipping it "off" (mode 4) would silently destroy the
+user's timer schedule with no way back. Therefore model AUX control as a
+**per-AUX `select`** with options `auto` / `on` / `off` (mirrors svasek's
+`relay_mode` select, `options_map={1: auto, 3: on, 4: off}`).
+
+This is a **breaking entity-domain change** (like the light move): remove the 4
+`switch.aux*` entities, add 4 `select.aux*_mode`. Touches the switch platform,
+the new select platform, dashboards (all 4 Lovelace files), `YAML_TO_*` /
+`YAML_ENTITIES_TO_DELETE` migration maps, `_cleanup_removed_entities`, and
+translations. Drop the Berry prerequisite from README/docs. Optionally keep a
+read-only `binary_sensor` for the physical output.
+
+#### 4a — Timer scheduling (the new feature)
 
 - **#13.** Timer blocks are 15-register structures with 32-bit Low/High pairs
-  (`0x0434+`). Heaviest item. Phased approach: start with a `neopool.set_timer`
-  service (start/stop/period/enable), add per-relay select entities later if
-  wanted. Note: writing timer blocks via `NPWriteL`+`NPExec` could drive AUX
-  relays **without** the Berry extension — worth validating as a side benefit.
-  ~3–5 days.
+  (`0x0434+`, 12 timers × 15 regs). Heaviest item. Phased: start with a
+  `neopool.set_timer` service (start/stop/period/enable via `NPWriteL` +
+  `NPExec`), add per-relay timer entities later if wanted. **Verify the timer
+  encoding on-device (read existing filtration timers, decode) before any
+  write.** ~3–5 days.
 
 ---
 
