@@ -1,0 +1,48 @@
+set_timer:
+  fields:
+    device_id:
+      required: true
+      selector:
+        device:
+          integration: sugar_valley_neopool
+    timer:
+      required: true
+      selector:
+        select:
+          translation_key: timer
+          options:
+            - filtration1
+            - filtration2
+            - filtration3
+            - light
+            - aux1
+            - aux2
+            - aux3
+            - aux4
+    start:
+      required: true
+      selector:
+        time:
+    stop:
+      required: true
+      selector:
+        time:
+    period:
+      default: 86400
+      selector:
+        number:
+          min: 0
+          max: 604800
+          step: 1
+          unit_of_measurement: s
+          mode: box
+    mode:
+      default: auto
+      selector:
+        select:
+          translation_key: timer_mode
+          options:
+            - disabled
+            - auto
+            - "on"
+            - "off"

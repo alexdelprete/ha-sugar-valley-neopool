@@ -450,5 +450,64 @@
         "name": "Light"
       }
     }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Set timer",
+      "description": "Configures one of the controller's built-in timers (filtration, light, or AUX). The schedule runs on the controller itself, independent of Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Device",
+          "description": "The NeoPool controller to configure."
+        },
+        "timer": {
+          "name": "Timer",
+          "description": "Which controller timer to write."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Time of day the relay turns on."
+        },
+        "stop": {
+          "name": "Stop",
+          "description": "Time of day the relay turns off (the run duration is derived from start and stop)."
+        },
+        "period": {
+          "name": "Repeat period",
+          "description": "How often the timer repeats, in seconds (86400 = every day)."
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Timer working mode: Auto runs the schedule, On forces the relay on, Off forces it off, Disabled turns the timer off."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Filtration timer 1",
+        "filtration2": "Filtration timer 2",
+        "filtration3": "Filtration timer 3",
+        "light": "Light",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Disabled",
+        "auto": "Auto",
+        "on": "On",
+        "off": "Off"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "No NeoPool controller found for device {device_id}."
+    }
   }
 }

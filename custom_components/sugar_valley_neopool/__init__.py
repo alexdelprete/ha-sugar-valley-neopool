@@ -58,6 +58,7 @@ from .helpers import (
     normalize_nodeid,
     validate_nodeid,
 )
+from .services import async_setup_services, async_unload_services
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -212,6 +213,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _LOGGER.debug("Platform setup complete for %d platforms", len(PLATFORMS))
 
+    # Register integration services (Group 4a timer scheduling). Idempotent, so
+    # registering once per entry setup is safe with multiple devices.
+    async_setup_services(hass)
+
     # Apply entity_id_mapping to preserve original YAML entity IDs
     if entity_id_mapping:
         # Log what entities exist for this integration before renaming
@@ -255,6 +260,10 @@ async def async_unload_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> 
     # ref.: https://developers.home-assistant.io/blog/2025/02/19/new-config-entry-states/
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         _LOGGER.info("NeoPool MQTT integration unloaded successfully")
+        # Remove integration services once the last entry is gone. async_entries
+        # still includes this entry during unload, so <=1 means it's the only one.
+        if len(hass.config_entries.async_entries(DOMAIN)) <= 1:
+            async_unload_services(hass)
     else:
         _LOGGER.debug("Platform unload failed, skipping cleanup")
 

@@ -172,6 +172,7 @@ CMD_ESCAPE: Final = "NPEscape"
 # Used for registers/actions that have no dedicated NPxxx command.
 CMD_NPREAD: Final = "NPRead"
 CMD_NPWRITE: Final = "NPWrite"
+CMD_NPWRITEL: Final = "NPWriteL"  # write 32-bit value(s) across register pairs
 CMD_NPSAVE: Final = "NPSave"
 # NPExec (MBF_RESTART_MODULES) commits register changes by restarting the
 # controller modules. Used after timer-block / relay-mode writes (Group 4) so
@@ -234,6 +235,41 @@ AUX_MODE_MAP: Final[dict[int, str]] = {
     AUX_MODE_ON: "on",
     AUX_MODE_OFF: "off",
 }
+
+# Group 4a — controller timer scheduling. The 12 configurable timers live in a
+# block of 15-register structures at MBF_PAR_TIMER_BLOCK_BASE (0x0434); each is
+# pre-assigned to a function (filtration 1-3, light, aux1-4, ...). Base
+# addresses verified vs @curzon01's xsns_83_neopool.ino (primary) and svasek's
+# registers.py (secondary). AUX uses the INT1 block (same as Group 4b). These
+# registers are NOT in the SENSOR payload; the set_timer service writes them
+# on demand via NPWrite/NPWriteL + NPExec + NPSave.
+TIMER_BLOCKS: Final[dict[str, int]] = {
+    "filtration1": 0x0434,
+    "filtration2": 0x0443,
+    "filtration3": 0x0452,
+    "light": 0x0470,
+    "aux1": 0x04AC,
+    "aux2": 0x04BB,
+    "aux3": 0x04CA,
+    "aux4": 0x04D9,
+}
+
+# Per-timer 15-register layout offsets (MBV_TIMER_OFFMB_*). Multi-word values
+# are 32-bit Low/High pairs written with NPWriteL.
+TIMER_OFFSET_ENABLE: Final = 0  # 16-bit enable/mode (MBV_PAR_CTIMER_*)
+TIMER_OFFSET_ON: Final = 1  # 32-bit ON time (seconds since midnight)
+TIMER_OFFSET_OFF: Final = 3  # 32-bit OFF time (seconds since midnight)
+TIMER_OFFSET_PERIOD: Final = 5  # 32-bit repeat period (e.g. 86400 = daily)
+TIMER_OFFSET_INTERVAL: Final = 7  # 32-bit run duration (seconds)
+
+# Timer working modes (MBV_PAR_CTIMER_*) accepted by the set_timer service.
+TIMER_MODE_MAP: Final[dict[str, int]] = {
+    "disabled": 0,
+    "auto": 1,
+    "on": 3,
+    "off": 4,
+}
+SECONDS_PER_DAY: Final = 86400
 
 # Registers read once at startup (and refreshed by write-ACK) to populate the
 # config entities. Read individually for robust NPRead response parsing.

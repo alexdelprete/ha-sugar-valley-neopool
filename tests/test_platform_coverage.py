@@ -480,7 +480,8 @@ class TestEntityDescriptionCoverage:
 
     def test_switch_descriptions_count(self) -> None:
         """Test switch descriptions count."""
-        assert len(SWITCH_DESCRIPTIONS) >= 5
+        # AUX1-4 moved to mode selects; only filtration remains a command switch.
+        assert len(SWITCH_DESCRIPTIONS) >= 1
 
     def test_select_descriptions_count(self) -> None:
         """Test select descriptions count."""
