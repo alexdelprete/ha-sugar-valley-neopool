@@ -12,20 +12,29 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from . import config_register_signal
 from .const import (
+    AUX1_FUNCTION_CODE,
+    AUX2_FUNCTION_CODE,
+    AUX3_FUNCTION_CODE,
+    AUX4_FUNCTION_CODE,
     AUX_MODE_MAP,
     BOOST_MODE_MAP,
     CMD_BOOST,
     CMD_FILTRATION_MODE,
     CMD_FILTRATION_SPEED,
+    CMD_NPWRITE,
     FILTRATION_MODE_MAP,
     FILTRATION_SPEED_MAP,
     JSON_PATH_FILTRATION_MODE,
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
     JSON_PATH_RELAY_AUX,
+    REG_AUX1_FUNCTION,
     REG_AUX1_MODE,
+    REG_AUX2_FUNCTION,
     REG_AUX2_MODE,
+    REG_AUX3_FUNCTION,
     REG_AUX3_MODE,
+    REG_AUX4_FUNCTION,
     REG_AUX4_MODE,
 )
 from .entity import NeoPoolMQTTEntity
@@ -99,7 +108,9 @@ SELECT_DESCRIPTIONS: tuple[NeoPoolSelectEntityDescription, ...] = (
 class NeoPoolAuxModeSelectEntityDescription(SelectEntityDescription):
     """Describes a register-backed AUX relay mode select (auto/on/off)."""
 
-    register: int
+    register: int  # mode/enable word (timer-block +0)
+    function_register: int  # function word (timer-block +11)
+    function_code: int  # MBV_PAR_CTIMER_FCT_RELAY bit that binds the timer
     aux_index: int  # 0-based index into NeoPool.Relay.Aux for availability gating
 
 
@@ -109,6 +120,8 @@ AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] 
         translation_key="aux1_mode",
         name="AUX1 Mode",
         register=REG_AUX1_MODE,
+        function_register=REG_AUX1_FUNCTION,
+        function_code=AUX1_FUNCTION_CODE,
         aux_index=0,
     ),
     NeoPoolAuxModeSelectEntityDescription(
@@ -116,6 +129,8 @@ AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] 
         translation_key="aux2_mode",
         name="AUX2 Mode",
         register=REG_AUX2_MODE,
+        function_register=REG_AUX2_FUNCTION,
+        function_code=AUX2_FUNCTION_CODE,
         aux_index=1,
     ),
     NeoPoolAuxModeSelectEntityDescription(
@@ -123,6 +138,8 @@ AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] 
         translation_key="aux3_mode",
         name="AUX3 Mode",
         register=REG_AUX3_MODE,
+        function_register=REG_AUX3_FUNCTION,
+        function_code=AUX3_FUNCTION_CODE,
         aux_index=2,
     ),
     NeoPoolAuxModeSelectEntityDescription(
@@ -130,6 +147,8 @@ AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] 
         translation_key="aux4_mode",
         name="AUX4 Mode",
         register=REG_AUX4_MODE,
+        function_register=REG_AUX4_FUNCTION,
+        function_code=AUX4_FUNCTION_CODE,
         aux_index=3,
     ),
 )
@@ -289,10 +308,29 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         return self._config_entry.runtime_data.register_state.get(self.entity_description.register)
 
     @property
+    def _function_value(self) -> int | None:
+        """Return the cached function-word value (relay binding), if known."""
+        return self._config_entry.runtime_data.register_state.get(
+            self.entity_description.function_register
+        )
+
+    @property
+    def _is_bound(self) -> bool:
+        """True if the timer is bound to its relay (function word == aux code).
+
+        On-device finding: the mode word is inert unless the function word holds
+        the AUX's relay bit, so an unbound timer's mode does not reflect the
+        relay. Report None (unknown) for the option until it is bound.
+        """
+        return self._function_value == self.entity_description.function_code
+
+    @property
     def current_option(self) -> str | None:
-        """Return the current mode option, or None for unmapped modes."""
+        """Return the current mode option (only meaningful while bound)."""
         value = self._register_value
-        return None if value is None else AUX_MODE_MAP.get(value)
+        if value is None or not self._is_bound:
+            return None
+        return AUX_MODE_MAP.get(value)
 
     @property
     def available(self) -> bool:
@@ -300,17 +338,32 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         return super().available and self._gating_ok and self._register_value is not None
 
     async def async_select_option(self, option: str) -> None:
-        """Set the AUX mode (write mode value + NPExec, no persist)."""
+        """Set the AUX mode: bind the timer (function word) then write the mode.
+
+        Writing the mode alone is inert (verified on-device) — the function word
+        must carry the AUX relay bit to bind the timer to the relay. We write the
+        function code (no commit), then the mode with NPExec to apply both. No
+        NPSave: a manual override is transient and reverts on power-cycle.
+        """
         mode = lookup_by_value(AUX_MODE_MAP, option)
         if mode is None:
             _LOGGER.warning("Invalid AUX mode %s for %s", option, self.entity_description.key)
             return
-        await self._write_register(self.entity_description.register, mode, save=False, execute=True)
-        self._config_entry.runtime_data.register_state[self.entity_description.register] = mode
+        desc = self.entity_description
+        # Bind the timer to the relay (function word), then apply mode + commit.
+        await self._publish_command(
+            CMD_NPWRITE, f"0x{desc.function_register:04X} {desc.function_code}"
+        )
+        await self._write_register(desc.register, mode, save=False, execute=True)
+        rs = self._config_entry.runtime_data.register_state
+        rs[desc.function_register] = desc.function_code
+        rs[desc.register] = mode
         self.async_write_ha_state()
         _LOGGER.debug(
-            "Set AUX mode %s (%d) for %s",
+            "Set AUX mode %s (%d, bound via 0x%04X=0x%04X) for %s",
             option,
             mode,
-            self.entity_description.key,
+            desc.function_register,
+            desc.function_code,
+            desc.key,
         )

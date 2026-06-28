@@ -47,12 +47,25 @@ class TestNeoPoolAuxModeSelect:
         sel, _desc = self._make(mock_config_entry)
         assert sel.options == ["auto", "on", "off"]
 
-    def test_current_option_from_register(self, mock_config_entry: MagicMock) -> None:
-        """current_option maps the cached mode value; None when unknown/unmapped."""
+    def test_current_option_requires_binding(self, mock_config_entry: MagicMock) -> None:
+        """A mode value is only meaningful once the timer is bound to its relay."""
         sel, desc = self._make(mock_config_entry)
         rs = mock_config_entry.runtime_data.register_state
         rs.clear()
-        assert sel.current_option is None  # nothing cached
+        # Mode set but function word still 0 (unbound) -> option is unknown.
+        rs[desc.register] = 3
+        assert sel.current_option is None
+        # Bind the timer (function word == aux code); now the mode maps.
+        rs[desc.function_register] = desc.function_code
+        assert sel.current_option == "on"
+
+    def test_current_option_from_register(self, mock_config_entry: MagicMock) -> None:
+        """current_option maps the cached mode value when bound; None otherwise."""
+        sel, desc = self._make(mock_config_entry)
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        rs[desc.function_register] = desc.function_code  # bound
+        assert sel.current_option is None  # mode not cached yet
         rs[desc.register] = 1
         assert sel.current_option == "auto"
         rs[desc.register] = 3
@@ -76,23 +89,35 @@ class TestNeoPoolAuxModeSelect:
         assert sel.available is True
 
     @pytest.mark.asyncio
-    async def test_select_option_writes_mode_with_exec_no_save(
+    async def test_select_option_binds_then_writes_mode(
         self, mock_config_entry: MagicMock, mock_hass: MagicMock
     ) -> None:
-        """Selecting a mode writes NPWrite + NPExec (no NPSave) and caches it."""
+        """Selecting a mode writes the function code + mode + NPExec (no NPSave).
+
+        The function-code write binds the timer to the relay (without it the
+        mode is inert, per the on-device finding), then the mode is applied with
+        NPExec; both are cached optimistically.
+        """
         sel, desc = self._make(mock_config_entry)
         sel.hass = mock_hass
         sel.async_write_ha_state = MagicMock()
-        mock_config_entry.runtime_data.register_state.clear()
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
 
         with patch.object(sel, "_publish_command", new_callable=AsyncMock) as pub:
             await sel.async_select_option("on")
 
         published = [c.args for c in pub.await_args_list]
+        # function word bound, mode applied, committed, never persisted
+        assert (
+            CMD_NPWRITE,
+            f"0x{desc.function_register:04X} {desc.function_code}",
+        ) in published
         assert (CMD_NPWRITE, f"0x{desc.register:04X} 3") in published
         assert (CMD_NPEXEC, "") in published
         assert all(cmd != CMD_NPSAVE for cmd, _ in published)
-        assert mock_config_entry.runtime_data.register_state[desc.register] == 3
+        assert rs[desc.function_register] == desc.function_code
+        assert rs[desc.register] == 3
 
     @pytest.mark.asyncio
     async def test_select_invalid_option_is_noop(

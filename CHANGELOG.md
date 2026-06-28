@@ -39,8 +39,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     controller's bit-packed registers and are written without disturbing each
     other.
 - **AUX relays no longer require the Tasmota Berry extension.** AUX1–4 are now
-  controlled through their controller timer-block mode register with the
-  built-in `NPWrite`/`NPExec` commands, exposed as **AUX1–4 mode** selects
+  controlled through their controller timer block with the built-in
+  `NPWrite`/`NPExec` commands (the timer's function word binds it to the relay,
+  then the mode word forces on/off — verified on hardware), exposed as
+  **AUX1–4 mode** selects
   (`select.<name>_aux<n>_mode`) with options **Auto** (follow schedule), **On**
   (force on), and **Off** (force off). The live relay output is exposed as
   read-only **AUX1–4** binary sensors (`binary_sensor.<name>_aux<n>`). See the

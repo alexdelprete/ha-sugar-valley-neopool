@@ -214,16 +214,37 @@ SHIFT_HIDRO_SHUTDOWN_TEMP: Final = 8  # bits 8-15
 
 # Group 4b — register-based AUX relay control (replaces the Berry-only NPAux
 # commands). Each AUX relay has a 15-register timer block; the enable/mode word
-# at block-base +0 (MBV_TIMER_OFFMB_TIMER_ENABLE) drives the relay. Addresses
-# verified against @curzon01's xsns_83_neopool.ino (primary) and svasek's
-# python-neopool-modbus registers.py (secondary cross-check) — they agree. AUX
-# uses the "INT1" block. Driven with built-in NPWrite + NPExec (no Berry, and no
-# NPSave per toggle so a manual override does not wear the EEPROM and reverts on
-# power-cycle). Physical on/off echoes back in SENSOR NeoPool.Relay.Aux[n].
+# at block-base +0 (MBV_TIMER_OFFMB_TIMER_ENABLE) selects the working mode, and
+# the function word at block-base +11 (MBV_TIMER_OFFMB_TIMER_FUNCTION) binds the
+# timer to its physical relay. Addresses verified against @curzon01's
+# xsns_83_neopool.ino (primary) and svasek's python-neopool-modbus registers.py
+# (secondary cross-check) — they agree. AUX uses the "INT1" block. Driven with
+# built-in NPWrite + NPExec (no Berry, and no NPSave per toggle so a manual
+# override does not wear the EEPROM and reverts on power-cycle). Physical on/off
+# echoes back in SENSOR NeoPool.Relay.Aux[n].
+#
+# ON-DEVICE FINDING (2026-06-28): writing the mode word alone does NOT switch the
+# relay — the function word must also be set to bind the timer to the relay.
+# Verified on the owner's controller: all 4 AUX had mode=3 (ALWAYS_ON) but
+# function=0 and every relay stayed off; writing AUX4's function code (0x4000) +
+# NPExec turned the relay on, and clearing it turned it back off. So every mode
+# write must also (re)assert the function code.
 REG_AUX1_MODE: Final = 0x04AC  # MBF_PAR_TIMER_BLOCK_AUX1_INT1 +0
 REG_AUX2_MODE: Final = 0x04BB  # MBF_PAR_TIMER_BLOCK_AUX2_INT1 +0
 REG_AUX3_MODE: Final = 0x04CA  # MBF_PAR_TIMER_BLOCK_AUX3_INT1 +0
 REG_AUX4_MODE: Final = 0x04D9  # MBF_PAR_TIMER_BLOCK_AUX4_INT1 +0
+
+# Function word (timer-block +11) and the per-AUX function code that binds the
+# timer to its physical relay (MBV_PAR_CTIMER_FCT_RELAY* bit). Without this the
+# mode word is inert (see on-device finding above).
+REG_AUX1_FUNCTION: Final = 0x04B7  # MBF_PAR_TIMER_BLOCK_AUX1_INT1 +11
+REG_AUX2_FUNCTION: Final = 0x04C6  # MBF_PAR_TIMER_BLOCK_AUX2_INT1 +11
+REG_AUX3_FUNCTION: Final = 0x04D5  # MBF_PAR_TIMER_BLOCK_AUX3_INT1 +11
+REG_AUX4_FUNCTION: Final = 0x04E4  # MBF_PAR_TIMER_BLOCK_AUX4_INT1 +11
+AUX1_FUNCTION_CODE: Final = 0x0800  # MBV_PAR_CTIMER_FCT_RELAY (AUX1)
+AUX2_FUNCTION_CODE: Final = 0x1000  # AUX2
+AUX3_FUNCTION_CODE: Final = 0x2000  # AUX3
+AUX4_FUNCTION_CODE: Final = 0x4000  # AUX4
 
 # Timer enable/mode values (MBV_PAR_CTIMER_*). The user-facing AUX subset is
 # auto/on/off; disabled(0) and linked(2) are intentionally not exposed.
@@ -286,6 +307,10 @@ CONFIG_REGISTERS: Final[tuple[int, ...]] = (
     REG_AUX2_MODE,
     REG_AUX3_MODE,
     REG_AUX4_MODE,
+    REG_AUX1_FUNCTION,
+    REG_AUX2_FUNCTION,
+    REG_AUX3_FUNCTION,
+    REG_AUX4_FUNCTION,
 )
 
 # Group 2 number entity bounds (raw register units).
