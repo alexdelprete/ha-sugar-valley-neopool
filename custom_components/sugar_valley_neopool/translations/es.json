@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Actualizar IDs de entidades para coincidir con el nuevo nombre del dispositivo (ej. sensor.neopool_ph → sensor.mipiscina_ph)",
           "discovery_prefix": "El topic MQTT usado por su dispositivo Tasmota"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Entidades NeoPool detectadas",
+        "description": "Hemos detectado entidades YAML de NeoPool:\n\n• **Prefijo de ID único**: `{prefix}`\n• **Entidades encontradas**: {entity_count}\n• **Confianza**: {confidence}%\n\n**Patrones coincidentes**:\n{matched_signatures}\n\n---\n\nSi es correcto, marca la casilla de abajo para continuar.\nSi no, desmárcala para introducir un prefijo personalizado manualmente.",
+        "data": {
+          "confirm_detection": "Sí, es correcto: continuar con la migración"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Script de recuperación (opcional)",
           "enable_repair_notification": "Habilitar notificaciones de reparación",
           "failures_threshold": "Fallos antes de notificación (1-10)",
-          "offline_timeout": "Tiempo de espera sin conexión (segundos)"
+          "offline_timeout": "Tiempo de espera sin conexión (segundos)",
+          "connection_error_rate_threshold": "Umbral de tasa de errores de conexión (%)"
         },
         "data_description": {
           "recovery_script": "Script a ejecutar cuando el dispositivo está fuera de línea demasiado tiempo",
           "enable_repair_notification": "Crear un problema de reparación cuando el dispositivo se desconecta",
           "failures_threshold": "Número de mensajes LWT fuera de línea consecutivos antes de activar las notificaciones",
-          "offline_timeout": "Cuánto tiempo debe estar el dispositivo fuera de línea antes de activar las notificaciones"
+          "offline_timeout": "Cuánto tiempo debe estar el dispositivo fuera de línea antes de activar las notificaciones",
+          "connection_error_rate_threshold": "Porcentaje de errores de Modbus (durante una ventana móvil de 10 minutos) por encima del cual se activa `binary_sensor.connection_problem`"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Hora del controlador"
+      },
+      "connection_error_rate": {
+        "name": "Tasa de errores de conexión"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hidrólisis controlada por Redox"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtración"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Problema de conexión"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtración"
+      },
+      "auto_time_sync": {
+        "name": "Sincronización automática de hora"
+      },
+      "uv_mode": {
+        "name": "Modo UV"
+      },
+      "climate_mode": {
+        "name": "Modo climatización"
+      },
+      "smart_antifreeze": {
+        "name": "Anticongelación inteligente"
+      },
+      "hydro_cover_reduction": {
+        "name": "Reducción de hidrólisis con cubierta"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Apagado de hidrólisis por temperatura"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Modo boost"
+      },
+      "aux1_mode": {
+        "name": "Modo AUX1",
+        "state": {
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "aux2_mode": {
+        "name": "Modo AUX2",
+        "state": {
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "aux3_mode": {
+        "name": "Modo AUX3",
+        "state": {
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "aux4_mode": {
+        "name": "Modo AUX4",
+        "state": {
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Consigna de cloro"
+      },
+      "heating_temp": {
+        "name": "Temperatura de calefacción"
+      },
+      "intelligent_min_time": {
+        "name": "Tiempo mínimo de filtración inteligente"
+      },
+      "ph_activation_delay": {
+        "name": "Retardo de activación de la bomba de pH"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Reducción de hidrólisis con cubierta"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Temperatura de apagado de hidrólisis"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Sincronizar hora del controlador"
+      },
+      "reset_cell_runtime": {
+        "name": "Restablecer tiempo de uso de la célula"
       }
     },
     "light": {
       "light": {
         "name": "Luz"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Configurar temporizador",
+      "description": "Configura uno de los temporizadores integrados del controlador (filtración, luz o AUX). La programación se ejecuta en el propio controlador, de forma independiente de Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "El controlador NeoPool que se va a configurar."
+        },
+        "timer": {
+          "name": "Temporizador",
+          "description": "Qué temporizador del controlador escribir."
+        },
+        "start": {
+          "name": "Inicio",
+          "description": "Hora del día en que se enciende el relé."
+        },
+        "stop": {
+          "name": "Parada",
+          "description": "Hora del día en que se apaga el relé (la duración de funcionamiento se calcula a partir del inicio y la parada)."
+        },
+        "period": {
+          "name": "Período de repetición",
+          "description": "Con qué frecuencia se repite el temporizador, en segundos (86400 = cada día)."
+        },
+        "mode": {
+          "name": "Modo",
+          "description": "Modo de funcionamiento del temporizador: Automático ejecuta la programación, Encendido fuerza el relé encendido, Apagado lo fuerza apagado, Desactivado apaga el temporizador."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Temporizador de filtración 1",
+        "filtration2": "Temporizador de filtración 2",
+        "filtration3": "Temporizador de filtración 3",
+        "light": "Luz",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Desactivado",
+        "auto": "Automático",
+        "on": "Encendido",
+        "off": "Apagado"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "No se encontró ningún controlador NeoPool para el dispositivo {device_id}."
     }
   }
 }

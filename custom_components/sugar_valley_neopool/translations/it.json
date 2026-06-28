@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Aggiorna gli ID delle entità per corrispondere al nuovo nome del dispositivo (es. sensor.neopool_ph → sensor.miapiscina_ph)",
           "discovery_prefix": "Il topic MQTT usato dal dispositivo Tasmota"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Entità NeoPool rilevate",
+        "description": "Abbiamo rilevato delle entità YAML NeoPool:\n\n• **Prefisso ID univoco**: `{prefix}`\n• **Entità trovate**: {entity_count}\n• **Affidabilità**: {confidence}%\n\n**Pattern corrispondenti**:\n{matched_signatures}\n\n---\n\nSe è corretto, seleziona la casella qui sotto per procedere.\nIn caso contrario, deselezionala per inserire manualmente un prefisso personalizzato.",
+        "data": {
+          "confirm_detection": "Sì, è corretto - procedi con la migrazione"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Script di ripristino (opzionale)",
           "enable_repair_notification": "Abilita notifiche di riparazione",
           "failures_threshold": "Fallimenti prima della notifica (1-10)",
-          "offline_timeout": "Timeout offline (secondi)"
+          "offline_timeout": "Timeout offline (secondi)",
+          "connection_error_rate_threshold": "Soglia del tasso di errori di connessione (%)"
         },
         "data_description": {
           "recovery_script": "Script da eseguire quando il dispositivo è offline troppo a lungo",
           "enable_repair_notification": "Crea un problema di riparazione quando il dispositivo va offline",
           "failures_threshold": "Numero di messaggi LWT offline consecutivi prima di attivare le notifiche",
-          "offline_timeout": "Quanto tempo il dispositivo deve essere offline prima di attivare le notifiche"
+          "offline_timeout": "Quanto tempo il dispositivo deve essere offline prima di attivare le notifiche",
+          "connection_error_rate_threshold": "Percentuale di errori Modbus (su una finestra mobile di 10 minuti) oltre la quale `binary_sensor.connection_problem` si attiva"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Ora del controller"
+      },
+      "connection_error_rate": {
+        "name": "Tasso di errori di connessione"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Idrolisi controllata da Redox"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtrazione"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Problema di connessione"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtrazione"
+      },
+      "auto_time_sync": {
+        "name": "Sincronizzazione automatica dell'ora"
+      },
+      "uv_mode": {
+        "name": "Modalità UV"
+      },
+      "climate_mode": {
+        "name": "Modalità climatizzazione"
+      },
+      "smart_antifreeze": {
+        "name": "Antigelo intelligente"
+      },
+      "hydro_cover_reduction": {
+        "name": "Riduzione idrolisi con copertura"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Spegnimento idrolisi per temperatura"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Modalità boost"
+      },
+      "aux1_mode": {
+        "name": "Modalità AUX1",
+        "state": {
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "aux2_mode": {
+        "name": "Modalità AUX2",
+        "state": {
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "aux3_mode": {
+        "name": "Modalità AUX3",
+        "state": {
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "aux4_mode": {
+        "name": "Modalità AUX4",
+        "state": {
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Setpoint cloro"
+      },
+      "heating_temp": {
+        "name": "Temperatura di riscaldamento"
+      },
+      "intelligent_min_time": {
+        "name": "Tempo minimo di filtrazione intelligente"
+      },
+      "ph_activation_delay": {
+        "name": "Ritardo di attivazione pompa pH"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Riduzione idrolisi con copertura"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Temperatura di spegnimento idrolisi"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Sincronizza ora del controller"
+      },
+      "reset_cell_runtime": {
+        "name": "Azzera ore di funzionamento cella"
       }
     },
     "light": {
       "light": {
         "name": "Luce"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Imposta timer",
+      "description": "Configura uno dei timer integrati del controller (filtrazione, luce o AUX). La pianificazione viene eseguita sul controller stesso, indipendentemente da Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "Il controller NeoPool da configurare."
+        },
+        "timer": {
+          "name": "Timer",
+          "description": "Quale timer del controller scrivere."
+        },
+        "start": {
+          "name": "Avvio",
+          "description": "Ora del giorno in cui il relè si accende."
+        },
+        "stop": {
+          "name": "Arresto",
+          "description": "Ora del giorno in cui il relè si spegne (la durata di funzionamento viene calcolata da avvio e arresto)."
+        },
+        "period": {
+          "name": "Periodo di ripetizione",
+          "description": "Frequenza con cui il timer si ripete, in secondi (86400 = ogni giorno)."
+        },
+        "mode": {
+          "name": "Modalità",
+          "description": "Modalità di funzionamento del timer: Auto esegue la pianificazione, Acceso forza l'accensione del relè, Spento lo forza spento, Disabilitato spegne il timer."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Timer filtrazione 1",
+        "filtration2": "Timer filtrazione 2",
+        "filtration3": "Timer filtrazione 3",
+        "light": "Luce",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Disabilitato",
+        "auto": "Auto",
+        "on": "Acceso",
+        "off": "Spento"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Nessun controller NeoPool trovato per il dispositivo {device_id}."
     }
   }
 }

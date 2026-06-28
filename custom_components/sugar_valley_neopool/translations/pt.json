@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Atualizar IDs de entidades para corresponder ao novo nome do dispositivo (ex: sensor.neopool_ph → sensor.minhapiscina_ph)",
           "discovery_prefix": "O tópico MQTT utilizado pelo seu dispositivo Tasmota"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Entidades NeoPool detetadas",
+        "description": "Detetámos entidades YAML do NeoPool:\n\n• **Prefixo de ID único**: `{prefix}`\n• **Entidades encontradas**: {entity_count}\n• **Confiança**: {confidence}%\n\n**Padrões correspondentes**:\n{matched_signatures}\n\n---\n\nSe estiver correto, marque a caixa abaixo para continuar.\nCaso contrário, desmarque-a para introduzir um prefixo personalizado manualmente.",
+        "data": {
+          "confirm_detection": "Sim, está correto - prosseguir com a migração"
+        }
       }
     },
     "error": {
@@ -89,7 +96,8 @@
       "cannot_connect": "Não foi possível receber mensagens deste tópico MQTT. Verifique o nome do tópico e se o seu dispositivo está online. Se o tópico estiver correto, o dispositivo pode publicar telemetria com pouca frequência — defina 'TelePeriod 10' no console do Tasmota e tente novamente.",
       "no_entities_found": "Nenhuma entidade migrável encontrada com este prefixo. Verifique que:\n1. O prefixo corresponde à sua configuração YAML\n2. As entidades existem no Home Assistant\n3. As entidades ainda não pertencem a esta integração",
       "confirmation_required": "Deve marcar a caixa de confirmação para prosseguir com a migração.",
-      "nodeid_configuration_failed": "Falha ao configurar o NodeID no dispositivo."
+      "nodeid_configuration_failed": "Falha ao configurar o NodeID no dispositivo.",
+      "yaml_still_active": "As entidades ainda estão ativas. Remova primeiro o pacote YAML e reinicie o Home Assistant."
     },
     "abort": {
       "already_configured": "Este dispositivo já está configurado",
@@ -108,13 +116,15 @@
           "recovery_script": "Script de recuperação (opcional)",
           "enable_repair_notification": "Ativar notificações de reparação",
           "failures_threshold": "Falhas antes da notificação (1-10)",
-          "offline_timeout": "Tempo limite offline (segundos)"
+          "offline_timeout": "Tempo limite offline (segundos)",
+          "connection_error_rate_threshold": "Limiar da taxa de erros de ligação (%)"
         },
         "data_description": {
           "recovery_script": "Script a executar quando o dispositivo está offline por muito tempo",
           "enable_repair_notification": "Criar um problema de reparação quando o dispositivo fica offline",
           "failures_threshold": "Número de mensagens LWT offline consecutivas antes de acionar notificações",
-          "offline_timeout": "Quanto tempo o dispositivo deve estar offline antes de acionar notificações"
+          "offline_timeout": "Quanto tempo o dispositivo deve estar offline antes de acionar notificações",
+          "connection_error_rate_threshold": "Percentagem de erros Modbus (numa janela móvel de 10 minutos) acima da qual `binary_sensor.connection_problem` é ativado"
         }
       }
     }
@@ -235,6 +245,9 @@
       },
       "controller_time": {
         "name": "Hora do controlador"
+      },
+      "connection_error_rate": {
+        "name": "Taxa de erros de ligação"
       }
     },
     "binary_sensor": {
@@ -303,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hidrólise controlada por Redox"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtração"
       },
       "aux1": {
         "name": "AUX1"
@@ -320,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Problema de ligação"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtração"
+      },
+      "auto_time_sync": {
+        "name": "Sincronização automática da hora"
+      },
+      "uv_mode": {
+        "name": "Modo UV"
+      },
+      "climate_mode": {
+        "name": "Modo de climatização"
+      },
+      "smart_antifreeze": {
+        "name": "Anticongelamento inteligente"
+      },
+      "hydro_cover_reduction": {
+        "name": "Redução de hidrólise com cobertura"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Desativação da hidrólise por temperatura"
       }
     },
     "select": {
@@ -331,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Modo Boost"
+      },
+      "aux1_mode": {
+        "name": "Modo AUX1",
+        "state": {
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "aux2_mode": {
+        "name": "Modo AUX2",
+        "state": {
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "aux3_mode": {
+        "name": "Modo AUX3",
+        "state": {
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "aux4_mode": {
+        "name": "Modo AUX4",
+        "state": {
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
       }
     },
     "number": {
@@ -351,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Setpoint de cloro"
+      },
+      "heating_temp": {
+        "name": "Temperatura de aquecimento"
+      },
+      "intelligent_min_time": {
+        "name": "Tempo mínimo de filtração inteligente"
+      },
+      "ph_activation_delay": {
+        "name": "Atraso de ativação da bomba de pH"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Redução de hidrólise com cobertura"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Temperatura de desativação da hidrólise"
       }
     },
     "button": {
@@ -359,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Sincronizar hora do controlador"
+      },
+      "reset_cell_runtime": {
+        "name": "Repor tempo de funcionamento da célula"
       }
     },
     "light": {
       "light": {
         "name": "Luz"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Definir temporizador",
+      "description": "Configura um dos temporizadores integrados do controlador (filtração, luz ou AUX). O agendamento é executado no próprio controlador, independentemente do Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Dispositivo",
+          "description": "O controlador NeoPool a configurar."
+        },
+        "timer": {
+          "name": "Temporizador",
+          "description": "Qual o temporizador do controlador a escrever."
+        },
+        "start": {
+          "name": "Início",
+          "description": "Hora do dia em que o relé liga."
+        },
+        "stop": {
+          "name": "Fim",
+          "description": "Hora do dia em que o relé desliga (a duração de funcionamento é derivada do início e do fim)."
+        },
+        "period": {
+          "name": "Período de repetição",
+          "description": "Frequência com que o temporizador se repete, em segundos (86400 = todos os dias)."
+        },
+        "mode": {
+          "name": "Modo",
+          "description": "Modo de funcionamento do temporizador: Automático executa o agendamento, Ligado força o relé ligado, Desligado força-o desligado, Desativado desliga o temporizador."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Temporizador de filtração 1",
+        "filtration2": "Temporizador de filtração 2",
+        "filtration3": "Temporizador de filtração 3",
+        "light": "Luz",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Desativado",
+        "auto": "Automático",
+        "on": "Ligado",
+        "off": "Desligado"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Nenhum controlador NeoPool encontrado para o dispositivo {device_id}."
     }
   }
 }

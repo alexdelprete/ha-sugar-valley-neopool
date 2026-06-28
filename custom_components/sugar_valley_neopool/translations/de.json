@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Entitäts-IDs aktualisieren, um den neuen Gerätenamen widerzuspiegeln (z.B. sensor.neopool_ph → sensor.mypool_ph)",
           "discovery_prefix": "Das MQTT-Topic Ihres Tasmota-Geräts"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Erkannte NeoPool-Entitäten",
+        "description": "Wir haben NeoPool-YAML-Entitäten erkannt:\n\n• **Präfix der eindeutigen ID**: `{prefix}`\n• **Gefundene Entitäten**: {entity_count}\n• **Konfidenz**: {confidence}%\n\n**Übereinstimmende Muster**:\n{matched_signatures}\n\n---\n\nWenn dies korrekt ist, aktivieren Sie das untenstehende Kontrollkästchen, um fortzufahren.\nFalls nicht, deaktivieren Sie es, um ein benutzerdefiniertes Präfix manuell einzugeben.",
+        "data": {
+          "confirm_detection": "Ja, das ist korrekt – mit der Migration fortfahren"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Wiederherstellungsskript (optional)",
           "enable_repair_notification": "Reparaturbenachrichtigungen aktivieren",
           "failures_threshold": "Fehler vor Benachrichtigung (1-10)",
-          "offline_timeout": "Offline-Timeout (Sekunden)"
+          "offline_timeout": "Offline-Timeout (Sekunden)",
+          "connection_error_rate_threshold": "Schwellenwert für Verbindungsfehlerrate (%)"
         },
         "data_description": {
           "recovery_script": "Skript, das ausgeführt wird, wenn das Gerät zu lange offline ist",
           "enable_repair_notification": "Erstellt ein Reparaturproblem, wenn das Gerät offline geht",
           "failures_threshold": "Anzahl aufeinanderfolgender LWT-Offline-Nachrichten vor Auslösung der Benachrichtigungen",
-          "offline_timeout": "Wie lange das Gerät offline sein muss, bevor Benachrichtigungen ausgelöst werden"
+          "offline_timeout": "Wie lange das Gerät offline sein muss, bevor Benachrichtigungen ausgelöst werden",
+          "connection_error_rate_threshold": "Modbus-Fehlerprozentsatz (über ein gleitendes 10-Minuten-Fenster), oberhalb dessen `binary_sensor.connection_problem` eingeschaltet wird"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Controller-Zeit"
+      },
+      "connection_error_rate": {
+        "name": "Verbindungsfehlerrate"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hydrolyse Redox-gesteuert"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtration"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Verbindungsproblem"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtration"
+      },
+      "auto_time_sync": {
+        "name": "Automatische Zeitsynchronisierung"
+      },
+      "uv_mode": {
+        "name": "UV-Modus"
+      },
+      "climate_mode": {
+        "name": "Klimamodus"
+      },
+      "smart_antifreeze": {
+        "name": "Intelligenter Frostschutz"
+      },
+      "hydro_cover_reduction": {
+        "name": "Hydrolyse-Abdeckungsreduzierung"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Hydrolyse-Temperaturabschaltung"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Boost-Modus"
+      },
+      "aux1_mode": {
+        "name": "AUX1 Modus",
+        "state": {
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "aux2_mode": {
+        "name": "AUX2 Modus",
+        "state": {
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "aux3_mode": {
+        "name": "AUX3 Modus",
+        "state": {
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "aux4_mode": {
+        "name": "AUX4 Modus",
+        "state": {
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Chlor-Sollwert"
+      },
+      "heating_temp": {
+        "name": "Heiztemperatur"
+      },
+      "intelligent_min_time": {
+        "name": "Intelligente minimale Filterzeit"
+      },
+      "ph_activation_delay": {
+        "name": "pH-Pumpen-Aktivierungsverzögerung"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Hydrolyse-Abdeckungsreduzierung"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Hydrolyse-Abschalttemperatur"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Controller-Zeit synchronisieren"
+      },
+      "reset_cell_runtime": {
+        "name": "Zellenlaufzeit zurücksetzen"
       }
     },
     "light": {
       "light": {
         "name": "Licht"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Timer einstellen",
+      "description": "Konfiguriert einen der integrierten Timer des Controllers (Filtration, Licht oder AUX). Der Zeitplan läuft auf dem Controller selbst, unabhängig von Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Gerät",
+          "description": "Der zu konfigurierende NeoPool-Controller."
+        },
+        "timer": {
+          "name": "Timer",
+          "description": "Welcher Controller-Timer geschrieben werden soll."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Uhrzeit, zu der das Relais einschaltet."
+        },
+        "stop": {
+          "name": "Stopp",
+          "description": "Uhrzeit, zu der das Relais ausschaltet (die Laufzeit wird aus Start und Stopp abgeleitet)."
+        },
+        "period": {
+          "name": "Wiederholungsintervall",
+          "description": "Wie oft sich der Timer wiederholt, in Sekunden (86400 = täglich)."
+        },
+        "mode": {
+          "name": "Modus",
+          "description": "Arbeitsmodus des Timers: Auto führt den Zeitplan aus, Ein schaltet das Relais zwangsweise ein, Aus schaltet es zwangsweise aus, Deaktiviert schaltet den Timer aus."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Filtrations-Timer 1",
+        "filtration2": "Filtrations-Timer 2",
+        "filtration3": "Filtrations-Timer 3",
+        "light": "Licht",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Deaktiviert",
+        "auto": "Auto",
+        "on": "Ein",
+        "off": "Aus"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Kein NeoPool-Controller für Gerät {device_id} gefunden."
     }
   }
 }

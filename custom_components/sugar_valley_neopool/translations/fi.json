@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Päivitä entiteetti-ID:t vastaamaan uutta laitteen nimeä (esim. sensor.neopool_ph → sensor.omaallas_ph)",
           "discovery_prefix": "Tasmota-laitteesi käyttämä MQTT-aihe"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Havaitut NeoPool-entiteetit",
+        "description": "Havaitsimme NeoPool YAML -entiteettejä:\n\n• **Yksilöllisen tunnuksen etuliite**: `{prefix}`\n• **Löytyneet entiteetit**: {entity_count}\n• **Luotettavuus**: {confidence} %\n\n**Vastaavat mallit**:\n{matched_signatures}\n\n---\n\nJos tämä on oikein, jatka valitsemalla alla oleva valintaruutu.\nJos ei, poista valinta ja syötä etuliite manuaalisesti.",
+        "data": {
+          "confirm_detection": "Kyllä, tämä on oikein – jatka siirtoa"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Palautusskripti (valinnainen)",
           "enable_repair_notification": "Ota korjausilmoitukset käyttöön",
           "failures_threshold": "Virheet ennen ilmoitusta (1-10)",
-          "offline_timeout": "Offline-aikakatkaisu (sekuntia)"
+          "offline_timeout": "Offline-aikakatkaisu (sekuntia)",
+          "connection_error_rate_threshold": "Yhteysvirheiden raja (%)"
         },
         "data_description": {
           "recovery_script": "Skripti, joka suoritetaan kun laite on ollut liian kauan offline-tilassa",
           "enable_repair_notification": "Luo korjausongelma kun laite menee offline-tilaan",
           "failures_threshold": "Peräkkäisten LWT offline-viestien määrä ennen ilmoitusten laukaisua",
-          "offline_timeout": "Kuinka kauan laitteen on oltava offline-tilassa ennen ilmoitusten laukaisua"
+          "offline_timeout": "Kuinka kauan laitteen on oltava offline-tilassa ennen ilmoitusten laukaisua",
+          "connection_error_rate_threshold": "Modbus-virheiden prosenttiosuus (liukuvan 10 minuutin ikkunan aikana), jonka ylittyessä `binary_sensor.connection_problem` kytkeytyy päälle"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Ohjaimen aika"
+      },
+      "connection_error_rate": {
+        "name": "Yhteysvirheiden osuus"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hydrolyysin Redox-ohjattu"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Suodatus"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Yhteysongelma"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Suodatus"
+      },
+      "auto_time_sync": {
+        "name": "Automaattinen ajan synkronointi"
+      },
+      "uv_mode": {
+        "name": "UV-tila"
+      },
+      "climate_mode": {
+        "name": "Ilmastointitila"
+      },
+      "smart_antifreeze": {
+        "name": "Älykäs jäätymisenesto"
+      },
+      "hydro_cover_reduction": {
+        "name": "Elektrolyysin vähennys peitteellä"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Elektrolyysin lämpötilakatkaisu"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Tehostustila"
+      },
+      "aux1_mode": {
+        "name": "AUX1-tila",
+        "state": {
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "aux2_mode": {
+        "name": "AUX2-tila",
+        "state": {
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "aux3_mode": {
+        "name": "AUX3-tila",
+        "state": {
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "aux4_mode": {
+        "name": "AUX4-tila",
+        "state": {
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Kloorin asetusarvo"
+      },
+      "heating_temp": {
+        "name": "Lämmityslämpötila"
+      },
+      "intelligent_min_time": {
+        "name": "Älykäs vähimmäissuodatusaika"
+      },
+      "ph_activation_delay": {
+        "name": "pH-pumpun käynnistysviive"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Elektrolyysin vähennys peitteellä"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Elektrolyysin katkaisulämpötila"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Synkronoi ohjaimen aika"
+      },
+      "reset_cell_runtime": {
+        "name": "Nollaa kennon käyttöaika"
       }
     },
     "light": {
       "light": {
         "name": "Valo"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Aseta ajastin",
+      "description": "Määrittää yhden ohjaimen sisäänrakennetuista ajastimista (suodatus, valo tai AUX). Aikataulu suoritetaan ohjaimessa itsessään riippumatta Home Assistant -järjestelmästä.",
+      "fields": {
+        "device_id": {
+          "name": "Laite",
+          "description": "Määritettävä NeoPool-ohjain."
+        },
+        "timer": {
+          "name": "Ajastin",
+          "description": "Mikä ohjaimen ajastin kirjoitetaan."
+        },
+        "start": {
+          "name": "Aloitus",
+          "description": "Vuorokaudenaika, jolloin rele kytkeytyy päälle."
+        },
+        "stop": {
+          "name": "Lopetus",
+          "description": "Vuorokaudenaika, jolloin rele kytkeytyy pois (käyntiaika johdetaan aloituksesta ja lopetuksesta)."
+        },
+        "period": {
+          "name": "Toistojakso",
+          "description": "Kuinka usein ajastin toistuu, sekunteina (86400 = joka päivä)."
+        },
+        "mode": {
+          "name": "Tila",
+          "description": "Ajastimen toimintatila: Automaattinen suorittaa aikataulun, Päällä pakottaa releen päälle, Pois pakottaa sen pois, Poistettu käytöstä kytkee ajastimen pois."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Suodatusajastin 1",
+        "filtration2": "Suodatusajastin 2",
+        "filtration3": "Suodatusajastin 3",
+        "light": "Valo",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Poistettu käytöstä",
+        "auto": "Automaattinen",
+        "on": "Päällä",
+        "off": "Pois"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Laitteelle {device_id} ei löytynyt NeoPool-ohjainta."
     }
   }
 }

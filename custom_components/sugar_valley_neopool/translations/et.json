@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Uuenda olemi ID-d vastama uuele seadme nimele (nt sensor.neopool_ph → sensor.minubassein_ph)",
           "discovery_prefix": "MQTT teema, mida kasutab teie Tasmota seade"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Tuvastatud NeoPool olemid",
+        "description": "Tuvastasime NeoPool YAML olemid:\n\n• **Kordumatu ID eesliide**: `{prefix}`\n• **Leitud olemeid**: {entity_count}\n• **Kindlus**: {confidence}%\n\n**Sobivad mustrid**:\n{matched_signatures}\n\n---\n\nKui see on õige, märgi allolev ruut, et jätkata.\nKui mitte, eemalda märge, et sisestada kohandatud eesliide käsitsi.",
+        "data": {
+          "confirm_detection": "Jah, see on õige - jätka migreerimisega"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Taastamise skript (valikuline)",
           "enable_repair_notification": "Luba paranduse teavitused",
           "failures_threshold": "Tõrked enne teavitust (1-10)",
-          "offline_timeout": "Võrguühenduseta aegumine (sekundites)"
+          "offline_timeout": "Võrguühenduseta aegumine (sekundites)",
+          "connection_error_rate_threshold": "Ühenduse veamäära lävi (%)"
         },
         "data_description": {
           "recovery_script": "Skript, mida käivitada kui seade on liiga kaua võrguühenduseta",
           "enable_repair_notification": "Loo paranduse probleem kui seade läheb võrguühenduseta",
           "failures_threshold": "Järjestikuste LWT võrguühenduseta sõnumite arv enne teavituste käivitamist",
-          "offline_timeout": "Kui kaua peab seade olema võrguühenduseta enne teavituste käivitamist"
+          "offline_timeout": "Kui kaua peab seade olema võrguühenduseta enne teavituste käivitamist",
+          "connection_error_rate_threshold": "Modbus vigade protsent (libiseva 10-minutilise akna jooksul), millest kõrgemal `binary_sensor.connection_problem` lülitub sisse"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Kontrolleri aeg"
+      },
+      "connection_error_rate": {
+        "name": "Ühenduse veamäär"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hüdrolüüsi Redox-juhitud"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtreerimine"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Ühenduse probleem"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtreerimine"
+      },
+      "auto_time_sync": {
+        "name": "Automaatne aja sünkroonimine"
+      },
+      "uv_mode": {
+        "name": "UV režiim"
+      },
+      "climate_mode": {
+        "name": "Kliimarežiim"
+      },
+      "smart_antifreeze": {
+        "name": "Nutikas külmumiskaitse"
+      },
+      "hydro_cover_reduction": {
+        "name": "Elektrolüüsi vähendamine katte korral"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Elektrolüüsi väljalülitus temperatuuri järgi"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Võimenduse režiim"
+      },
+      "aux1_mode": {
+        "name": "AUX1 režiim",
+        "state": {
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "aux2_mode": {
+        "name": "AUX2 režiim",
+        "state": {
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "aux3_mode": {
+        "name": "AUX3 režiim",
+        "state": {
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "aux4_mode": {
+        "name": "AUX4 režiim",
+        "state": {
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Kloori sihtväärtus"
+      },
+      "heating_temp": {
+        "name": "Kütte temperatuur"
+      },
+      "intelligent_min_time": {
+        "name": "Intelligentne minimaalne filtreerimisaeg"
+      },
+      "ph_activation_delay": {
+        "name": "pH pumba aktiveerimise viivitus"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Elektrolüüsi vähendamine katte korral"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Elektrolüüsi väljalülitustemperatuur"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Sünkroniseeri kontrolleri aeg"
+      },
+      "reset_cell_runtime": {
+        "name": "Lähtesta elemendi tööaeg"
       }
     },
     "light": {
       "light": {
         "name": "Valgus"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Määra taimer",
+      "description": "Seadistab ühe kontrolleri sisseehitatud taimeritest (filtreerimine, valgustus või AUX). Ajakava töötab kontrolleris endas, sõltumatult Home Assistant'ist.",
+      "fields": {
+        "device_id": {
+          "name": "Seade",
+          "description": "Seadistatav NeoPool kontroller."
+        },
+        "timer": {
+          "name": "Taimer",
+          "description": "Milline kontrolleri taimer kirjutada."
+        },
+        "start": {
+          "name": "Algus",
+          "description": "Kellaaeg, mil relee lülitub sisse."
+        },
+        "stop": {
+          "name": "Lõpp",
+          "description": "Kellaaeg, mil relee lülitub välja (tööaeg arvutatakse algus- ja lõpuaja põhjal)."
+        },
+        "period": {
+          "name": "Kordusperiood",
+          "description": "Kui sageli taimer kordub, sekundites (86400 = iga päev)."
+        },
+        "mode": {
+          "name": "Režiim",
+          "description": "Taimeri töörežiim: Automaatne käivitab ajakava, Sees sunnib relee sisse, Väljas sunnib selle välja, Keelatud lülitab taimeri välja."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Filtreerimistaimer 1",
+        "filtration2": "Filtreerimistaimer 2",
+        "filtration3": "Filtreerimistaimer 3",
+        "light": "Valgustus",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Keelatud",
+        "auto": "Automaatne",
+        "on": "Sees",
+        "off": "Väljas"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Seadme {device_id} jaoks NeoPool kontrollerit ei leitud."
     }
   }
 }

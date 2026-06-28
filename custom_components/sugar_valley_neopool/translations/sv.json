@@ -81,6 +81,13 @@
           "regenerate_entity_ids": "Uppdatera entitets-ID:n för att matcha det nya enhetsnamnet (t.ex. sensor.neopool_ph → sensor.minpool_ph)",
           "discovery_prefix": "MQTT-ämnet som används av din Tasmota-enhet"
         }
+      },
+      "yaml_detect_confirm": {
+        "title": "Identifierade NeoPool-enheter",
+        "description": "Vi identifierade NeoPool YAML-entiteter:\n\n• **Prefix för unikt ID**: `{prefix}`\n• **Entiteter hittade**: {entity_count}\n• **Tillförlitlighet**: {confidence}%\n\n**Matchade mönster**:\n{matched_signatures}\n\n---\n\nOm detta stämmer, markera rutan nedan för att fortsätta.\nOm inte, avmarkera den för att ange ett eget prefix manuellt.",
+        "data": {
+          "confirm_detection": "Ja, detta stämmer – fortsätt med migreringen"
+        }
       }
     },
     "error": {
@@ -109,13 +116,15 @@
           "recovery_script": "Återställningsskript (valfritt)",
           "enable_repair_notification": "Aktivera reparationsaviseringar",
           "failures_threshold": "Fel innan avisering (1-10)",
-          "offline_timeout": "Offline-timeout (sekunder)"
+          "offline_timeout": "Offline-timeout (sekunder)",
+          "connection_error_rate_threshold": "Tröskel för anslutningsfelfrekvens (%)"
         },
         "data_description": {
           "recovery_script": "Skript att köra när enheten är offline för länge",
           "enable_repair_notification": "Skapa ett reparationsproblem när enheten går offline",
           "failures_threshold": "Antal på varandra följande LWT offline-meddelanden innan aviseringar utlöses",
-          "offline_timeout": "Hur länge enheten måste vara offline innan aviseringar utlöses"
+          "offline_timeout": "Hur länge enheten måste vara offline innan aviseringar utlöses",
+          "connection_error_rate_threshold": "Modbus-felprocent (över ett rullande 10-minutersfönster) över vilken `binary_sensor.connection_problem` aktiveras"
         }
       }
     }
@@ -236,6 +245,9 @@
       },
       "controller_time": {
         "name": "Styrenhetens tid"
+      },
+      "connection_error_rate": {
+        "name": "Anslutningsfelfrekvens"
       }
     },
     "binary_sensor": {
@@ -304,11 +316,6 @@
       },
       "hydrolysis_redox_controlled": {
         "name": "Hydrolys Redox-styrd"
-      }
-    },
-    "switch": {
-      "filtration": {
-        "name": "Filtrering"
       },
       "aux1": {
         "name": "AUX1"
@@ -321,6 +328,32 @@
       },
       "aux4": {
         "name": "AUX4"
+      },
+      "connection_problem": {
+        "name": "Anslutningsproblem"
+      }
+    },
+    "switch": {
+      "filtration": {
+        "name": "Filtrering"
+      },
+      "auto_time_sync": {
+        "name": "Automatisk tidssynkronisering"
+      },
+      "uv_mode": {
+        "name": "UV-läge"
+      },
+      "climate_mode": {
+        "name": "Klimatläge"
+      },
+      "smart_antifreeze": {
+        "name": "Smart frostskydd"
+      },
+      "hydro_cover_reduction": {
+        "name": "Hydrolys täckreducering"
+      },
+      "hydro_temp_shutdown": {
+        "name": "Hydrolys temperaturavstängning"
       }
     },
     "select": {
@@ -332,6 +365,38 @@
       },
       "boost_mode": {
         "name": "Boostläge"
+      },
+      "aux1_mode": {
+        "name": "AUX1-läge",
+        "state": {
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "aux2_mode": {
+        "name": "AUX2-läge",
+        "state": {
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "aux3_mode": {
+        "name": "AUX3-läge",
+        "state": {
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "aux4_mode": {
+        "name": "AUX4-läge",
+        "state": {
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
       }
     },
     "number": {
@@ -352,6 +417,21 @@
       },
       "chlorine_setpoint": {
         "name": "Klorbörvärde"
+      },
+      "heating_temp": {
+        "name": "Uppvärmningstemperatur"
+      },
+      "intelligent_min_time": {
+        "name": "Intelligent minsta filtreringstid"
+      },
+      "ph_activation_delay": {
+        "name": "pH-pump aktiveringsfördröjning"
+      },
+      "hydro_cover_reduction_pct": {
+        "name": "Hydrolys täckreducering"
+      },
+      "hydro_shutdown_temp": {
+        "name": "Hydrolys avstängningstemperatur"
       }
     },
     "button": {
@@ -360,12 +440,74 @@
       },
       "sync_controller_time": {
         "name": "Synkronisera styrenhetens tid"
+      },
+      "reset_cell_runtime": {
+        "name": "Återställ cellens drifttid"
       }
     },
     "light": {
       "light": {
         "name": "Ljus"
       }
+    }
+  },
+  "services": {
+    "set_timer": {
+      "name": "Ställ in timer",
+      "description": "Konfigurerar en av styrenhetens inbyggda timrar (filtrering, ljus eller AUX). Schemat körs på själva styrenheten, oberoende av Home Assistant.",
+      "fields": {
+        "device_id": {
+          "name": "Enhet",
+          "description": "NeoPool-styrenheten som ska konfigureras."
+        },
+        "timer": {
+          "name": "Timer",
+          "description": "Vilken styrenhetstimer som ska skrivas."
+        },
+        "start": {
+          "name": "Start",
+          "description": "Tid på dygnet då reläet slås på."
+        },
+        "stop": {
+          "name": "Stopp",
+          "description": "Tid på dygnet då reläet slås av (drifttiden härleds från start och stopp)."
+        },
+        "period": {
+          "name": "Upprepningsperiod",
+          "description": "Hur ofta timern upprepas, i sekunder (86400 = varje dag)."
+        },
+        "mode": {
+          "name": "Läge",
+          "description": "Timerns arbetsläge: Auto kör schemat, På tvingar reläet på, Av tvingar det av, Inaktiverad stänger av timern."
+        }
+      }
+    }
+  },
+  "selector": {
+    "timer": {
+      "options": {
+        "filtration1": "Filtreringstimer 1",
+        "filtration2": "Filtreringstimer 2",
+        "filtration3": "Filtreringstimer 3",
+        "light": "Ljus",
+        "aux1": "AUX1",
+        "aux2": "AUX2",
+        "aux3": "AUX3",
+        "aux4": "AUX4"
+      }
+    },
+    "timer_mode": {
+      "options": {
+        "disabled": "Inaktiverad",
+        "auto": "Auto",
+        "on": "På",
+        "off": "Av"
+      }
+    }
+  },
+  "exceptions": {
+    "set_timer_unknown_device": {
+      "message": "Ingen NeoPool-styrenhet hittades för enhet {device_id}."
     }
   }
 }
