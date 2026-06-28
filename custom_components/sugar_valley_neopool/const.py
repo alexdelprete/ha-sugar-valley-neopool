@@ -236,8 +236,12 @@ PH_ACTIVATION_DELAY_MAX: Final = 300  # UX cap (5 min); device accepts more
 PH_ACTIVATION_DELAY_STEP: Final = 5
 
 # Group 3 number bounds (raw byte fields of 0x042D, units percent and °C).
-# NOTE: the shutdown-temperature range is a sensible default, not yet
-# hardware-verified; cover reduction is a straightforward 0-100 %.
+# On-device probing (2026-06-28) confirmed the controller does NOT clamp either
+# byte of 0x042D (writing 0x00FF / 0xFF00 stored unchanged), nor the enable bits
+# of 0x042C — NeoPool NPWrite never validates at the register level. So these are
+# UX caps the entity enforces, not device limits. Observed factory default:
+# cover reduction 20 %, shutdown temp 0. Cover reduction is a true 0-100 %;
+# the shutdown-temp range is a sensible UX choice.
 HIDRO_COVER_REDUCTION_MIN: Final = 0
 HIDRO_COVER_REDUCTION_MAX: Final = 100
 HIDRO_COVER_REDUCTION_STEP: Final = 5

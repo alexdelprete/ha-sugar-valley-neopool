@@ -92,8 +92,13 @@ the 3 echo-only commands via the SENSOR echo.
 > would never populate. The wildcard catches both SO4 modes; non-NPRead messages
 > are filtered by the JSON-key check. The same device had **`NPResult 1`**,
 > returning Address and Data as hex strings (`{"NPRead":{"Address":"0x0433",
-> "Data":"0x0002"}}`) — handled by `_parse_register_int`. Probing `0x0433`
-> accepted `0xFFFF` unclamped, confirming no firmware max (UX cap only).
+> "Data":"0x0002"}}`) — handled by `_parse_register_int`. Probing confirmed
+> **NeoPool NPWrite never clamps at the register level**: `0x0433` accepted
+> `0xFFFF`; `0x042D` stored `0x00FF`/`0xFF00` unchanged (cover-% and
+> shutdown-temp bytes); `0x042C` stored `0xFFFF`. So every entity bound (pH
+> delay, cover %, shutdown temp, heating temp, intelligent min time) is a UX cap
+> the entity must enforce — there are no device-side limits. Observed factory
+> defaults: `0x042D` cover-reduction = 20 %, shutdown-temp = 0.
 
 **Bonus — the read layer is lightweight, not heavy polling.** `NPRead` returns
 its value on the same `stat/RESULT` channel (`{"NPRead":...}`), so reading a
