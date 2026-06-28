@@ -115,9 +115,9 @@ async def _async_set_timer(call: ServiceCall) -> None:
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_OFF:04X} {stop}")
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_INTERVAL:04X} {interval}")
     await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_PERIOD:04X} {period}")
-    # AUX timers default to unbound (function word 0); without binding the block
-    # is inert (verified on-device). Filtration/light are bound by the
-    # controller's GPIO assignment, so function_code is None for them.
+    # Bind the timer to its relay via the function word — without it the block is
+    # inert (verified on-device: AUX and filtration timers were unbound). This is
+    # idempotent where the controller already bound the timer (e.g. light).
     if function_code is not None:
         await _pub(CMD_NPWRITE, f"0x{base + TIMER_OFFSET_FUNCTION:04X} {function_code}")
     await _pub(CMD_NPEXEC, "")

@@ -15,9 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   disabled); the schedule is written to the controller and runs there,
   independent of Home Assistant. Uses the built-in `NPWrite`/`NPWriteL`/
   `NPExec` commands (no Berry extension). The timer registers are not in the
-  SENSOR telemetry, so the service writes them on demand. For AUX timers the
-  service also writes the timer's function word to bind it to the relay
-  (verified on hardware — without it the schedule is inert).
+  SENSOR telemetry, so the service writes them on demand. The service also
+  writes each timer's function word to bind it to its relay (filtration, light,
+  and AUX) — verified on hardware that an unbound timer's schedule is inert.
 - **Pool light as a dedicated `light` entity** (`light.<name>_light`). It
   controls the same relay as before via `NPLight`, but as a proper light it
   now works with light cards, light groups, and "turn on the lights" voice

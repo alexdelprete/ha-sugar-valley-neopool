@@ -136,8 +136,8 @@ class TestSetTimerService:
         assert ("cmnd/SmartPool/NPWriteL", f"0x{base + 5:04X} 86400") in sent
         assert ("cmnd/SmartPool/NPExec", "") in sent
         assert ("cmnd/SmartPool/NPSave", "") in sent
-        # filtration is controller-bound: no function-word write at base+11
-        assert all(addr != f"0x{base + 11:04X} 1" for _, addr in sent)
+        # filtration is bound via FCT_FILTRATION (0x0001) at block +11
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base + 11:04X} 1") in sent
 
     @pytest.mark.asyncio
     async def test_aux_timer_writes_function_word(self, mock_config_entry: MagicMock) -> None:

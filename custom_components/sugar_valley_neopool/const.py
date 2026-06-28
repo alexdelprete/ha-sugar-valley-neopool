@@ -284,12 +284,21 @@ TIMER_OFFSET_PERIOD: Final = 5  # 32-bit repeat period (e.g. 86400 = daily)
 TIMER_OFFSET_INTERVAL: Final = 7  # 32-bit run duration (seconds)
 TIMER_OFFSET_FUNCTION: Final = 11  # 16-bit function word (relay binding)
 
-# Timers whose function word must be written to bind them to a relay before the
-# block takes effect. Verified on-device (2026-06-28): an AUX timer with a full
-# schedule written but function word=0 left the relay off; adding the function
-# code drove it. Filtration/light timers are bound by the controller's relay
-# GPIO assignment, so they are NOT auto-bound here.
+# Function word (MBV_TIMER_OFFMB_TIMER_FUNCTION) value per timer — written to
+# bind the timer to its relay before the block takes effect. A timer with a
+# schedule written but function word=0 is inert (verified on-device 2026-06-28:
+# AUX4 and the filtration block were both unbound; the light block was already
+# bound with FCT_LIGHTING=0x0002 and toggling its mode drove the pool light).
+# Filtration/light use the MBV_PAR_CTIMER_FCT_* function bits; AUX uses the
+# MBV_PAR_CTIMER_FCT_RELAY* relay bits. Writing these is idempotent where the
+# controller already bound the timer, and required where it did not.
+FCT_FILTRATION: Final = 0x0001  # MBV_PAR_CTIMER_FCT_FILTRATION
+FCT_LIGHTING: Final = 0x0002  # MBV_PAR_CTIMER_FCT_LIGHTING
 TIMER_FUNCTION_CODES: Final[dict[str, int]] = {
+    "filtration1": FCT_FILTRATION,
+    "filtration2": FCT_FILTRATION,
+    "filtration3": FCT_FILTRATION,
+    "light": FCT_LIGHTING,
     "aux1": AUX1_FUNCTION_CODE,
     "aux2": AUX2_FUNCTION_CODE,
     "aux3": AUX3_FUNCTION_CODE,
