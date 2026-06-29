@@ -10,14 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **`sugar_valley_neopool.set_timer` service** to program the controller's
-  built-in timers (filtration 1-3, light, AUX1-4). You pick a device, a timer,
-  a start and stop time, an optional repeat period, and a mode (auto/on/off/
-  disabled); the schedule is written to the controller and runs there,
-  independent of Home Assistant. Uses the built-in `NPWrite`/`NPWriteL`/
-  `NPExec` commands (no Berry extension). The timer registers are not in the
-  SENSOR telemetry, so the service writes them on demand. The service also
-  writes each timer's function word to bind it to its relay (filtration, light,
-  and AUX) — verified on hardware that an unbound timer's schedule is inert.
+  built-in timers (filtration 1-3, light, AUX1-4), which then run on the
+  controller independent of Home Assistant. You pick a device and timer, then
+  set any of: a start+stop time, a repeat period, and a mode (auto/on/off/
+  disabled). **All schedule fields are optional and applied granularly** — set
+  only what you want to change and leave the rest to keep their current value
+  (start and stop must be set together). Uses the built-in `NPWrite`/
+  `NPWriteL`/`NPExec` commands (no Berry extension); the timer registers are not
+  in the SENSOR telemetry, so the service writes them on demand. The service
+  also writes each timer's function word to bind it to its relay (filtration,
+  light, and AUX) — verified on hardware that an unbound timer's schedule is
+  inert.
 - **Pool light as a dedicated `light` entity** (`light.<name>_light`). It
   controls the same relay as before via `NPLight`, but as a proper light it
   now works with light cards, light groups, and "turn on the lights" voice

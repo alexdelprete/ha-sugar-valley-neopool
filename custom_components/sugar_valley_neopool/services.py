@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from datetime import time as dt_time
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import voluptuous as vol
 
@@ -53,17 +53,38 @@ ATTR_STOP = "stop"
 ATTR_PERIOD = "period"
 ATTR_MODE = "mode"
 
+
+def _validate_set_timer(data: dict[str, Any]) -> dict[str, Any]:
+    """Cross-field rules for granular (partial) timer edits.
+
+    All schedule fields are optional so a call can change just one thing (e.g.
+    only the mode), but ``start`` and ``stop`` are coupled (the run interval is
+    derived from the pair), and a call must change at least one field.
+    """
+    if (ATTR_START in data) != (ATTR_STOP in data):
+        raise vol.Invalid("'start' and 'stop' must be set together")
+    if not any(k in data for k in (ATTR_START, ATTR_PERIOD, ATTR_MODE)):
+        raise vol.Invalid("provide at least one of 'start'/'stop', 'period', or 'mode'")
+    return data
+
+
 SET_TIMER_SCHEMA = vol.Schema(
-    {
-        vol.Required(ATTR_DEVICE_ID): cv.string,
-        vol.Required(ATTR_TIMER): vol.In(list(TIMER_BLOCKS)),
-        vol.Required(ATTR_START): cv.time,
-        vol.Required(ATTR_STOP): cv.time,
-        vol.Optional(ATTR_PERIOD, default=SECONDS_PER_DAY): vol.All(
-            vol.Coerce(int), vol.Range(min=0, max=7 * SECONDS_PER_DAY)
-        ),
-        vol.Optional(ATTR_MODE, default="auto"): vol.In(list(TIMER_MODE_MAP)),
-    }
+    vol.All(
+        {
+            vol.Required(ATTR_DEVICE_ID): cv.string,
+            vol.Required(ATTR_TIMER): vol.In(list(TIMER_BLOCKS)),
+            # All schedule fields optional → only the ones provided are written
+            # (granular edit). No defaults, so an omitted field keeps its current
+            # value on the controller (we simply don't write that register).
+            vol.Optional(ATTR_START): cv.time,
+            vol.Optional(ATTR_STOP): cv.time,
+            vol.Optional(ATTR_PERIOD): vol.All(
+                vol.Coerce(int), vol.Range(min=0, max=7 * SECONDS_PER_DAY)
+            ),
+            vol.Optional(ATTR_MODE): vol.In(list(TIMER_MODE_MAP)),
+        },
+        _validate_set_timer,
+    )
 )
 
 
@@ -98,40 +119,54 @@ async def _async_set_timer(call: ServiceCall) -> None:
     mqtt_topic = entry.runtime_data.mqtt_topic
     timer = call.data[ATTR_TIMER]
     base = TIMER_BLOCKS[timer]
-    start = _seconds_since_midnight(call.data[ATTR_START])
-    stop = _seconds_since_midnight(call.data[ATTR_STOP])
-    interval = (stop - start) % SECONDS_PER_DAY
-    period = call.data[ATTR_PERIOD]
-    mode = TIMER_MODE_MAP[call.data[ATTR_MODE]]
     function_code = TIMER_FUNCTION_CODES.get(timer)
 
     async def _pub(command: str, payload: str) -> None:
         await mqtt.async_publish(hass, f"cmnd/{mqtt_topic}/{command}", payload, qos=1, retain=False)
 
-    # 16-bit enable/mode, then the 32-bit ON/OFF/INTERVAL/PERIOD pairs, then
-    # commit (NPExec) and persist (NPSave — a schedule should survive reboot).
-    await _pub(CMD_NPWRITE, f"0x{base + TIMER_OFFSET_ENABLE:04X} {mode}")
-    await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_ON:04X} {start}")
-    await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_OFF:04X} {stop}")
-    await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_INTERVAL:04X} {interval}")
-    await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_PERIOD:04X} {period}")
-    # Bind the timer to its relay via the function word — without it the block is
-    # inert (verified on-device: AUX and filtration timers were unbound). This is
-    # idempotent where the controller already bound the timer (e.g. light).
+    # Granular edit: only registers for the fields actually supplied are written;
+    # omitted fields keep their current value on the controller. We never read
+    # the block first (our MQTT transport makes a read-modify-write round trip
+    # costly/fragile), so a write is fully specified by the call.
+    start_t = call.data.get(ATTR_START)
+    stop_t = call.data.get(ATTR_STOP)
+    period = call.data.get(ATTR_PERIOD)
+    mode_name = call.data.get(ATTR_MODE)
+
+    # Always (re)bind the timer to its relay via the function word — without it
+    # the block is inert (verified on-device: AUX and filtration timers were
+    # unbound). Idempotent where the controller already bound it (e.g. light).
     if function_code is not None:
         await _pub(CMD_NPWRITE, f"0x{base + TIMER_OFFSET_FUNCTION:04X} {function_code}")
+
+    if mode_name is not None:
+        mode = TIMER_MODE_MAP[mode_name]
+        await _pub(CMD_NPWRITE, f"0x{base + TIMER_OFFSET_ENABLE:04X} {mode}")
+
+    if start_t is not None and stop_t is not None:
+        start = _seconds_since_midnight(start_t)
+        stop = _seconds_since_midnight(stop_t)
+        interval = (stop - start) % SECONDS_PER_DAY
+        await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_ON:04X} {start}")
+        await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_OFF:04X} {stop}")
+        await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_INTERVAL:04X} {interval}")
+
+    if period is not None:
+        await _pub(CMD_NPWRITEL, f"0x{base + TIMER_OFFSET_PERIOD:04X} {period}")
+
+    # Commit (NPExec) and persist (NPSave — a schedule should survive reboot).
     await _pub(CMD_NPEXEC, "")
     await _pub(CMD_NPSAVE, "")
 
     _LOGGER.debug(
-        "set_timer %s on %s: start=%ds stop=%ds interval=%ds period=%ds mode=%d",
-        call.data[ATTR_TIMER],
+        "set_timer %s on %s: fields=%s",
+        timer,
         mqtt_topic,
-        start,
-        stop,
-        interval,
-        period,
-        mode,
+        {
+            k: call.data[k]
+            for k in (ATTR_START, ATTR_STOP, ATTR_PERIOD, ATTR_MODE)
+            if k in call.data
+        },
     )
 
 

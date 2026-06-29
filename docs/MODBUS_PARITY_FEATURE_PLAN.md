@@ -346,6 +346,56 @@ read-only `binary_sensor` for the physical output.
   encoding on-device (read existing filtration timers, decode) before any
   write.** ~3–5 days.
 
+##### On-device validation + svasek cross-check (2026-06-29)
+
+Validated against svasek's Modbus integration (the parity target). Findings:
+
+- **AUX on/off** — both write `function code` (bind) + `ALWAYS_ON(3)` +
+  `EXEC`; OFF writes `ALWAYS_OFF(4)` + `EXEC`. svasek skips the rebind on OFF;
+  we rebind on every change (idempotent). Our on-device test confirmed the
+  mode word is **inert without the function-word bind**.
+- **Light on/off** — svasek drives it via the **light timer block**
+  (`function_code=2` LIGHTING + `ALWAYS_ON/OFF` + `EXEC`); we drive the light
+  entity via the built-in `NPLight` command instead. Reading the owner's device
+  confirmed the light timer is pre-bound (`+11 = 0x0002`); toggling its mode
+  drove the pool light (owner-confirmed).
+- **Filtration on/off** — svasek uses the dedicated manual register
+  `MBF_PAR_FILT_MANUAL_STATE (0x0413)`, not a timer; we use `NPFiltration`.
+  The owner's filtration **timer** block was fully unbound (`function=0`), so a
+  scheduled filtration timer needs the bind too (`FCT_FILTRATION = 0x0001`).
+- **Function codes**: filtration `0x0001`, light `0x0002` (FCT_* function
+  bits); AUX `0x0800/0x1000/0x2000/0x4000` (FCT_RELAY bits). Our `set_timer`
+  binds every timer so a never-bound timer's schedule is not silently inert.
+
+##### `set_timer` design: ours vs svasek (pros/cons)
+
+The one real divergence: **ours = fully-specified write + explicit bind, no
+read** vs **svasek = read-modify-write patch, preserves the function word**.
+
+Ours — pros: binds unbound timers (works standalone); no read round-trip
+(a real win on our async MQTT transport, where read-modify-write means issuing
+`NPRead` and correlating the async reply on `stat/{topic}/+`); deterministic
+(result depends only on the call); doesn't touch unknown registers. Cons:
+imposes a function code (filtration `0x0001` documented, not pump-tested);
+needs explicit fields.
+
+svasek — pros: native partial edits; preserves existing binding/fields; one
+atomic FC16 block write. Cons: does **not** bind → schedule inert on an
+unbound timer; requires a read before every write (cheap on Modbus, costly on
+MQTT); read→write race; rewrites all 15 regs (hardcodes reg +12 = 0). Also
+svasek's relay `is_on` checks only `mode == ALWAYS_ON` (no bind check), so a
+`mode=3`-but-unbound timer mis-shows as on; our select gates `current_option`
+on `function == code`.
+
+**Decision (2026-06-29): keep our no-read + always-bind model, and add
+granular edits without read-modify-write** — every `set_timer` field
+(`start`/`stop`, `period`, `mode`) is optional; only the registers for the
+fields supplied are written, so omitted fields keep their current value.
+`start`/`stop` are coupled (interval derived) and must be set together; a call
+must change at least one field. This gives svasek's partial-edit ergonomics
+while keeping our robustness (binding) and MQTT-friendliness (no read). Commit
+on `main`.
+
 ---
 
 ## Suggested sequencing

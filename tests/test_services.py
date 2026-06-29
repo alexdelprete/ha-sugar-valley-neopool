@@ -29,8 +29,8 @@ def test_seconds_since_midnight() -> None:
     assert _seconds_since_midnight(dt_time(15, 30, 15)) == 55815
 
 
-def test_set_timer_schema_defaults() -> None:
-    """The schema fills period/mode defaults and accepts time strings."""
+def test_set_timer_schema_parses_and_omits_unset() -> None:
+    """Schema parses provided fields and leaves unset ones absent (no defaults)."""
     data = SET_TIMER_SCHEMA(
         {
             "device_id": "dev1",
@@ -39,9 +39,30 @@ def test_set_timer_schema_defaults() -> None:
             "stop": "15:00:00",
         }
     )
-    assert data["period"] == 86400
-    assert data["mode"] == "auto"
     assert data["start"] == dt_time(10, 0, 0)
+    assert data["stop"] == dt_time(15, 0, 0)
+    # no defaults are injected for granular edits
+    assert "period" not in data
+    assert "mode" not in data
+
+
+def test_set_timer_schema_mode_only_is_valid() -> None:
+    """A mode-only call is accepted (granular edit)."""
+    data = SET_TIMER_SCHEMA({"device_id": "dev1", "timer": "aux4", "mode": "on"})
+    assert data["mode"] == "on"
+    assert "start" not in data
+
+
+def test_set_timer_schema_start_requires_stop() -> None:
+    """start without stop is rejected (they are coupled)."""
+    with pytest.raises(vol.Invalid):
+        SET_TIMER_SCHEMA({"device_id": "dev1", "timer": "filtration1", "start": "10:00:00"})
+
+
+def test_set_timer_schema_requires_at_least_one_field() -> None:
+    """A call with no editable field is rejected."""
+    with pytest.raises(vol.Invalid):
+        SET_TIMER_SCHEMA({"device_id": "dev1", "timer": "filtration1"})
 
 
 def test_set_timer_schema_rejects_unknown_timer() -> None:
@@ -58,6 +79,7 @@ def test_set_timer_schema_rejects_unknown_timer() -> None:
 
 
 def _make_call(hass: MagicMock, **overrides: object) -> MagicMock:
+    """Build a full-schedule call (all fields). Override or drop via overrides."""
     call = MagicMock()
     call.hass = hass
     call.data = {
@@ -69,6 +91,14 @@ def _make_call(hass: MagicMock, **overrides: object) -> MagicMock:
         "mode": "auto",
         **overrides,
     }
+    return call
+
+
+def _partial_call(hass: MagicMock, *, timer: str = "aux4", **fields: object) -> MagicMock:
+    """Build a partial (granular) call with only device_id, timer and given fields."""
+    call = MagicMock()
+    call.hass = hass
+    call.data = {"device_id": "dev1", "timer": timer, **fields}
     return call
 
 
@@ -177,6 +207,57 @@ class TestSetTimerService:
         sent = [(c.args[1], c.args[2]) for c in pub.await_args_list]
         # 23:00 -> 01:00 = 2h = 7200s interval
         assert ("cmnd/SmartPool/NPWriteL", f"0x{0x0434 + 7:04X} 7200") in sent
+
+    @pytest.mark.asyncio
+    async def test_partial_mode_only_writes_bind_mode_no_schedule(
+        self, mock_config_entry: MagicMock
+    ) -> None:
+        """A mode-only call binds + writes the mode; no ON/OFF/INTERVAL/PERIOD."""
+        hass = MagicMock()
+        mock_config_entry.domain = DOMAIN
+        mock_config_entry.runtime_data.mqtt_topic = "SmartPool"
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        call = _partial_call(hass, timer="aux4", mode="on")
+
+        with _patch_registry(found=True), _publish_patch() as pub:
+            await _async_set_timer(call)
+
+        sent = [(c.args[1], c.args[2]) for c in pub.await_args_list]
+        base = 0x04D9  # aux4
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base + 11:04X} 16384") in sent  # bind
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base:04X} 3") in sent  # mode ON
+        assert ("cmnd/SmartPool/NPExec", "") in sent
+        assert ("cmnd/SmartPool/NPSave", "") in sent
+        # no schedule fields written (no 32-bit writes)
+        assert all(cmd != "cmnd/SmartPool/NPWriteL" for cmd, _ in sent)
+
+    @pytest.mark.asyncio
+    async def test_partial_period_only_writes_bind_period_no_mode(
+        self, mock_config_entry: MagicMock
+    ) -> None:
+        """A period-only call binds + writes period; no mode, no ON/OFF/INTERVAL."""
+        hass = MagicMock()
+        mock_config_entry.domain = DOMAIN
+        mock_config_entry.runtime_data.mqtt_topic = "SmartPool"
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        call = _partial_call(hass, timer="filtration1", period=43200)
+
+        with _patch_registry(found=True), _publish_patch() as pub:
+            await _async_set_timer(call)
+
+        sent = [(c.args[1], c.args[2]) for c in pub.await_args_list]
+        base = 0x0434  # filtration1
+        assert ("cmnd/SmartPool/NPWrite", f"0x{base + 11:04X} 1") in sent  # bind
+        assert ("cmnd/SmartPool/NPWriteL", f"0x{base + 5:04X} 43200") in sent  # period
+        # the only NPWriteL is the period (no ON/OFF/INTERVAL)
+        writel = [addr for cmd, addr in sent if cmd == "cmnd/SmartPool/NPWriteL"]
+        assert writel == [f"0x{base + 5:04X} 43200"]
+        # no mode write at base+0
+        assert all(
+            not addr.startswith(f"0x{base:04X} ")
+            for cmd, addr in sent
+            if cmd == "cmnd/SmartPool/NPWrite"
+        )
 
     @pytest.mark.asyncio
     async def test_unknown_device_raises(self) -> None:
