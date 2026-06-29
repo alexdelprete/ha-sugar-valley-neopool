@@ -117,14 +117,16 @@
           "enable_repair_notification": "Ota korjausilmoitukset käyttöön",
           "failures_threshold": "Virheet ennen ilmoitusta (1-10)",
           "offline_timeout": "Offline-aikakatkaisu (sekuntia)",
-          "connection_error_rate_threshold": "Yhteysvirheiden raja (%)"
+          "connection_error_rate_threshold": "Yhteysvirheiden raja (%)",
+          "pump_type": "Suodatuspumpun tyyppi"
         },
         "data_description": {
           "recovery_script": "Skripti, joka suoritetaan kun laite on ollut liian kauan offline-tilassa",
           "enable_repair_notification": "Luo korjausongelma kun laite menee offline-tilaan",
           "failures_threshold": "Peräkkäisten LWT offline-viestien määrä ennen ilmoitusten laukaisua",
           "offline_timeout": "Kuinka kauan laitteen on oltava offline-tilassa ennen ilmoitusten laukaisua",
-          "connection_error_rate_threshold": "Modbus-virheiden prosenttiosuus (liukuvan 10 minuutin ikkunan aikana), jonka ylittyessä `binary_sensor.connection_problem` kytkeytyy päälle"
+          "connection_error_rate_threshold": "Modbus-virheiden prosenttiosuus (liukuvan 10 minuutin ikkunan aikana), jonka ylittyessä `binary_sensor.connection_problem` kytkeytyy päälle",
+          "pump_type": "Muuttuvanopeuksiset pumput saavat ajastinkohtaiset nopeussäätimet. Automaattinen tunnistus luottaa ohjaimeen (muuttuvanopeuksiset pumput ilmoittavat nopeuden); ohita vain tarvittaessa."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Päällä",
           "off": "Pois"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Suodatusajastimen 1 nopeus"
+      },
+      "filtration_timer2_speed": {
+        "name": "Suodatusajastimen 2 nopeus"
+      },
+      "filtration_timer3_speed": {
+        "name": "Suodatusajastimen 3 nopeus"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Automaattinen",
         "on": "Päällä",
         "off": "Pois"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Tunnista automaattisesti",
+        "variable": "Muuttuva nopeus",
+        "standard": "Vakio (yksi nopeus)"
       }
     }
   },

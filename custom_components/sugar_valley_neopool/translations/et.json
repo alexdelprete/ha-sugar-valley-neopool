@@ -117,14 +117,16 @@
           "enable_repair_notification": "Luba paranduse teavitused",
           "failures_threshold": "Tõrked enne teavitust (1-10)",
           "offline_timeout": "Võrguühenduseta aegumine (sekundites)",
-          "connection_error_rate_threshold": "Ühenduse veamäära lävi (%)"
+          "connection_error_rate_threshold": "Ühenduse veamäära lävi (%)",
+          "pump_type": "Filtreerimispumba tüüp"
         },
         "data_description": {
           "recovery_script": "Skript, mida käivitada kui seade on liiga kaua võrguühenduseta",
           "enable_repair_notification": "Loo paranduse probleem kui seade läheb võrguühenduseta",
           "failures_threshold": "Järjestikuste LWT võrguühenduseta sõnumite arv enne teavituste käivitamist",
           "offline_timeout": "Kui kaua peab seade olema võrguühenduseta enne teavituste käivitamist",
-          "connection_error_rate_threshold": "Modbus vigade protsent (libiseva 10-minutilise akna jooksul), millest kõrgemal `binary_sensor.connection_problem` lülitub sisse"
+          "connection_error_rate_threshold": "Modbus vigade protsent (libiseva 10-minutilise akna jooksul), millest kõrgemal `binary_sensor.connection_problem` lülitub sisse",
+          "pump_type": "Muudetava kiirusega pumbad saavad taimeripõhised kiiruse juhtnupud. Automaattuvastus usaldab kontrollerit (muudetava kiirusega pumbad teatavad kiiruse); alista ainult vajadusel."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Sees",
           "off": "Väljas"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Filtreerimistaimeri 1 kiirus"
+      },
+      "filtration_timer2_speed": {
+        "name": "Filtreerimistaimeri 2 kiirus"
+      },
+      "filtration_timer3_speed": {
+        "name": "Filtreerimistaimeri 3 kiirus"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Automaatne",
         "on": "Sees",
         "off": "Väljas"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Automaattuvastus",
+        "variable": "Muudetav kiirus",
+        "standard": "Standardne (üks kiirus)"
       }
     }
   },

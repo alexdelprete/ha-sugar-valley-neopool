@@ -117,14 +117,16 @@
           "enable_repair_notification": "Reparaturbenachrichtigungen aktivieren",
           "failures_threshold": "Fehler vor Benachrichtigung (1-10)",
           "offline_timeout": "Offline-Timeout (Sekunden)",
-          "connection_error_rate_threshold": "Schwellenwert für Verbindungsfehlerrate (%)"
+          "connection_error_rate_threshold": "Schwellenwert für Verbindungsfehlerrate (%)",
+          "pump_type": "Filtrationspumpentyp"
         },
         "data_description": {
           "recovery_script": "Skript, das ausgeführt wird, wenn das Gerät zu lange offline ist",
           "enable_repair_notification": "Erstellt ein Reparaturproblem, wenn das Gerät offline geht",
           "failures_threshold": "Anzahl aufeinanderfolgender LWT-Offline-Nachrichten vor Auslösung der Benachrichtigungen",
           "offline_timeout": "Wie lange das Gerät offline sein muss, bevor Benachrichtigungen ausgelöst werden",
-          "connection_error_rate_threshold": "Modbus-Fehlerprozentsatz (über ein gleitendes 10-Minuten-Fenster), oberhalb dessen `binary_sensor.connection_problem` eingeschaltet wird"
+          "connection_error_rate_threshold": "Modbus-Fehlerprozentsatz (über ein gleitendes 10-Minuten-Fenster), oberhalb dessen `binary_sensor.connection_problem` eingeschaltet wird",
+          "pump_type": "Drehzahlgeregelte Pumpen erhalten Geschwindigkeitsregler pro Timer. Die automatische Erkennung vertraut dem Controller (drehzahlgeregelte Pumpen melden eine Geschwindigkeit); nur bei Bedarf überschreiben."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Ein",
           "off": "Aus"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Filtrationstimer 1 Geschwindigkeit"
+      },
+      "filtration_timer2_speed": {
+        "name": "Filtrationstimer 2 Geschwindigkeit"
+      },
+      "filtration_timer3_speed": {
+        "name": "Filtrationstimer 3 Geschwindigkeit"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Auto",
         "on": "Ein",
         "off": "Aus"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Automatisch erkennen",
+        "variable": "Drehzahlgeregelt",
+        "standard": "Standard (eine Geschwindigkeit)"
       }
     }
   },

@@ -117,14 +117,16 @@
           "enable_repair_notification": "Habilitar notificaciones de reparación",
           "failures_threshold": "Fallos antes de notificación (1-10)",
           "offline_timeout": "Tiempo de espera sin conexión (segundos)",
-          "connection_error_rate_threshold": "Umbral de tasa de errores de conexión (%)"
+          "connection_error_rate_threshold": "Umbral de tasa de errores de conexión (%)",
+          "pump_type": "Tipo de bomba de filtración"
         },
         "data_description": {
           "recovery_script": "Script a ejecutar cuando el dispositivo está fuera de línea demasiado tiempo",
           "enable_repair_notification": "Crear un problema de reparación cuando el dispositivo se desconecta",
           "failures_threshold": "Número de mensajes LWT fuera de línea consecutivos antes de activar las notificaciones",
           "offline_timeout": "Cuánto tiempo debe estar el dispositivo fuera de línea antes de activar las notificaciones",
-          "connection_error_rate_threshold": "Porcentaje de errores de Modbus (durante una ventana móvil de 10 minutos) por encima del cual se activa `binary_sensor.connection_problem`"
+          "connection_error_rate_threshold": "Porcentaje de errores de Modbus (durante una ventana móvil de 10 minutos) por encima del cual se activa `binary_sensor.connection_problem`",
+          "pump_type": "Las bombas de velocidad variable obtienen controles de velocidad por temporizador. La detección automática confía en el controlador (las bombas de velocidad variable informan una velocidad); anule solo si es necesario."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Encendido",
           "off": "Apagado"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Velocidad del temporizador de filtración 1"
+      },
+      "filtration_timer2_speed": {
+        "name": "Velocidad del temporizador de filtración 2"
+      },
+      "filtration_timer3_speed": {
+        "name": "Velocidad del temporizador de filtración 3"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Automático",
         "on": "Encendido",
         "off": "Apagado"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Detección automática",
+        "variable": "Velocidad variable",
+        "standard": "Estándar (velocidad única)"
       }
     }
   },

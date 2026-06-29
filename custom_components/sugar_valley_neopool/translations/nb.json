@@ -117,14 +117,16 @@
           "enable_repair_notification": "Aktiver reparasjonsvarsler",
           "failures_threshold": "Feil før varsling (1-10)",
           "offline_timeout": "Frakoblet tidsavbrudd (sekunder)",
-          "connection_error_rate_threshold": "Terskel for tilkoblingsfeilrate (%)"
+          "connection_error_rate_threshold": "Terskel for tilkoblingsfeilrate (%)",
+          "pump_type": "Filtreringspumpetype"
         },
         "data_description": {
           "recovery_script": "Skript som skal kjøres når enheten er frakoblet for lenge",
           "enable_repair_notification": "Opprett et reparasjonsproblem når enheten går frakoblet",
           "failures_threshold": "Antall påfølgende LWT frakoblede meldinger før varsling utløses",
           "offline_timeout": "Hvor lenge enheten må være frakoblet før varsling utløses",
-          "connection_error_rate_threshold": "Modbus-feilprosent (over et rullerende 10-minutters vindu) som `binary_sensor.connection_problem` slås på over"
+          "connection_error_rate_threshold": "Modbus-feilprosent (over et rullerende 10-minutters vindu) som `binary_sensor.connection_problem` slås på over",
+          "pump_type": "Pumper med variabel hastighet får hastighetskontroller per tidsur. Automatisk gjenkjenning stoler på kontrolleren (pumper med variabel hastighet rapporterer en hastighet); overstyr bare ved behov."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "På",
           "off": "Av"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Hastighet for filtreringstidsur 1"
+      },
+      "filtration_timer2_speed": {
+        "name": "Hastighet for filtreringstidsur 2"
+      },
+      "filtration_timer3_speed": {
+        "name": "Hastighet for filtreringstidsur 3"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Auto",
         "on": "På",
         "off": "Av"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Oppdag automatisk",
+        "variable": "Variabel hastighet",
+        "standard": "Standard (én hastighet)"
       }
     }
   },

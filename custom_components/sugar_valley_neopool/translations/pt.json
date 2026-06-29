@@ -117,14 +117,16 @@
           "enable_repair_notification": "Ativar notificações de reparação",
           "failures_threshold": "Falhas antes da notificação (1-10)",
           "offline_timeout": "Tempo limite offline (segundos)",
-          "connection_error_rate_threshold": "Limiar da taxa de erros de ligação (%)"
+          "connection_error_rate_threshold": "Limiar da taxa de erros de ligação (%)",
+          "pump_type": "Tipo de bomba de filtração"
         },
         "data_description": {
           "recovery_script": "Script a executar quando o dispositivo está offline por muito tempo",
           "enable_repair_notification": "Criar um problema de reparação quando o dispositivo fica offline",
           "failures_threshold": "Número de mensagens LWT offline consecutivas antes de acionar notificações",
           "offline_timeout": "Quanto tempo o dispositivo deve estar offline antes de acionar notificações",
-          "connection_error_rate_threshold": "Percentagem de erros Modbus (numa janela móvel de 10 minutos) acima da qual `binary_sensor.connection_problem` é ativado"
+          "connection_error_rate_threshold": "Percentagem de erros Modbus (numa janela móvel de 10 minutos) acima da qual `binary_sensor.connection_problem` é ativado",
+          "pump_type": "As bombas de velocidade variável obtêm controlos de velocidade por temporizador. A deteção automática confia no controlador (as bombas de velocidade variável reportam uma velocidade); substitua apenas se necessário."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Ligado",
           "off": "Desligado"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Velocidade do temporizador de filtração 1"
+      },
+      "filtration_timer2_speed": {
+        "name": "Velocidade do temporizador de filtração 2"
+      },
+      "filtration_timer3_speed": {
+        "name": "Velocidade do temporizador de filtração 3"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Automático",
         "on": "Ligado",
         "off": "Desligado"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Deteção automática",
+        "variable": "Velocidade variável",
+        "standard": "Padrão (velocidade única)"
       }
     }
   },

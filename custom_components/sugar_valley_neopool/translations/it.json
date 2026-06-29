@@ -117,14 +117,16 @@
           "enable_repair_notification": "Abilita notifiche di riparazione",
           "failures_threshold": "Fallimenti prima della notifica (1-10)",
           "offline_timeout": "Timeout offline (secondi)",
-          "connection_error_rate_threshold": "Soglia del tasso di errori di connessione (%)"
+          "connection_error_rate_threshold": "Soglia del tasso di errori di connessione (%)",
+          "pump_type": "Tipo di pompa di filtrazione"
         },
         "data_description": {
           "recovery_script": "Script da eseguire quando il dispositivo è offline troppo a lungo",
           "enable_repair_notification": "Crea un problema di riparazione quando il dispositivo va offline",
           "failures_threshold": "Numero di messaggi LWT offline consecutivi prima di attivare le notifiche",
           "offline_timeout": "Quanto tempo il dispositivo deve essere offline prima di attivare le notifiche",
-          "connection_error_rate_threshold": "Percentuale di errori Modbus (su una finestra mobile di 10 minuti) oltre la quale `binary_sensor.connection_problem` si attiva"
+          "connection_error_rate_threshold": "Percentuale di errori Modbus (su una finestra mobile di 10 minuti) oltre la quale `binary_sensor.connection_problem` si attiva",
+          "pump_type": "Le pompe a velocità variabile ottengono controlli di velocità per timer. Il rilevamento automatico si fida del controller (le pompe a velocità variabile segnalano una velocità); sovrascrivi solo se necessario."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "Acceso",
           "off": "Spento"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Velocità del timer di filtrazione 1"
+      },
+      "filtration_timer2_speed": {
+        "name": "Velocità del timer di filtrazione 2"
+      },
+      "filtration_timer3_speed": {
+        "name": "Velocità del timer di filtrazione 3"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Auto",
         "on": "Acceso",
         "off": "Spento"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Rilevamento automatico",
+        "variable": "Velocità variabile",
+        "standard": "Standard (velocità singola)"
       }
     }
   },
