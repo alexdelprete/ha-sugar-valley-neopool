@@ -1,18 +1,16 @@
 # Feature Parity Plan — svasek Modbus Integration → our MQTT/Tasmota Integration
 
-**Status:** Groups 1–4 implemented on `main` (Lint/Tests/Validate pass,
-coverage 97%, 869 tests). **Group 4b** (register-based AUX selects + read-only
-binary sensors, drops the Berry requirement) and **Group 4a** (`set_timer`
-service) landed 2026-06-28 (commits b59f663, f21eee5). Remaining: non-feature
-follow-ups only — localize the new English-only translations into the other 9
-languages, and **validate on-device** the AUX mode write (mode 3/4 + NPExec;
-function-code write at base+11 not done, may be needed if the relay doesn't
-switch) and the timer-block encoding before relying on the timer service.
-Item #10 (power/energy) parked. Write-ACK design resolved with @curzon01 in
-discussion #16; SENSOR-emit of config registers still open. Register addresses
-verified vs curzon01 driver (primary) + svasek `registers.py` (secondary).
+**Status:** All planned features (Groups 1–4) implemented on `main`,
+CI-green (Lint/Tests/Validate), localized into all 10 languages, and
+hardware-validated (AUX mode write, light + filtration timer binding,
+granular `set_timer` edits). **Not yet released** (version still 1.1.4;
+two breaking entity moves — light and AUX — ship whenever tagged).
+Write-ACK design resolved with @curzon01 (discussion #16); SENSOR-emit of
+config registers still open (non-blocking). Register addresses verified vs
+curzon01 driver (primary) + svasek `registers.py` (secondary).
 **Created:** 2026-06-16
-**Updated:** 2026-06-28 (Groups 4a + 4b implemented and CI-green on main)
+**Updated:** 2026-06-29 (all groups done + validated; #10 power/energy
+removed as out of scope)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
@@ -127,12 +125,16 @@ After checking our code, three items are **not** gaps:
 So the missing pieces are the **config switches/numbers/selects** behind these
 states, not the state sensors.
 
-**`#10` (filtration pump power & energy / Energy Dashboard) is intentionally
-parked** — the owner wants a different implementation, planned separately.
+**Dropped — svasek's "filtration pump power & energy" is out of scope (not a
+real feature).** The controller has no power meter; svasek's version just
+multiplies a single user-entered wattage by the pump's on/off state and
+integrates it for the Energy Dashboard — an estimate, not a measurement. Users
+who want real numbers use a smart plug / energy meter on the pump circuit. Not
+pursued here.
 
 ---
 
-## Per-feature analysis (13 features; #10 parked)
+## Per-feature analysis (12 features)
 
 <!-- pyml disable-num-lines 40 line-length-->
 | # | Feature | State source | Write mechanism | Gating (from payload) | Needs read-layer? |
