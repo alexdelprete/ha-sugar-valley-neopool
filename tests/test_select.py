@@ -19,9 +19,11 @@ from custom_components.sugar_valley_neopool.const import (
 from custom_components.sugar_valley_neopool.select import (
     AUX_MODE_SELECT_DESCRIPTIONS,
     SELECT_DESCRIPTIONS,
+    TIMER_SPEED_SELECT_DESCRIPTIONS,
     NeoPoolAuxModeSelect,
     NeoPoolSelect,
     NeoPoolSelectEntityDescription,
+    NeoPoolTimerSpeedSelect,
     async_setup_entry,
     create_value_fn,
 )
@@ -344,5 +346,12 @@ class TestAsyncSetupEntry:
 
         await async_setup_entry(mock_hass, mock_config_entry, async_add_entities)
 
-        assert len(added_entities) == len(SELECT_DESCRIPTIONS) + len(AUX_MODE_SELECT_DESCRIPTIONS)
-        assert all(isinstance(e, (NeoPoolSelect, NeoPoolAuxModeSelect)) for e in added_entities)
+        assert len(added_entities) == (
+            len(SELECT_DESCRIPTIONS)
+            + len(AUX_MODE_SELECT_DESCRIPTIONS)
+            + len(TIMER_SPEED_SELECT_DESCRIPTIONS)
+        )
+        assert all(
+            isinstance(e, (NeoPoolSelect, NeoPoolAuxModeSelect, NeoPoolTimerSpeedSelect))
+            for e in added_entities
+        )

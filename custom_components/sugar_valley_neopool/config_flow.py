@@ -26,6 +26,9 @@ from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 from homeassistant.helpers.service_info.mqtt import MqttServiceInfo
 from homeassistant.util import slugify
@@ -40,6 +43,7 @@ from .const import (
     CONF_MIGRATE_YAML,
     CONF_NODEID,
     CONF_OFFLINE_TIMEOUT,
+    CONF_PUMP_TYPE,
     CONF_RECOVERY_SCRIPT,
     CONF_REGENERATE_ENTITY_IDS,
     CONF_UNIQUE_ID_PREFIX,
@@ -49,6 +53,7 @@ from .const import (
     DEFAULT_FAILURES_THRESHOLD,
     DEFAULT_MQTT_TOPIC,
     DEFAULT_OFFLINE_TIMEOUT,
+    DEFAULT_PUMP_TYPE,
     DEFAULT_RECOVERY_SCRIPT,
     DEFAULT_UNIQUE_ID_PREFIX,
     DOMAIN,
@@ -58,6 +63,7 @@ from .const import (
     MIN_CONNECTION_ERROR_RATE_THRESHOLD,
     MIN_FAILURES_THRESHOLD,
     MIN_OFFLINE_TIMEOUT,
+    PUMP_TYPE_OPTIONS,
 )
 from .helpers import async_set_setoption157, classify_nodeid, get_nested_value, normalize_nodeid
 
@@ -1298,6 +1304,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
             CONF_CONNECTION_ERROR_RATE_THRESHOLD,
             DEFAULT_CONNECTION_ERROR_RATE_THRESHOLD,
         )
+        pump_type = current_options.get(CONF_PUMP_TYPE, DEFAULT_PUMP_TYPE)
 
         description_placeholders: dict[str, str] = {}
 
@@ -1356,6 +1363,19 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                             mode=NumberSelectorMode.BOX,
                             unit_of_measurement="%",
                             step=0.1,
+                        )
+                    ),
+                    # 6. Filtration pump type — gates the per-timer speed selects.
+                    # "auto" trusts the controller's self-report (variable-speed
+                    # pumps emit Filtration.Speed); override forces on/off.
+                    vol.Required(
+                        CONF_PUMP_TYPE,
+                        default=pump_type,
+                    ): SelectSelector(
+                        SelectSelectorConfig(
+                            options=list(PUMP_TYPE_OPTIONS),
+                            translation_key="pump_type",
+                            mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
                 },

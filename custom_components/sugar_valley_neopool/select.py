@@ -7,6 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.select import SelectEntity, SelectEntityDescription
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
@@ -22,12 +23,18 @@ from .const import (
     CMD_FILTRATION_MODE,
     CMD_FILTRATION_SPEED,
     CMD_NPWRITE,
+    CONF_PUMP_TYPE,
+    DEFAULT_PUMP_TYPE,
     FILTRATION_MODE_MAP,
     FILTRATION_SPEED_MAP,
+    FILTRATION_TIMER_SPEED_MAP,
+    FILTRATION_TIMER_SPEED_MASK,
     JSON_PATH_FILTRATION_MODE,
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
     JSON_PATH_RELAY_AUX,
+    PUMP_TYPE_STANDARD,
+    PUMP_TYPE_VARIABLE,
     REG_AUX1_FUNCTION,
     REG_AUX1_MODE,
     REG_AUX2_FUNCTION,
@@ -36,6 +43,10 @@ from .const import (
     REG_AUX3_MODE,
     REG_AUX4_FUNCTION,
     REG_AUX4_MODE,
+    REG_FILTRATION_CONF,
+    SHIFT_FILTRATION_TIMER1_SPEED,
+    SHIFT_FILTRATION_TIMER2_SPEED,
+    SHIFT_FILTRATION_TIMER3_SPEED,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, lookup_by_value, parse_json_payload, safe_int
@@ -154,6 +165,38 @@ AUX_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolAuxModeSelectEntityDescription, ...] 
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolTimerSpeedSelectEntityDescription(SelectEntityDescription):
+    """Describes a per-timer filtration-speed select (variable-speed pumps)."""
+
+    bit_shift: int  # position of the 3-bit speed field in REG_FILTRATION_CONF
+
+
+TIMER_SPEED_SELECT_DESCRIPTIONS: tuple[NeoPoolTimerSpeedSelectEntityDescription, ...] = (
+    NeoPoolTimerSpeedSelectEntityDescription(
+        key="filtration_timer1_speed",
+        translation_key="filtration_timer1_speed",
+        name="Filtration Timer 1 Speed",
+        bit_shift=SHIFT_FILTRATION_TIMER1_SPEED,
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolTimerSpeedSelectEntityDescription(
+        key="filtration_timer2_speed",
+        translation_key="filtration_timer2_speed",
+        name="Filtration Timer 2 Speed",
+        bit_shift=SHIFT_FILTRATION_TIMER2_SPEED,
+        entity_category=EntityCategory.CONFIG,
+    ),
+    NeoPoolTimerSpeedSelectEntityDescription(
+        key="filtration_timer3_speed",
+        translation_key="filtration_timer3_speed",
+        name="Filtration Timer 3 Speed",
+        bit_shift=SHIFT_FILTRATION_TIMER3_SPEED,
+        entity_category=EntityCategory.CONFIG,
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -167,6 +210,10 @@ async def async_setup_entry(
     ]
     selects.extend(
         NeoPoolAuxModeSelect(entry, description) for description in AUX_MODE_SELECT_DESCRIPTIONS
+    )
+    selects.extend(
+        NeoPoolTimerSpeedSelect(entry, description)
+        for description in TIMER_SPEED_SELECT_DESCRIPTIONS
     )
 
     async_add_entities(selects)
@@ -366,4 +413,126 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
             desc.function_register,
             desc.function_code,
             desc.key,
+        )
+
+
+class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
+    """Per-timer filtration speed for variable-speed pumps (Group 5).
+
+    The three filtration timers each have a 3-bit speed field packed into
+    MBF_PAR_FILTRATION_CONF (0x050F), read on startup via NPRead and kept current
+    by the write-ACK. Writes are read-modify-write (preserve the other fields).
+    The register encodes 0/1/2 = Slow/Medium/Fast (one less than the SENSOR /
+    NPFiltrationspeed 1/2/3 encoding — verified on-device).
+
+    Variable-speed gating: the controller emits NeoPool.Filtration.Speed in
+    SENSOR only for speed-capable pumps, so the select self-gates on that key.
+    The pump_type option overrides it (variable = force on, standard = force off,
+    auto = follow the SENSOR detection).
+    """
+
+    entity_description: NeoPoolTimerSpeedSelectEntityDescription
+
+    def __init__(
+        self,
+        config_entry: NeoPoolConfigEntry,
+        description: NeoPoolTimerSpeedSelectEntityDescription,
+    ) -> None:
+        """Initialize the timer-speed select."""
+        super().__init__(config_entry, description.key)
+        self.entity_description = description
+        self._attr_options = list(FILTRATION_TIMER_SPEED_MAP.values())
+        self._speed_present = False
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to LWT, the config-register signal, and SENSOR gating."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                config_register_signal(self._config_entry),
+                self._handle_register_update,
+            )
+        )
+
+        sensor_topic = f"tele/{self.mqtt_topic}/SENSOR"
+
+        @callback
+        def message_received(msg: mqtt.ReceiveMessage) -> None:
+            payload = parse_json_payload(msg.payload)
+            if payload is None:
+                return
+            # Filtration.Speed is emitted only for speed-capable (VS) pumps.
+            self._speed_present = get_nested_value(payload, JSON_PATH_FILTRATION_SPEED) is not None
+            self.async_write_ha_state()
+
+        await self._subscribe_topic(sensor_topic, message_received)
+
+    @callback
+    def _handle_register_update(self) -> None:
+        """React to a config-register cache update."""
+        self.async_write_ha_state()
+
+    @property
+    def _vs_enabled(self) -> bool:
+        """Whether per-timer speed applies (override, else SENSOR detection)."""
+        override = self._config_entry.options.get(CONF_PUMP_TYPE, DEFAULT_PUMP_TYPE)
+        if override == PUMP_TYPE_VARIABLE:
+            return True
+        if override == PUMP_TYPE_STANDARD:
+            return False
+        return self._speed_present
+
+    @property
+    def _conf_value(self) -> int | None:
+        """Return the cached raw MBF_PAR_FILTRATION_CONF value, if known."""
+        return self._config_entry.runtime_data.register_state.get(REG_FILTRATION_CONF)
+
+    @property
+    def _speed_field(self) -> int | None:
+        """Return this timer's 3-bit speed value from the register, if known."""
+        value = self._conf_value
+        if value is None:
+            return None
+        return (value >> self.entity_description.bit_shift) & FILTRATION_TIMER_SPEED_MASK
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current speed option (only meaningful for VS pumps)."""
+        field = self._speed_field
+        if field is None or not self._vs_enabled:
+            return None
+        return FILTRATION_TIMER_SPEED_MAP.get(field)
+
+    @property
+    def available(self) -> bool:
+        """Available for VS pumps when online and the register is cached."""
+        return super().available and self._vs_enabled and self._conf_value is not None
+
+    async def async_select_option(self, option: str) -> None:
+        """Set this timer's speed (read-modify-write the 3-bit field, persist)."""
+        field = lookup_by_value(FILTRATION_TIMER_SPEED_MAP, option)
+        current = self._conf_value
+        if field is None or current is None:
+            _LOGGER.warning(
+                "Cannot set %s to %s (field=%s, cached=%s)",
+                self.entity_description.key,
+                option,
+                field,
+                current,
+            )
+            return
+        shift = self.entity_description.bit_shift
+        new_value = (current & ~(FILTRATION_TIMER_SPEED_MASK << shift)) | (field << shift)
+        await self._write_register(REG_FILTRATION_CONF, new_value)
+        self._config_entry.runtime_data.register_state[REG_FILTRATION_CONF] = new_value
+        self.async_write_ha_state()
+        _LOGGER.debug(
+            "Set %s = %s (field %d) -> 0x%04X = 0x%04X",
+            self.entity_description.key,
+            option,
+            field,
+            REG_FILTRATION_CONF,
+            new_value,
         )

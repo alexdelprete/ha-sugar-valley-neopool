@@ -117,14 +117,16 @@
           "enable_repair_notification": "Enable repair notifications",
           "failures_threshold": "Failures before notification (1-10)",
           "offline_timeout": "Offline timeout (seconds)",
-          "connection_error_rate_threshold": "Connection error-rate threshold (%)"
+          "connection_error_rate_threshold": "Connection error-rate threshold (%)",
+          "pump_type": "Filtration pump type"
         },
         "data_description": {
           "recovery_script": "Script to run when device is offline for too long",
           "enable_repair_notification": "Create a repair issue when device goes offline",
           "failures_threshold": "Number of consecutive LWT offline messages before triggering notifications",
           "offline_timeout": "How long the device must be offline before triggering notifications",
-          "connection_error_rate_threshold": "Modbus error percentage (over a rolling 10-minute window) above which `binary_sensor.connection_problem` turns on"
+          "connection_error_rate_threshold": "Modbus error percentage (over a rolling 10-minute window) above which `binary_sensor.connection_problem` turns on",
+          "pump_type": "Variable-speed pumps get per-timer speed controls. Auto-detect trusts the controller (variable-speed pumps report a speed); override only if needed."
         }
       }
     }
@@ -397,6 +399,15 @@
           "on": "On",
           "off": "Off"
         }
+      },
+      "filtration_timer1_speed": {
+        "name": "Filtration Timer 1 Speed"
+      },
+      "filtration_timer2_speed": {
+        "name": "Filtration Timer 2 Speed"
+      },
+      "filtration_timer3_speed": {
+        "name": "Filtration Timer 3 Speed"
       }
     },
     "number": {
@@ -502,6 +513,13 @@
         "auto": "Auto",
         "on": "On",
         "off": "Off"
+      }
+    },
+    "pump_type": {
+      "options": {
+        "auto": "Auto-detect",
+        "variable": "Variable speed",
+        "standard": "Standard (single speed)"
       }
     }
   },

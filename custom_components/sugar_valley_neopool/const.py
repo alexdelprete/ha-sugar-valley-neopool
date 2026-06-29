@@ -44,6 +44,19 @@ CONF_REGENERATE_ENTITY_IDS: Final = "regenerate_entity_ids"
 CONF_NODEID_HASHED: Final = "nodeid_hashed"
 CONF_NODEID_REAL: Final = "nodeid_real"
 CONF_NODEID_MASKED: Final = "nodeid_masked"
+# Pump-type override for the per-timer filtration-speed selects (Group 5).
+# "auto" trusts the controller's self-report (Filtration.Speed present in SENSOR
+# = variable-speed pump); "variable"/"standard" force it on/off.
+CONF_PUMP_TYPE: Final = "pump_type"
+PUMP_TYPE_AUTO: Final = "auto"
+PUMP_TYPE_VARIABLE: Final = "variable"
+PUMP_TYPE_STANDARD: Final = "standard"
+PUMP_TYPE_OPTIONS: Final[tuple[str, ...]] = (
+    PUMP_TYPE_AUTO,
+    PUMP_TYPE_VARIABLE,
+    PUMP_TYPE_STANDARD,
+)
+DEFAULT_PUMP_TYPE: Final = PUMP_TYPE_AUTO
 
 # Device metadata keys (stored in runtime_data, updated from MQTT)
 CONF_MANUFACTURER: Final = "manufacturer"
@@ -257,6 +270,34 @@ AUX_MODE_MAP: Final[dict[int, str]] = {
     AUX_MODE_OFF: "off",
 }
 
+# Group 5 — per-timer filtration speed (variable-speed pumps). MBF_PAR_FILTRATION_CONF
+# (0x050F) is bit-packed (verified vs @curzon01's xsns_83_neopool.ino; svasek
+# cross-check agrees). Not in SENSOR → read on demand via NPRead, written
+# read-modify-write via NPWrite. Bit layout:
+#   bits 0-3  pump type  (MBMSK_PAR_FILTRATION_CONF_TYPE 0x000F; 0 = standard /
+#             single-speed, non-zero = variable speed)
+#   bits 4-6  default/manual speed (MBMSK_PAR_FILTRATION_CONF_DEF_SPEED 0x0070)
+#   bits 7-9  filtration timer 1 speed (shift 7)
+#   bits 10-12 filtration timer 2 speed (shift 10)
+#   bits 13-15 filtration timer 3 speed (shift 13)
+# ON-DEVICE FINDING (2026-06-29): the speed bit-fields use 0/1/2 = Slow/Medium/
+# Fast, i.e. one LESS than the SENSOR `NeoPool.Filtration.Speed` / NPFiltrationspeed
+# encoding (1/2/3). Verified on the owner's VS pump: reg 0x050F = 0x0002 (type=2,
+# all speeds=0) while SENSOR speed read "Slow" (1). So register_value = sensor - 1.
+REG_FILTRATION_CONF: Final = 0x050F  # MBF_PAR_FILTRATION_CONF (bit-packed)
+MASK_FILTRATION_PUMP_TYPE: Final = 0x000F  # 0 = standard, non-zero = variable speed
+FILTRATION_TIMER_SPEED_MASK: Final = 0x0007  # 3-bit speed field (pre-shift)
+SHIFT_FILTRATION_TIMER1_SPEED: Final = 7
+SHIFT_FILTRATION_TIMER2_SPEED: Final = 10
+SHIFT_FILTRATION_TIMER3_SPEED: Final = 13
+# Register (0/1/2) → user-facing speed label, matching FILTRATION_SPEED_MAP labels
+# but offset by one (SENSOR/command use 1/2/3).
+FILTRATION_TIMER_SPEED_MAP: Final[dict[int, str]] = {
+    0: "Slow",
+    1: "Medium",
+    2: "Fast",
+}
+
 # Group 4a — controller timer scheduling. The 12 configurable timers live in a
 # block of 15-register structures at MBF_PAR_TIMER_BLOCK_BASE (0x0434); each is
 # pre-assigned to a function (filtration 1-3, light, aux1-4, ...). Base
@@ -333,6 +374,7 @@ CONFIG_REGISTERS: Final[tuple[int, ...]] = (
     REG_AUX2_FUNCTION,
     REG_AUX3_FUNCTION,
     REG_AUX4_FUNCTION,
+    REG_FILTRATION_CONF,
 )
 
 # Group 2 number entity bounds (raw register units).
