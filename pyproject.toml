@@ -64,7 +64,7 @@ dev = [
 
 
 # <!-- BEGIN SHARED:repo-sync -->
-# Synced by repo-sync on 2026-06-27
+# Synced by repo-sync on 2026-07-24
 
 
 [tool.codespell]
@@ -105,17 +105,23 @@ fix = true
 target-version = "py314"
 required-version = ">=0.15.17"
 
+# Exclude non-code directories from formatting and linting
+extend-exclude = [
+    ".vscode",
+    ".devcontainer",
+    ".github",
+    # Keep ruff >= 0.16 from reformatting Python code blocks inside Markdown
+    # (docs snippets and the repo-sync-managed CLAUDE.md SHARED zone are
+    # hand-formatted; the linter never processed .md files anyway)
+    "*.md",
+]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "lf"
 docstring-code-format = true
-exclude = [
-    ".vscode",
-    ".devcontainer",
-    ".github",
-]
 
 [tool.ruff.lint]
 select = [
