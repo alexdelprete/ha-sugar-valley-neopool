@@ -77,6 +77,8 @@ from custom_components.sugar_valley_neopool.const import (
     # MQTT topics
     TOPIC_SENSOR,
     VERSION,
+    YAML_ENTITIES_TO_DELETE,
+    YAML_TO_INTEGRATION_KEY_MAP,
 )
 from homeassistant.const import Platform
 
@@ -455,3 +457,14 @@ class TestJsonPaths:
         assert JSON_PATH_TEMPERATURE == "NeoPool.Temperature"
         assert JSON_PATH_PH_DATA == "NeoPool.pH.Data"
         assert JSON_PATH_POWERUNIT_NODEID == "NeoPool.Powerunit.NodeID"
+
+
+class TestYamlMigrationMaps:
+    """Tests for the YAML package migration data (refs #23)."""
+
+    def test_water_flow_deleted_not_mapped(self) -> None:
+        """The inverted Water Flow duplicate is deleted during migration, not mapped."""
+        assert "hydrolysis_ctrl_fl1_water_flow" not in YAML_TO_INTEGRATION_KEY_MAP
+        assert ("binary_sensor", "hydrolysis_ctrl_fl1_water_flow") in YAML_ENTITIES_TO_DELETE
+        # The raw FL1 entity remains the migration target
+        assert YAML_TO_INTEGRATION_KEY_MAP["hydrolysis_ctrl_fl1"] == "hydrolysis_fl1"
