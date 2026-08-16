@@ -296,7 +296,7 @@
         "name": "État du relais de vanne"
       },
       "ph_fl1": {
-        "name": "Alarme de débit pH"
+        "name": "pH FL1"
       },
       "hydrolysis_fl1": {
         "name": "Alarme de débit d'hydrolyse"

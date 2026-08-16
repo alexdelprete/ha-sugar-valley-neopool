@@ -296,7 +296,7 @@
         "name": "Relé ventiltilstand"
       },
       "ph_fl1": {
-        "name": "pH-strømningsalarm"
+        "name": "pH FL1"
       },
       "hydrolysis_fl1": {
         "name": "Hydrolyse-strømningsalarm"

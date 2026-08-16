@@ -38,14 +38,15 @@ class TestBinarySensorDescriptions:
         assert desc.invert is False
 
     def test_flow_alarm_descriptions(self) -> None:
-        """Test FL1 flow alarm binary sensors expose raw alarm semantics."""
+        """Test hydrolysis FL1 is a problem-class flow alarm; pH FL1 stays raw."""
         hydro = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "hydrolysis_fl1")
         ph = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "ph_fl1")
 
         assert hydro.device_class == BinarySensorDeviceClass.PROBLEM
         assert hydro.json_path == "NeoPool.Hydrolysis.FL1"
         assert hydro.invert is False  # FL1=1 means flow alarm active
-        assert ph.device_class == BinarySensorDeviceClass.PROBLEM
+        # pH.FL1 semantics are unconfirmed upstream — keep it neutral (refs #23)
+        assert ph.device_class is None
         assert ph.json_path == "NeoPool.pH.FL1"
         assert ph.invert is False
 

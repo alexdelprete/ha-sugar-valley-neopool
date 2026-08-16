@@ -296,7 +296,7 @@
         "name": "Relais Ventil-Zustand"
       },
       "ph_fl1": {
-        "name": "pH-Durchflussalarm"
+        "name": "pH FL1"
       },
       "hydrolysis_fl1": {
         "name": "Hydrolyse-Durchflussalarm"

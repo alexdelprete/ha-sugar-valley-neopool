@@ -148,7 +148,7 @@
         "default": "mdi:valve"
       },
       "ph_fl1": {
-        "default": "mdi:water-alert"
+        "default": "mdi:water-pump"
       },
       "hydrolysis_fl1": {
         "default": "mdi:water-alert"

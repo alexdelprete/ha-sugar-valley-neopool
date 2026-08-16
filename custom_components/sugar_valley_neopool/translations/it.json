@@ -296,7 +296,7 @@
         "name": "Stato relè valvola"
       },
       "ph_fl1": {
-        "name": "Allarme flusso pH"
+        "name": "pH FL1"
       },
       "hydrolysis_fl1": {
         "name": "Allarme flusso idrolisi"

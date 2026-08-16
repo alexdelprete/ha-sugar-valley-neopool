@@ -1508,13 +1508,6 @@ class TestCleanupRemovedEntitiesRename:
             config_entry=entry,
             suggested_object_id="neopool_hydrolysis_fl1",
         )
-        entity_registry.async_get_or_create(
-            domain="binary_sensor",
-            platform=DOMAIN,
-            unique_id="neopool_mqtt_ABC123_ph_fl1",
-            config_entry=entry,
-            suggested_object_id="neopool_ph_fl1",
-        )
 
         _cleanup_removed_entities(hass, entry)
 
@@ -1523,12 +1516,6 @@ class TestCleanupRemovedEntitiesRename:
                 "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
             )
             == "binary_sensor.neopool_hydrolysis_flow_alarm"
-        )
-        assert (
-            entity_registry.async_get_entity_id(
-                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
-            )
-            == "binary_sensor.neopool_ph_flow_alarm"
         )
 
     def test_fl1_realignment_skips_migrated_installs(self, hass: HomeAssistant) -> None:
@@ -1576,7 +1563,7 @@ class TestCleanupRemovedEntitiesRename:
         entity_registry.async_get_or_create(
             domain="binary_sensor",
             platform=DOMAIN,
-            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            unique_id="neopool_mqtt_ABC123_hydrolysis_fl1",
             config_entry=entry,
             suggested_object_id="my_custom_flow_sensor",
         )
@@ -1585,7 +1572,7 @@ class TestCleanupRemovedEntitiesRename:
 
         assert (
             entity_registry.async_get_entity_id(
-                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
             )
             == "binary_sensor.my_custom_flow_sensor"
         )
@@ -1603,25 +1590,25 @@ class TestCleanupRemovedEntitiesRename:
         entity_registry.async_get_or_create(
             domain="binary_sensor",
             platform=DOMAIN,
-            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            unique_id="neopool_mqtt_ABC123_hydrolysis_fl1",
             config_entry=entry,
-            suggested_object_id="neopool_ph_fl1",
+            suggested_object_id="neopool_hydrolysis_fl1",
         )
         # Occupy the target entity_id with an unrelated entity
         entity_registry.async_get_or_create(
             domain="binary_sensor",
             platform="mqtt",
             unique_id="some_other_entity",
-            suggested_object_id="neopool_ph_flow_alarm",
+            suggested_object_id="neopool_hydrolysis_flow_alarm",
         )
 
         _cleanup_removed_entities(hass, entry)
 
         assert (
             entity_registry.async_get_entity_id(
-                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
             )
-            == "binary_sensor.neopool_ph_fl1"
+            == "binary_sensor.neopool_hydrolysis_fl1"
         )
 
 

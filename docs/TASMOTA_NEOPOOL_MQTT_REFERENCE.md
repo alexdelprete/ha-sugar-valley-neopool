@@ -254,7 +254,7 @@ System voltage and version information:
   "Max": 7.4,        // User-defined maximum pH
   "State": 0,        // pH alarm state (0-6, see below)
   "Pump": 0,         // Pump state: 0=inactive, 1=on, 2=off
-  "FL1": 0,          // Flow sensor 1 (0=no flow, 1=flow)
+  "FL1": 0,          // Control status of pH module by flow detection (0=Disable, 1=Enable) — NOT a flow alarm
   "Tank": 1          // Tank level (0=empty, 1=ok)
 }
 ```
@@ -316,7 +316,7 @@ System voltage and version information:
   "Cover": 0,         // Pool cover sensor (0=open, 1=covered)
   "Boost": 0,         // Boost mode (0=off, 1=on, 2=redox-controlled)
   "Low": 0,           // Low production mode (0=normal, 1=low)
-  "FL1": 0,           // Flow sensor 1 (0=no flow, 1=flow)
+  "FL1": 0,           // Hydrolysis flow alarm (0=no alarm, 1=flow alarm/no flow detected)
   "Redox": 1          // Redox control enabled (0=disabled, 1=enabled)
 }
 ```
@@ -1362,7 +1362,11 @@ Three boost operating modes:
 
 #### Flow Detection
 
-- `Hydrolysis.FL1` monitors water flow
+- `Hydrolysis.FL1` is the hydrolysis flow alarm: `1` = flow alarm (no flow
+  detected), `0` = no alarm; it mirrors `State` == `"FLOW"`
+- The alarm is the combined verdict of the configured detection source
+  (`MBF_PAR_HIDRO_FLOW_SIGNAL`): the cell's built-in conduction detector,
+  a paddle switch on the FL1 input, or an AND/OR combination of both
 - State changes to "FLOW" when no flow detected
 - Safety feature to prevent dry running
 - Protects electrode cell

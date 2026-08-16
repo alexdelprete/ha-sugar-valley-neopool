@@ -714,7 +714,6 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
     # their entity_ids are intentionally pinned to the YAML package scheme by
     # _apply_entity_id_mapping on every startup.
     renamed_entity_id_suffixes = [
-        ("binary_sensor", "ph_fl1", "ph_fl1", "ph_flow_alarm"),
         ("binary_sensor", "hydrolysis_fl1", "hydrolysis_fl1", "hydrolysis_flow_alarm"),
     ]
     if not entry.data.get("entity_id_mapping"):
