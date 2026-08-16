@@ -1205,7 +1205,15 @@ SENSOR-watch callback without standing up real MQTT.
 
 [`alexdelprete/HA-NeoPool-MQTT-Package`](https://github.com/alexdelprete/HA-NeoPool-MQTT-Package)
 is the predecessor YAML-package project this integration replaces and supports
-migrating from. It exposes the same NeoPool MQTT data as HA MQTT entities defined
+migrating from.
+
+> **NOTE:** The package repo is **archived** (read-only reference since
+> 2026-05-31). To land a lock-step fix there, temporarily unarchive it,
+> push, and re-archive:
+> `gh api -X PATCH repos/alexdelprete/HA-NeoPool-MQTT-Package -F archived=false`
+> → commit/push (plain imperative commit style, per that repo's CLAUDE.md;
+> changes go under `[Unreleased]` in its CHANGELOG, no tagging) →
+> `... -F archived=true`. Ask the user before unarchiving. It exposes the same NeoPool MQTT data as HA MQTT entities defined
 in `ha_neopool_mqtt_package.yaml` (Jinja `value_template`s) and ships two
 companion Lovelace dashboards.
 
