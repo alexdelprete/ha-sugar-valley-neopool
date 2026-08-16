@@ -296,13 +296,10 @@
         "name": "Relé ventiltilstand"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH-strømningsalarm"
       },
       "hydrolysis_fl1": {
-        "name": "Hydrolyse FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Vannstrøm"
+        "name": "Hydrolyse-strømningsalarm"
       },
       "ph_tank_level": {
         "name": "pH-tanknivå lav"

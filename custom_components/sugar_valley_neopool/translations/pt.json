@@ -296,13 +296,10 @@
         "name": "Estado do Relé de Válvula"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "Alarme de Fluxo de pH"
       },
       "hydrolysis_fl1": {
-        "name": "Hidrólise FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Fluxo de Água"
+        "name": "Alarme de Fluxo de Hidrólise"
       },
       "ph_tank_level": {
         "name": "Nível Baixo do Tanque de pH"

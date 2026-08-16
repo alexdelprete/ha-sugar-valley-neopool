@@ -296,13 +296,10 @@
         "name": "Relee klapi olek"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH vooluhäire"
       },
       "hydrolysis_fl1": {
-        "name": "Hüdrolüüs FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Vee vool"
+        "name": "Hüdrolüüsi vooluhäire"
       },
       "ph_tank_level": {
         "name": "pH paagi tase madal"

@@ -191,25 +191,22 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
         json_path=f"{JSON_PATH_RELAY_AUX}.3",
     ),
     # Flow and tank level sensors
+    # FL1 is the flow-detection alarm bit of each module (1 = flow alarm),
+    # NOT the filtration pump state — that lives in NeoPool.Filtration.State.
+    # Keys keep the historical "_fl1" form so existing unique_ids survive.
     NeoPoolBinarySensorEntityDescription(
         key="ph_fl1",
         translation_key="ph_fl1",
-        name="pH FL1",
+        name="pH Flow Alarm",
+        device_class=BinarySensorDeviceClass.PROBLEM,
         json_path=JSON_PATH_PH_FL1,
     ),
     NeoPoolBinarySensorEntityDescription(
         key="hydrolysis_fl1",
         translation_key="hydrolysis_fl1",
-        name="Hydrolysis FL1",
+        name="Hydrolysis Flow Alarm",
+        device_class=BinarySensorDeviceClass.PROBLEM,
         json_path=JSON_PATH_HYDROLYSIS_FL1,
-    ),
-    NeoPoolBinarySensorEntityDescription(
-        key="hydrolysis_water_flow",
-        translation_key="hydrolysis_water_flow",
-        name="Water Flow",
-        device_class=BinarySensorDeviceClass.RUNNING,
-        json_path=JSON_PATH_HYDROLYSIS_FL1,
-        invert=True,  # FL1=0 means flow is OK, FL1=1 means no flow
     ),
     NeoPoolBinarySensorEntityDescription(
         key="ph_tank_level",

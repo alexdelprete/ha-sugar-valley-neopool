@@ -296,13 +296,10 @@
         "name": "Rele venttiilitila"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH-virtaushälytys"
       },
       "hydrolysis_fl1": {
-        "name": "Hydrolyysi FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Vesivirtaus"
+        "name": "Hydrolyysin virtaushälytys"
       },
       "ph_tank_level": {
         "name": "pH-säiliön taso matala"

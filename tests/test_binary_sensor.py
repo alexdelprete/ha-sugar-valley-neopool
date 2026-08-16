@@ -37,13 +37,21 @@ class TestBinarySensorDescriptions:
         assert desc.json_path == "NeoPool.Modules.pH"
         assert desc.invert is False
 
-    def test_water_flow_description(self) -> None:
-        """Test water flow binary sensor with inversion."""
-        desc = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "hydrolysis_water_flow")
+    def test_flow_alarm_descriptions(self) -> None:
+        """Test FL1 flow alarm binary sensors expose raw alarm semantics."""
+        hydro = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "hydrolysis_fl1")
+        ph = next(d for d in BINARY_SENSOR_DESCRIPTIONS if d.key == "ph_fl1")
 
-        assert desc.device_class == BinarySensorDeviceClass.RUNNING
-        assert desc.json_path == "NeoPool.Hydrolysis.FL1"
-        assert desc.invert is True  # FL1=0 means flow OK
+        assert hydro.device_class == BinarySensorDeviceClass.PROBLEM
+        assert hydro.json_path == "NeoPool.Hydrolysis.FL1"
+        assert hydro.invert is False  # FL1=1 means flow alarm active
+        assert ph.device_class == BinarySensorDeviceClass.PROBLEM
+        assert ph.json_path == "NeoPool.pH.FL1"
+        assert ph.invert is False
+
+    def test_water_flow_description_removed(self) -> None:
+        """The inverted Water Flow duplicate of Hydrolysis.FL1 is gone (refs #23)."""
+        assert not any(d.key == "hydrolysis_water_flow" for d in BINARY_SENSOR_DESCRIPTIONS)
 
     def test_ph_tank_level_description(self) -> None:
         """Test pH tank level binary sensor with inversion."""

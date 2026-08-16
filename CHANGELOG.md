@@ -85,6 +85,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relay's schedule. Update automations, scripts, or dashboards that toggled the
   old AUX switches to set the select instead. The bundled Lovelace dashboards
   (fresh and migrated variants) have already been updated.
+- **BREAKING: the "Water Flow" binary sensor was removed; the FL1 sensors are
+  now problem-class "Flow Alarm" entities.** (Refs #23, thanks @deZeus89.)
+  "Water Flow" was an inverted duplicate of the same `Hydrolysis.FL1` bit
+  behind "Hydrolysis FL1", and its name wrongly suggested it tracked pump
+  water flow — FL1 is the hydrolysis module's flow-detection alarm, not the
+  filtration state (that is `switch.<name>_filtration`). Now a single entity
+  per FL1 bit exposes raw alarm semantics (`on` = flow alarm active):
+  - Fresh installs: `binary_sensor.neopool_water_flow` is removed
+    automatically; use `binary_sensor.neopool_hydrolysis_fl1` (named
+    "Hydrolysis Flow Alarm"; new installs create it as
+    `binary_sensor.neopool_hydrolysis_flow_alarm`). "pH FL1" is likewise
+    renamed "pH Flow Alarm".
+  - Migrated installs: `binary_sensor.neopool_mqtt_hydrolysis_water_flow` is
+    removed automatically; use `binary_sensor.neopool_mqtt_hydrolysis_fl1`.
+
+  Note the inverted meaning when updating automations: the old entity was `on`
+  when flow was OK; the flow-alarm entities are `on` when there is a problem.
+  The bundled Lovelace dashboards have already been updated.
 
 ## [1.1.3] - 2026-06-27
 

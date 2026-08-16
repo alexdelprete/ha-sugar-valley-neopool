@@ -662,6 +662,11 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
         ("switch", "aux2"),
         ("switch", "aux3"),
         ("switch", "aux4"),
+        # "Water Flow" was an inverted duplicate of Hydrolysis.FL1 with a
+        # misleading name (it is the hydrolysis flow alarm, not the pump
+        # state). Replaced by the single problem-class "Hydrolysis Flow
+        # Alarm" entity (key hydrolysis_fl1). Refs #23.
+        ("binary_sensor", "hydrolysis_water_flow"),
     ]
 
     # Entities renamed in this version

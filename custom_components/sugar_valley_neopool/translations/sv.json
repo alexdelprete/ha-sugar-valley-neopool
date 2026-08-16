@@ -296,13 +296,10 @@
         "name": "Relä ventilstatus"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH-flödeslarm"
       },
       "hydrolysis_fl1": {
-        "name": "Hydrolys FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Vattenflöde"
+        "name": "Hydrolys flödeslarm"
       },
       "ph_tank_level": {
         "name": "pH-tanknivå låg"

@@ -499,8 +499,10 @@ YAML_TO_INTEGRATION_KEY_MAP: Final[dict[str, str]] = {
     "hydrolysis_data_g_h": "hydrolysis_data",  # Alternative naming for g/h
     "hydrolysis_runtime_pol_changes": "hydrolysis_polarity_changes",  # YAML uses pol_changes
     "hydrolysis_runtime_polarity_changes": "hydrolysis_polarity_changes",  # Alternative
-    # Binary sensors - hydrolysis water flow (YAML: hydrolysis_ctrl_fl1_water_flow)
-    "hydrolysis_ctrl_fl1_water_flow": "hydrolysis_water_flow",
+    # Binary sensors - hydrolysis FL1 (YAML: hydrolysis_ctrl_fl1)
+    # NOTE: the YAML hydrolysis_ctrl_fl1_water_flow entity is NOT mapped — it was
+    # an inverted duplicate of the same Hydrolysis.FL1 bit and is deleted during
+    # migration (see YAML_ENTITIES_TO_DELETE). Refs #23.
     "hydrolysis_ctrl_fl1": "hydrolysis_fl1",
     # Binary sensors - pH FL1 naming (YAML: ph_ctrl_fl1, Integration: ph_fl1)
     "ph_ctrl_fl1": "ph_fl1",
@@ -552,4 +554,7 @@ YAML_ENTITIES_TO_DELETE: Final[list[tuple[str, str]]] = [
     ("binary_sensor", "relay_ph_state"),
     ("binary_sensor", "relay_filtration_state"),
     ("binary_sensor", "relay_light_state"),
+    # "Water Flow" - inverted duplicate of Hydrolysis.FL1; replaced by the
+    # single problem-class "Hydrolysis Flow Alarm" (hydrolysis_fl1). Refs #23.
+    ("binary_sensor", "hydrolysis_ctrl_fl1_water_flow"),
 ]

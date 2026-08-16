@@ -296,13 +296,10 @@
         "name": "Stato relè valvola"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "Allarme flusso pH"
       },
       "hydrolysis_fl1": {
-        "name": "Idrolisi FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Flusso acqua"
+        "name": "Allarme flusso idrolisi"
       },
       "ph_tank_level": {
         "name": "Livello serbatoio pH basso"

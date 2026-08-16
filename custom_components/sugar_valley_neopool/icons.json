@@ -148,13 +148,10 @@
         "default": "mdi:valve"
       },
       "ph_fl1": {
-        "default": "mdi:water-pump"
+        "default": "mdi:water-alert"
       },
       "hydrolysis_fl1": {
-        "default": "mdi:water-pump"
-      },
-      "hydrolysis_water_flow": {
-        "default": "mdi:air-filter"
+        "default": "mdi:water-alert"
       },
       "ph_tank_level": {
         "default": "mdi:cup-water"

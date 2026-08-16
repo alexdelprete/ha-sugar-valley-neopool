@@ -308,13 +308,10 @@
         "name": "AUX4"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH Flow Alarm"
       },
       "hydrolysis_fl1": {
-        "name": "Hydrolysis FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Water Flow"
+        "name": "Hydrolysis Flow Alarm"
       },
       "ph_tank_level": {
         "name": "pH Tank Level Low"

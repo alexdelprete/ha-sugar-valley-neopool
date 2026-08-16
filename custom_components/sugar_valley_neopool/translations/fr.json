@@ -296,13 +296,10 @@
         "name": "État du relais de vanne"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "Alarme de débit pH"
       },
       "hydrolysis_fl1": {
-        "name": "Hydrolyse FL1"
-      },
-      "hydrolysis_water_flow": {
-        "name": "Débit d'eau"
+        "name": "Alarme de débit d'hydrolyse"
       },
       "ph_tank_level": {
         "name": "Niveau du réservoir pH bas"
