@@ -254,7 +254,7 @@ System voltage and version information:
   "Max": 7.4,        // User-defined maximum pH
   "State": 0,        // pH alarm state (0-6, see below)
   "Pump": 0,         // Pump state: 0=inactive, 1=on, 2=off
-  "FL1": 0,          // Control status of pH module by flow detection (0=Disable, 1=Enable) — NOT a flow alarm
+  "FL1": 0,          // pH flow alarm: 1 = pH dosing blocked by flow detection (same polarity as Hydrolysis.FL1, verified empirically)
   "Tank": 1          // Tank level (0=empty, 1=ok)
 }
 ```

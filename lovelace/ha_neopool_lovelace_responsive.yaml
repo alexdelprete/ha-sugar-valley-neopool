@@ -246,8 +246,8 @@
                 name: Tank
                 icon: mdi:cup
               - type: tile
-                entity: binary_sensor.neopool_ph_fl1
-                name: FL1
+                entity: binary_sensor.neopool_ph_flow_alarm
+                name: Flow Alarm
                 icon: mdi:waves-arrow-right
       # Conditional: Chlorine module
       - type: conditional

@@ -296,7 +296,7 @@
         "name": "Relä ventilstatus"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH-flödeslarm"
       },
       "hydrolysis_fl1": {
         "name": "Hydrolys flödeslarm"

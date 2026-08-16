@@ -252,7 +252,7 @@
                 icon: mdi:cup
               - type: tile
                 entity: binary_sensor.neopool_mqtt_ph_fl1
-                name: FL1
+                name: Flow Alarm
                 icon: mdi:waves-arrow-right
       # Conditional: Chlorine module
       - type: conditional

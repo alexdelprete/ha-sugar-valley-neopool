@@ -85,35 +85,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   relay's schedule. Update automations, scripts, or dashboards that toggled the
   old AUX switches to set the select instead. The bundled Lovelace dashboards
   (fresh and migrated variants) have already been updated.
-- **BREAKING: the "Water Flow" binary sensor was removed; "Hydrolysis FL1" is
-  now the problem-class "Hydrolysis Flow Alarm".** (Refs #23, thanks
+- **BREAKING: the "Water Flow" binary sensor was removed; the FL1 sensors
+  are now problem-class "Flow Alarm" entities.** (Refs #23, thanks
   @deZeus89.) "Water Flow" was an inverted duplicate of the same
   `Hydrolysis.FL1` bit behind "Hydrolysis FL1", and its name wrongly suggested
   it tracked pump water flow — per the Tasmota NeoPool docs, `Hydrolysis.FL1`
   is the hydrolysis module's flow-detection alarm (`1` = flow alarm, no flow
   detected), not the filtration state (that is `switch.<name>_filtration`).
-  The single surviving entity exposes the raw alarm semantics (`on` = flow
-  alarm active):
+  `pH.FL1` shares the same polarity — verified empirically against a live
+  controller, where both FL1 fields transition in lockstep within the same
+  SENSOR frames across flow-loss episodes. Now a single entity per FL1 bit
+  exposes the raw alarm semantics (`on` = flow alarm active):
   - Fresh installs: `binary_sensor.<device>_water_flow` is removed
-    automatically, and the surviving entity is renamed — including its
-    entity_id, on existing installs too, so all fresh installs share the same
-    ID: `binary_sensor.<device>_hydrolysis_fl1` →
-    `binary_sensor.<device>_hydrolysis_flow_alarm` ("Hydrolysis Flow Alarm").
-    User-customized entity_ids are left untouched.
+    automatically, and the surviving FL1 entities are renamed — including
+    their entity_ids, on existing installs too, so all fresh installs share
+    the same IDs: `binary_sensor.<device>_hydrolysis_fl1` →
+    `binary_sensor.<device>_hydrolysis_flow_alarm` ("Hydrolysis Flow Alarm")
+    and `binary_sensor.<device>_ph_fl1` → `binary_sensor.<device>_ph_flow_alarm`
+    ("pH Flow Alarm"). User-customized entity_ids are left untouched.
   - Migrated installs: `binary_sensor.neopool_mqtt_hydrolysis_water_flow` is
     removed automatically; use `binary_sensor.neopool_mqtt_hydrolysis_fl1`
     (entity_ids from the YAML package are preserved as before).
 
   Update automations that referenced the old entity_ids, and note the
   inverted meaning: the old "Water Flow" entity was `on` when flow was OK;
-  the flow-alarm entity is `on` when there is a problem. The bundled
+  the flow-alarm entities are `on` when there is a problem. The bundled
   Lovelace dashboards have already been updated.
-
-  The "pH FL1" sensor is intentionally unchanged: per the Tasmota docs,
-  `pH.FL1` is the "control status of the pH module by flow detection"
-  (`0` = Disable, `1` = Enable) — a supervision status, not a flow alarm —
-  and its exact polarity is not confirmed upstream, so it keeps its raw,
-  class-less representation for now.
 
 ## [1.1.3] - 2026-06-27
 

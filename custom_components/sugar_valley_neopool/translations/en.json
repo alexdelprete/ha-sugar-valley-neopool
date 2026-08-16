@@ -308,7 +308,7 @@
         "name": "AUX4"
       },
       "ph_fl1": {
-        "name": "pH FL1"
+        "name": "pH Flow Alarm"
       },
       "hydrolysis_fl1": {
         "name": "Hydrolysis Flow Alarm"

@@ -1508,6 +1508,13 @@ class TestCleanupRemovedEntitiesRename:
             config_entry=entry,
             suggested_object_id="neopool_hydrolysis_fl1",
         )
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            config_entry=entry,
+            suggested_object_id="neopool_ph_fl1",
+        )
 
         _cleanup_removed_entities(hass, entry)
 
@@ -1516,6 +1523,12 @@ class TestCleanupRemovedEntitiesRename:
                 "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
             )
             == "binary_sensor.neopool_hydrolysis_flow_alarm"
+        )
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+            )
+            == "binary_sensor.neopool_ph_flow_alarm"
         )
 
     def test_fl1_realignment_skips_migrated_installs(self, hass: HomeAssistant) -> None:
