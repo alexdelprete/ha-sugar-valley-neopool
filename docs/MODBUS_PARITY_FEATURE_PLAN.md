@@ -1,16 +1,17 @@
 # Feature Parity Plan — svasek Modbus Integration → our MQTT/Tasmota Integration
 
-**Status:** All planned features (Groups 1–4) implemented on `main`,
+**Status:** All planned features (Groups 1–5) implemented on `main`,
 CI-green (Lint/Tests/Validate), localized into all 10 languages, and
 hardware-validated (AUX mode write, light + filtration timer binding,
-granular `set_timer` edits). **Not yet released** (version still 1.1.4;
-two breaking entity moves — light and AUX — ship whenever tagged).
-Write-ACK design resolved with @curzon01 (discussion #16); SENSOR-emit of
-config registers still open (non-blocking). Register addresses verified vs
-curzon01 driver (primary) + svasek `registers.py` (secondary).
+granular `set_timer` edits, per-timer filtration speed). **Not yet released**
+(version still 1.1.4; two breaking entity moves, light and AUX, ship whenever
+tagged). Write-ACK design resolved with @curzon01 (discussion #16); SENSOR-emit
+of config/timer registers **asked of @curzon01 in discussion #16 (2026-06-30);
+awaiting reply** (non-blocking). Register addresses verified vs curzon01 driver
+(primary) + svasek `registers.py` (secondary).
 **Created:** 2026-06-16
-**Updated:** 2026-06-29 (all groups done + validated; #10 power/energy
-removed as out of scope)
+**Updated:** 2026-06-30 (Groups 1–5 done + validated; SENSOR-emit question
+posted to @curzon01 in #16)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
@@ -20,11 +21,11 @@ Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/sv
 > polling**. Subscribe to `stat/{topic}/RESULT` and match the command's JSON
 > key. See "Write acknowledgment" section below.
 >
-> **Still open with @curzon01:** whether the Group-Y config registers could be
-> emitted in `tele/{topic}/SENSOR` (e.g. gated behind an
-> `NPTelePeriod`/`NPSetOption` flag to keep the default payload small). This is
-> **not** needed for write-ACK — only for auto-reflecting *external* (keypad)
-> changes to those settings without an on-demand `NPRead`. Preferred if feasible.
+> **Asked @curzon01 (discussion #16, 2026-06-30), awaiting reply:** whether the
+> config/timer registers could be emitted in `tele/{topic}/SENSOR` (e.g. gated
+> behind an `NPTelePeriod`/`NPSetOption` flag to keep the default payload small).
+> This is **not** needed for write-ACK, only for auto-reflecting *external*
+> (keypad/app) changes without an on-demand `NPRead`. Preferred if feasible.
 
 ---
 
@@ -467,8 +468,15 @@ to follow rather than a separate phase.
 
 ## Still open
 
-- With @curzon01: whether config registers can be emitted in SENSOR (would
-  remove the startup `NPRead` and reflect keypad edits for free). Not blocking.
+- **Asked @curzon01 in discussion #16 (2026-06-30), awaiting reply:** whether
+  the config/timer registers can be emitted in SENSOR (behind an
+  `NPTelePeriod`/`NPSetOption` flag), which would remove the startup `NPRead`
+  and reflect external keypad/app edits for free (and enable push-native timer
+  entities for feature #1). Not blocking.
+- **#1 per-timer timer entities** (time pickers / selects, in addition to the
+  `set_timer` service) — deferred pending the answer above: without SENSOR-emit
+  they'd be read-layer-backed (startup read + write-ACK, stale on external
+  edits); with it they'd be push-native. No polling either way.
 
 ## Cross-repo note
 
