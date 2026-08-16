@@ -1491,6 +1491,139 @@ class TestCleanupRemovedEntitiesRename:
         entity = entity_registry.async_get("binary_sensor.neopool_relay_filtration")
         assert entity is None
 
+    def test_realigns_fl1_entity_ids_on_fresh_install(self, hass: HomeAssistant) -> None:
+        """Old fresh installs get the new flow-alarm entity_ids (refs #23)."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_NODEID: "ABC123"},
+        )
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="T", nodeid="ABC123")
+
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_hydrolysis_fl1",
+            config_entry=entry,
+            suggested_object_id="neopool_hydrolysis_fl1",
+        )
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            config_entry=entry,
+            suggested_object_id="neopool_ph_fl1",
+        )
+
+        _cleanup_removed_entities(hass, entry)
+
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
+            )
+            == "binary_sensor.neopool_hydrolysis_flow_alarm"
+        )
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+            )
+            == "binary_sensor.neopool_ph_flow_alarm"
+        )
+
+    def test_fl1_realignment_skips_migrated_installs(self, hass: HomeAssistant) -> None:
+        """Migrated installs keep YAML-pinned entity_ids (refs #23)."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_NODEID: "ABC123",
+                "entity_id_mapping": {
+                    "hydrolysis_ctrl_fl1": "binary_sensor.neopool_mqtt_hydrolysis_fl1"
+                },
+            },
+        )
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="T", nodeid="ABC123")
+
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_hydrolysis_fl1",
+            config_entry=entry,
+            suggested_object_id="neopool_mqtt_hydrolysis_fl1",
+        )
+
+        _cleanup_removed_entities(hass, entry)
+
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_hydrolysis_fl1"
+            )
+            == "binary_sensor.neopool_mqtt_hydrolysis_fl1"
+        )
+
+    def test_fl1_realignment_skips_custom_entity_ids(self, hass: HomeAssistant) -> None:
+        """User-customized entity_ids are left alone (refs #23)."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_NODEID: "ABC123"},
+        )
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="T", nodeid="ABC123")
+
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            config_entry=entry,
+            suggested_object_id="my_custom_flow_sensor",
+        )
+
+        _cleanup_removed_entities(hass, entry)
+
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+            )
+            == "binary_sensor.my_custom_flow_sensor"
+        )
+
+    def test_fl1_realignment_skips_on_target_collision(self, hass: HomeAssistant) -> None:
+        """Realignment is skipped when the target entity_id is taken (refs #23)."""
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={CONF_NODEID: "ABC123"},
+        )
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="T", nodeid="ABC123")
+
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform=DOMAIN,
+            unique_id="neopool_mqtt_ABC123_ph_fl1",
+            config_entry=entry,
+            suggested_object_id="neopool_ph_fl1",
+        )
+        # Occupy the target entity_id with an unrelated entity
+        entity_registry.async_get_or_create(
+            domain="binary_sensor",
+            platform="mqtt",
+            unique_id="some_other_entity",
+            suggested_object_id="neopool_ph_flow_alarm",
+        )
+
+        _cleanup_removed_entities(hass, entry)
+
+        assert (
+            entity_registry.async_get_entity_id(
+                "binary_sensor", DOMAIN, "neopool_mqtt_ABC123_ph_fl1"
+            )
+            == "binary_sensor.neopool_ph_fl1"
+        )
+
 
 # ---------------------------------------------------------------------------
 # get_device_info (device_ip config_url path)

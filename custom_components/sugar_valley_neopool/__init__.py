@@ -705,6 +705,42 @@ def _cleanup_removed_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
                 new_unique_id,
             )
 
+    # Entity_id realignment after display renames (refs #23). Auto-generated
+    # entity_ids are frozen at first creation, so installs created before a
+    # rename would keep old IDs forever and drift from new installs and the
+    # bundled dashboards. Force the old auto-generated suffix to the new one
+    # so all fresh installs converge on the same entity_ids. Customized IDs
+    # (suffix doesn't match) are left alone. Migrated installs are skipped:
+    # their entity_ids are intentionally pinned to the YAML package scheme by
+    # _apply_entity_id_mapping on every startup.
+    renamed_entity_id_suffixes = [
+        ("binary_sensor", "ph_fl1", "ph_fl1", "ph_flow_alarm"),
+        ("binary_sensor", "hydrolysis_fl1", "hydrolysis_fl1", "hydrolysis_flow_alarm"),
+    ]
+    if not entry.data.get("entity_id_mapping"):
+        for domain, entity_key, old_suffix, new_suffix in renamed_entity_id_suffixes:
+            unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+            entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if entity_id is None:
+                continue
+            object_id = entity_id.split(".", 1)[1]
+            if not object_id.endswith(old_suffix):
+                continue
+            new_entity_id = f"{domain}.{object_id[: -len(old_suffix)]}{new_suffix}"
+            if entity_registry.async_get(new_entity_id) is not None:
+                _LOGGER.warning(
+                    "Cannot realign %s to %s - target entity_id already exists",
+                    entity_id,
+                    new_entity_id,
+                )
+                continue
+            entity_registry.async_update_entity(entity_id, new_entity_id=new_entity_id)
+            _LOGGER.info(
+                "Realigned entity_id %s -> %s after display rename",
+                entity_id,
+                new_entity_id,
+            )
+
 
 @callback
 def _disable_unavailable_relay_entities(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
