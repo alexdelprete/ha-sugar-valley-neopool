@@ -476,10 +476,15 @@ to follow rather than a separate phase.
 
 - **SENSOR-emit of config/timer registers: DECLINED by @curzon01** (#16,
   2026-06-30). Reason: generating it is complex and bloats the ESP82xx code, and
-  the driver is kept lean. So it is not coming. He offered instead to make
-  `Relay.Aux` report `0/1/2/3` (OFF/ON/Countdown/Timer) as a smaller alternative
-  — **owner decision pending** (caveat: that would overload the currently
-  physical-state `Relay.Aux`, which our AUX state binary sensors consume).
+  the driver is kept lean. So it is not coming.
+- **AUX mode via `Relay.Aux` 0/1/2/3 (OFF/ON/Countdown/Timer): wanted** — it
+  would push the AUX operating mode (which we do not surface today) and reflect
+  keypad mode changes for free. **Open question to @curzon01:** does `0/1/2/3`
+  *replace* the current physical-state `Relay.Aux` (in which case where does
+  physical on/off come from, e.g. `Relay.State`), or can the mode be a separate
+  field so `Relay.Aux` stays physical? Our AUX state binary sensors read
+  `Relay.Aux` as physical 0/1 today, so both axes need a home. Would drive a new
+  AUX-mode enum sensor.
 - **#1 per-timer timer entities** (time pickers / selects, in addition to the
   `set_timer` service): since SENSOR-emit is declined, these would be
   **read-layer-backed** (startup `NPRead`/`NPReadL` + write-ACK, stale on
