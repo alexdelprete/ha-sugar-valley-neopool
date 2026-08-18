@@ -413,20 +413,25 @@ driver; svasek corroborates):
 - bits 4–6 default/manual speed
 - bits 7–9 / 10–12 / 13–15 timer 1 / 2 / 3 speed
 
-**On-device finding (owner's VS pump):** the speed bit-fields use **0/1/2 =
-Slow/Medium/Fast — one LESS than the SENSOR / `NPFiltrationspeed` 1/2/3
-encoding** (reg `0x050F = 0x0002`: type=2, all speeds 0, while SENSOR read
-"Slow"=1). So `register = sensor − 1`. The register is not in SENSOR → read via
-`NPRead`, written read-modify-write via `NPWrite` (+`NPSave`).
+**Speed encoding (confirmed by @curzon01 in #16, 2026-06-30):** the speed fields
+use **1/2/3 = Slow/Medium/Fast** (intentionally consistent with the
+`NPFiltrationspeed` command), and **0 = unset**. An earlier "0/1/2, one less than
+SENSOR" guess was **wrong**: the 0 we read in `0x050F` was the unset default
+field, while the live SENSOR speed comes from `MBF_RELAY_STATE (0x010E)` speed
+bits when set, not from this register. Fixed in commit after Norbert's reply. The
+register is not in SENSOR → read via `NPRead`, written read-modify-write via
+`NPWrite` (+`NPSave`).
 
 **Design (decision 2026-06-29, owner = auto-detect + override):** three
 register-backed `select.*_filtration_timer{1,2,3}_speed` entities (Slow/Medium/
-Fast). **VS detection** is dynamic: the driver emits `NeoPool.Filtration.Speed`
-only for speed-capable pumps, so the selects self-gate on that SENSOR key. A
-`pump_type` options-flow selector (`auto`/`variable`/`standard`) overrides the
-detection. `REG_FILTRATION_CONF` added to `CONFIG_REGISTERS` (startup read).
-Selects are `unavailable` (not registry-disabled) on single-speed pumps for now;
-registry auto-disable is a possible refinement.
+Fast). **VS detection** uses the **pump-type nibble (bits 0-3) of `0x050F`**
+(non-zero = variable speed), which is reliable regardless of whether the pump is
+running (the driver suppresses `Filtration.Speed` from SENSOR when the pump is
+off, so presence-based detection was fragile). A `pump_type` options-flow
+selector (`auto`/`variable`/`standard`) overrides it. `REG_FILTRATION_CONF` added
+to `CONFIG_REGISTERS` (startup read). Selects are `unavailable` (not
+registry-disabled) on single-speed pumps for now; registry auto-disable is a
+possible refinement.
 
 ---
 

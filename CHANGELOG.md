@@ -13,10 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`select.<name>_filtration_timer<n>_speed`, Slow/Medium/Fast) let each
   filtration timer run at its own speed, read/written in the bit-packed
   `MBF_PAR_FILTRATION_CONF` register. The integration **auto-detects** a
-  variable-speed pump (the controller only reports `Filtration.Speed` for
-  speed-capable pumps); a new **Filtration pump type** option
-  (auto/variable/standard) in the integration's options can override the
-  detection. The selects stay unavailable on single-speed pumps.
+  variable-speed pump from the controller's reported pump type; a new
+  **Filtration pump type** option (auto/variable/standard) in the integration's
+  options can override the detection. The selects stay unavailable on
+  single-speed pumps.
 - **`sugar_valley_neopool.set_timer` service** to program the controller's
   built-in timers (filtration 1-3, light, AUX1-4), which then run on the
   controller independent of Home Assistant. You pick a device and timer, then

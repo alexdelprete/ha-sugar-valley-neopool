@@ -280,22 +280,27 @@ AUX_MODE_MAP: Final[dict[int, str]] = {
 #   bits 7-9  filtration timer 1 speed (shift 7)
 #   bits 10-12 filtration timer 2 speed (shift 10)
 #   bits 13-15 filtration timer 3 speed (shift 13)
-# ON-DEVICE FINDING (2026-06-29): the speed bit-fields use 0/1/2 = Slow/Medium/
-# Fast, i.e. one LESS than the SENSOR `NeoPool.Filtration.Speed` / NPFiltrationspeed
-# encoding (1/2/3). Verified on the owner's VS pump: reg 0x050F = 0x0002 (type=2,
-# all speeds=0) while SENSOR speed read "Slow" (1). So register_value = sensor - 1.
+# SPEED ENCODING (confirmed by @curzon01 in discussion #16, 2026-06-30): the
+# speed fields use 1/2/3 = Slow/Medium/Fast (intentionally consistent with the
+# NPFiltrationspeed command params), and 0 means UNSET (no per-timer speed
+# override). An earlier "0/1/2" on-device guess was wrong: the 0 we read in
+# 0x050F was the unset default field, while the live SENSOR speed the driver
+# reports comes from MBF_RELAY_STATE (0x010E) speed bits when set, not from this
+# register. Pump-type detection therefore uses the type nibble (bits 0-3) here,
+# not the presence of Filtration.Speed in SENSOR (which the driver suppresses
+# when the pump is off).
 REG_FILTRATION_CONF: Final = 0x050F  # MBF_PAR_FILTRATION_CONF (bit-packed)
 MASK_FILTRATION_PUMP_TYPE: Final = 0x000F  # 0 = standard, non-zero = variable speed
 FILTRATION_TIMER_SPEED_MASK: Final = 0x0007  # 3-bit speed field (pre-shift)
 SHIFT_FILTRATION_TIMER1_SPEED: Final = 7
 SHIFT_FILTRATION_TIMER2_SPEED: Final = 10
 SHIFT_FILTRATION_TIMER3_SPEED: Final = 13
-# Register (0/1/2) → user-facing speed label, matching FILTRATION_SPEED_MAP labels
-# but offset by one (SENSOR/command use 1/2/3).
+# Register value → user-facing speed label (1/2/3; 0 = unset, shown as no
+# selection). Matches the SENSOR/command 1/2/3 encoding.
 FILTRATION_TIMER_SPEED_MAP: Final[dict[int, str]] = {
-    0: "Slow",
-    1: "Medium",
-    2: "Fast",
+    1: "Slow",
+    2: "Medium",
+    3: "Fast",
 }
 
 # Group 4a — controller timer scheduling. The 12 configurable timers live in a

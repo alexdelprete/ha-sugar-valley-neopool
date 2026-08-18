@@ -33,6 +33,7 @@ from .const import (
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
     JSON_PATH_RELAY_AUX,
+    MASK_FILTRATION_PUMP_TYPE,
     PUMP_TYPE_STANDARD,
     PUMP_TYPE_VARIABLE,
     REG_AUX1_FUNCTION,
@@ -422,13 +423,13 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
     The three filtration timers each have a 3-bit speed field packed into
     MBF_PAR_FILTRATION_CONF (0x050F), read on startup via NPRead and kept current
     by the write-ACK. Writes are read-modify-write (preserve the other fields).
-    The register encodes 0/1/2 = Slow/Medium/Fast (one less than the SENSOR /
-    NPFiltrationspeed 1/2/3 encoding — verified on-device).
+    The fields encode 1/2/3 = Slow/Medium/Fast (consistent with the
+    NPFiltrationspeed command; confirmed by @curzon01), and 0 = unset.
 
-    Variable-speed gating: the controller emits NeoPool.Filtration.Speed in
-    SENSOR only for speed-capable pumps, so the select self-gates on that key.
+    Variable-speed gating: detected from the pump-type nibble (bits 0-3) of the
+    same register, which is reliable regardless of whether the pump is running.
     The pump_type option overrides it (variable = force on, standard = force off,
-    auto = follow the SENSOR detection).
+    auto = follow the register detection).
     """
 
     entity_description: NeoPoolTimerSpeedSelectEntityDescription
@@ -442,10 +443,9 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
         super().__init__(config_entry, description.key)
         self.entity_description = description
         self._attr_options = list(FILTRATION_TIMER_SPEED_MAP.values())
-        self._speed_present = False
 
     async def async_added_to_hass(self) -> None:
-        """Subscribe to LWT, the config-register signal, and SENSOR gating."""
+        """Subscribe to LWT and the config-register signal."""
         await super().async_added_to_hass()
 
         self.async_on_remove(
@@ -456,19 +456,6 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
             )
         )
 
-        sensor_topic = f"tele/{self.mqtt_topic}/SENSOR"
-
-        @callback
-        def message_received(msg: mqtt.ReceiveMessage) -> None:
-            payload = parse_json_payload(msg.payload)
-            if payload is None:
-                return
-            # Filtration.Speed is emitted only for speed-capable (VS) pumps.
-            self._speed_present = get_nested_value(payload, JSON_PATH_FILTRATION_SPEED) is not None
-            self.async_write_ha_state()
-
-        await self._subscribe_topic(sensor_topic, message_received)
-
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
@@ -476,13 +463,14 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
 
     @property
     def _vs_enabled(self) -> bool:
-        """Whether per-timer speed applies (override, else SENSOR detection)."""
+        """Whether per-timer speed applies (override, else pump-type nibble)."""
         override = self._config_entry.options.get(CONF_PUMP_TYPE, DEFAULT_PUMP_TYPE)
         if override == PUMP_TYPE_VARIABLE:
             return True
         if override == PUMP_TYPE_STANDARD:
             return False
-        return self._speed_present
+        conf = self._conf_value
+        return conf is not None and (conf & MASK_FILTRATION_PUMP_TYPE) != 0
 
     @property
     def _conf_value(self) -> int | None:
