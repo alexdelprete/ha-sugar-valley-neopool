@@ -6,12 +6,13 @@ hardware-validated (AUX mode write, light + filtration timer binding,
 granular `set_timer` edits, per-timer filtration speed). **Not yet released**
 (version still 1.1.4; two breaking entity moves, light and AUX, ship whenever
 tagged). Write-ACK design resolved with @curzon01 (discussion #16); SENSOR-emit
-of config/timer registers **asked of @curzon01 in discussion #16 (2026-06-30);
-awaiting reply** (non-blocking). Register addresses verified vs curzon01 driver
-(primary) + svasek `registers.py` (secondary).
+of config/timer registers **declined by @curzon01** (#16, 2026-06-30; keeps the
+driver lean) so feature #1 timer entities would be read-layer-backed. Register
+addresses verified vs curzon01 driver (primary) + svasek `registers.py`
+(secondary); per-timer speed encoding corrected to 1/2/3 per his reply.
 **Created:** 2026-06-16
-**Updated:** 2026-06-30 (Groups 1–5 done + validated; SENSOR-emit question
-posted to @curzon01 in #16)
+**Updated:** 2026-06-30 (Groups 1–5 done + validated; @curzon01 replied in #16:
+speed encoding corrected, SENSOR-emit declined)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
@@ -473,15 +474,17 @@ to follow rather than a separate phase.
 
 ## Still open
 
-- **Asked @curzon01 in discussion #16 (2026-06-30), awaiting reply:** whether
-  the config/timer registers can be emitted in SENSOR (behind an
-  `NPTelePeriod`/`NPSetOption` flag), which would remove the startup `NPRead`
-  and reflect external keypad/app edits for free (and enable push-native timer
-  entities for feature #1). Not blocking.
+- **SENSOR-emit of config/timer registers: DECLINED by @curzon01** (#16,
+  2026-06-30). Reason: generating it is complex and bloats the ESP82xx code, and
+  the driver is kept lean. So it is not coming. He offered instead to make
+  `Relay.Aux` report `0/1/2/3` (OFF/ON/Countdown/Timer) as a smaller alternative
+  — **owner decision pending** (caveat: that would overload the currently
+  physical-state `Relay.Aux`, which our AUX state binary sensors consume).
 - **#1 per-timer timer entities** (time pickers / selects, in addition to the
-  `set_timer` service) — deferred pending the answer above: without SENSOR-emit
-  they'd be read-layer-backed (startup read + write-ACK, stale on external
-  edits); with it they'd be push-native. No polling either way.
+  `set_timer` service): since SENSOR-emit is declined, these would be
+  **read-layer-backed** (startup `NPRead`/`NPReadL` + write-ACK, stale on
+  external keypad/app edits, no polling). Build only if the entity UX is wanted
+  on top of the service. Not started.
 
 ## Cross-repo note
 
