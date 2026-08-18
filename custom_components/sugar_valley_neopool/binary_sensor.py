@@ -192,10 +192,12 @@ BINARY_SENSOR_DESCRIPTIONS: tuple[NeoPoolBinarySensorEntityDescription, ...] = (
     ),
     # Flow and tank level sensors
     # pH.FL1: 1 = pH dosing blocked by flow detection (flow alarm), same
-    # polarity as Hydrolysis.FL1. The written sources are ambiguous (docs:
-    # "control status of the pH module by flow detection"), but 10 days of
-    # live-controller history show it transitioning in lockstep with the
-    # hydrolysis flow alarm within the same SENSOR frames. Refs #23.
+    # polarity as Hydrolysis.FL1. The vendor doc is inaccurate on this bit
+    # (per the Tasmota driver author); polarity is double-verified: 10 days
+    # of live-controller history show it transitioning in lockstep with the
+    # hydrolysis flow alarm within the same SENSOR frames, and the driver
+    # author's own experiments match ("inverse copy of
+    # MBMSK_PH_STATUS_CTRL_BY_FL"). Refs #23.
     NeoPoolBinarySensorEntityDescription(
         key="ph_fl1",
         translation_key="ph_fl1",
