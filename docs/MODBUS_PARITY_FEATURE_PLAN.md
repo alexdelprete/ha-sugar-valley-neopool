@@ -490,6 +490,29 @@ to follow rather than a separate phase.
   field so `Relay.Aux` stays physical? Our AUX state binary sensors read
   `Relay.Aux` as physical 0/1 today, so both axes need a home. Would drive a new
   AUX-mode enum sensor.
+
+  **Scope if he agrees to implement it (AUX-only; does NOT affect the #1 timer
+  entities, which need timer *parameters* he declined to push):**
+  - **Supplement** (preferred — `Relay.Aux` stays physical 0/1, mode is a new
+    separate field): purely additive. (1) AUX binary sensors unchanged. (2) Add
+    a per-AUX push-native operating-mode enum sensor (Manual Off / Manual On /
+    Countdown / Timer) — a capability we have none of today. (3) Upgrade the
+    existing `aux<n>_mode` select to drive `current_option` from the pushed field
+    instead of the read-backed `NPRead` cache, so keypad mode changes reflect
+    live (kills the AUX-mode staleness); write path unchanged. Note the pushed
+    field has 4 states but the select writes only auto/on/off, so Countdown has
+    no clean write option — the full mode lives on the new enum sensor, the
+    select keeps its 3 write options.
+  - **Replace** (`Relay.Aux` becomes 0/1/2/3): mildly breaking on our side. AUX
+    binary sensors must re-source physical on/off from `Relay.State` (needs the
+    physical-relay mapping) or be converted to mode sensors and the physical ones
+    dropped — a breaking entity change with a migration note. Same new mode
+    capability, more cost.
+  - **Both cases:** it is a Tasmota firmware change (users must update), so keep
+    the `NPRead` cache as a **version-gated fallback** — prefer the SENSOR field
+    when present, fall back to read-backed behavior on older firmware (same
+    prefer-new-field/fallback pattern as the localized-JSON-key handling, #22).
+    Independent of the current release; treat as a fast-follow once he answers.
 - **#1 per-timer timer entities: DONE (2026-08-19).** Scope: filtration 1-3 +
   light. Built as Option A (editable entities) on a new `time` platform: per
   timer a **mode** select (`select.*_filtration_timer<n>_mode` /
