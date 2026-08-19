@@ -388,31 +388,31 @@
             square: false
             cards:
               - type: tile
-                entity: select.neopool_mqtt_filtration_timer1_mode
+                entity: select.neopool_mqtt_filtration_timer_1_mode
                 name: Filt 1 Mode
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer1_start
+                entity: time.neopool_mqtt_filtration_timer_1_start
                 name: Filt 1 Start
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer1_stop
+                entity: time.neopool_mqtt_filtration_timer_1_stop
                 name: Filt 1 Stop
               - type: tile
-                entity: select.neopool_mqtt_filtration_timer2_mode
+                entity: select.neopool_mqtt_filtration_timer_2_mode
                 name: Filt 2 Mode
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer2_start
+                entity: time.neopool_mqtt_filtration_timer_2_start
                 name: Filt 2 Start
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer2_stop
+                entity: time.neopool_mqtt_filtration_timer_2_stop
                 name: Filt 2 Stop
               - type: tile
-                entity: select.neopool_mqtt_filtration_timer3_mode
+                entity: select.neopool_mqtt_filtration_timer_3_mode
                 name: Filt 3 Mode
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer3_start
+                entity: time.neopool_mqtt_filtration_timer_3_start
                 name: Filt 3 Start
               - type: tile
-                entity: time.neopool_mqtt_filtration_timer3_stop
+                entity: time.neopool_mqtt_filtration_timer_3_stop
                 name: Filt 3 Stop
               - type: tile
                 entity: select.neopool_mqtt_light_timer_mode

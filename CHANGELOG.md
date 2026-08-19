@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Register-backed config entities no longer stay unavailable after startup.**
+  The integration reads the config/timer registers that are not in the SENSOR
+  telemetry with a burst of `NPRead` commands at startup; the controller drops
+  reads that arrive too fast, so the earliest registers went unread and their
+  entities (UV mode, climate mode, smart antifreeze, heating temperature,
+  intelligent minimum filtration time, pH pump activation delay, hydrolysis
+  cover/shutdown, and the four AUX mode selects) stayed `unavailable`. The reads
+  are now paced and run in the background, so these entities populate shortly
+  after startup. (Introduced in v2.0.0 when the per-timer registers enlarged the
+  startup read burst.)
+- **Bundled Lovelace dashboards referenced the wrong per-timer entity IDs.** The
+  timer tiles used `..._filtration_timer1_mode` etc., but Home Assistant
+  slugifies the entity IDs as `..._filtration_timer_1_mode` (underscore before
+  the digit), so the twelve timer tiles were dead. All four dashboards now use
+  the correct entity IDs.
+
 ## [2.0.0] - 2026-08-19
 
 ### Added

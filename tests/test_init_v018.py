@@ -2178,13 +2178,24 @@ class TestResultWatch:
         entry.add_to_hass(hass)
         entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
 
-        with patch(
-            "homeassistant.components.mqtt.async_publish",
-            new_callable=AsyncMock,
-        ) as mock_publish:
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+            ) as mock_publish,
+            # The reads are paced with asyncio.sleep; patch it so the test does
+            # not actually wait NPREAD_BURST_INTERVAL between each publish.
+            patch(
+                "custom_components.sugar_valley_neopool.asyncio.sleep",
+                new_callable=AsyncMock,
+            ) as mock_sleep,
+        ):
             await _read_config_registers(hass, entry)
 
-        assert mock_publish.await_count == len(CONFIG_REGISTERS) + len(TIMER_ENTITY_REGISTERS)
+        expected = len(CONFIG_REGISTERS) + len(TIMER_ENTITY_REGISTERS)
+        assert mock_publish.await_count == expected
+        # Each read is paced (the controller drops a fast burst).
+        assert mock_sleep.await_count == expected
         topics = {call.args[1] for call in mock_publish.await_args_list}
         assert all(t == "cmnd/MyPool/NPRead" for t in topics)
 

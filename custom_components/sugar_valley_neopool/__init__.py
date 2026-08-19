@@ -42,6 +42,7 @@ from .const import (
     JSON_PATH_TYPE,
     MANUFACTURER,
     MODEL,
+    NPREAD_BURST_INTERVAL,
     PLATFORMS,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
@@ -204,11 +205,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Disable g/h-labeled entities when the controller is in % display mode
     _disable_unavailable_mode_entities(hass, entry)
 
-    # Subscribe to stat/RESULT and request the Group 2 config registers (not in
-    # SENSOR) so the register-backed entities have state on first render.
-    # Subscribe before reading so the responses are captured.
+    # Subscribe to stat/RESULT and request the config registers (not in SENSOR)
+    # so the register-backed entities gain state shortly after startup. Subscribe
+    # before reading so the responses are captured. The reads are paced (the
+    # controller drops a fast burst) and run in the background so setup is not
+    # blocked for the several seconds the paced sequence takes; entities populate
+    # progressively as each response arrives.
     await _setup_result_watch(hass, entry)
-    await _read_config_registers(hass, entry)
+    entry.async_create_background_task(
+        hass, _read_config_registers(hass, entry), "neopool_read_config_registers"
+    )
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -1216,6 +1222,11 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
     individually for robust response parsing. Includes the per-timer entity
     registers (mode + ON/OFF pairs for filtration 1-3 + light), which are read
     the same way and kept current by the write-ACK.
+
+    The reads are spaced by NPREAD_BURST_INTERVAL: the controller drops reads
+    that arrive as one fast burst (verified on-device), which previously left the
+    first ~16 registers unread and their entities unavailable. Runs as a
+    background task, so the pacing does not block config-entry setup.
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
     addresses = (*CONFIG_REGISTERS, *TIMER_ENTITY_REGISTERS)
@@ -1227,6 +1238,7 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
             qos=1,
             retain=False,
         )
+        await asyncio.sleep(NPREAD_BURST_INTERVAL)
     _LOGGER.debug("Requested %d config registers via NPRead", len(addresses))
 
 

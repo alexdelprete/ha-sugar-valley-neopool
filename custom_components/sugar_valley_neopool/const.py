@@ -394,6 +394,13 @@ TIMER_ENTITY_REGISTERS: Final[tuple[int, ...]] = tuple(
     )
 )
 
+# Seconds to wait between consecutive startup NPRead commands. The NeoPool
+# controller drops reads when they arrive as one fast burst (verified on-device:
+# a ~37-command burst left the first ~16 registers unread, so their entities
+# stayed unavailable). Spacing the reads lets Tasmota service each Modbus read
+# before the next arrives. A single-register read completes well under this.
+NPREAD_BURST_INTERVAL: Final = 0.3
+
 # Registers read once at startup (and refreshed by write-ACK) to populate the
 # config entities. Read individually for robust NPRead response parsing.
 CONFIG_REGISTERS: Final[tuple[int, ...]] = (
