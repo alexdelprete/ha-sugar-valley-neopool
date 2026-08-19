@@ -202,6 +202,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Disable sensor/number entities for modules the controller doesn't have
     _disable_unavailable_module_entities(hass, entry)
 
+    # Disable config switch/number entities for relays the controller doesn't have
+    _disable_unavailable_relay_config_entities(hass, entry)
+
     # Disable g/h-labeled entities when the controller is in % display mode
     _disable_unavailable_mode_entities(hass, entry)
 
@@ -831,6 +834,35 @@ _MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     "Conductivity": [
         ("sensor", "conductivity_data"),
     ],
+    # Config entities that gate on a module's data being in SENSOR. Disabling
+    # them (rather than leaving them perpetually unavailable) keeps the device
+    # page clean on installs without that module.
+    "Hydrolysis": [
+        ("switch", "hydro_cover_reduction"),
+        ("switch", "hydro_temp_shutdown"),
+        ("number", "hydro_cover_reduction_pct"),
+        ("number", "hydro_shutdown_temp"),
+    ],
+    "pH": [
+        ("number", "ph_activation_delay"),
+    ],
+}
+
+# Map: named relay in NeoPool.Relay → config entities (switch/number) that are
+# only meaningful when that relay is assigned. Same idea as _MODULE_ENTITY_MAP
+# but keyed on relay presence (available_relays), so e.g. the heating/UV config
+# controls are disabled on controllers without those relays instead of sitting
+# perpetually unavailable. smart_antifreeze is intentionally omitted: it gates
+# only on Temperature, which is always present.
+_RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
+    "Heating": [
+        ("switch", "climate_mode"),
+        ("number", "heating_temp"),
+        ("number", "intelligent_min_time"),
+    ],
+    "UV": [
+        ("switch", "uv_mode"),
+    ],
 }
 
 
@@ -881,6 +913,59 @@ def _disable_unavailable_module_entities(hass: HomeAssistant, entry: NeoPoolConf
                     "Re-enabled module entity %s (%s module is installed)",
                     entity_id,
                     module_name,
+                )
+
+
+@callback
+def _disable_unavailable_relay_config_entities(
+    hass: HomeAssistant, entry: NeoPoolConfigEntry
+) -> None:
+    """Disable config switch/number entities for named relays not assigned.
+
+    Uses available_relays from the SENSOR payload (NeoPool.Relay) to decide,
+    like _disable_unavailable_relay_entities does for the relay-state binary
+    sensors, but for the register-backed config controls in _RELAY_CONFIG_ENTITY_MAP
+    (heating/UV). Only touches entities disabled_by None or INTEGRATION; leaves
+    user-disabled entities alone, and re-enables ones the integration disabled
+    when the relay reappears.
+    """
+    available = entry.runtime_data.available_relays
+    if not available and not entry.runtime_data.available:
+        # No SENSOR data received yet — can't determine relay availability
+        _LOGGER.debug("No relay data available, skipping relay config entity management")
+        return
+
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    for relay_name, entity_descriptors in _RELAY_CONFIG_ENTITY_MAP.items():
+        is_present = relay_name in available
+        for domain, entity_key in entity_descriptors:
+            unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+            entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+            if not entity_id:
+                continue
+
+            entity_entry = entity_registry.async_get(entity_id)
+            if not entity_entry:
+                continue
+
+            if not is_present and entity_entry.disabled_by is None:
+                entity_registry.async_update_entity(
+                    entity_id,
+                    disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+                )
+                _LOGGER.warning(
+                    "Disabled config entity %s (%s relay not assigned on controller)",
+                    entity_id,
+                    relay_name,
+                )
+            elif is_present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                entity_registry.async_update_entity(entity_id, disabled_by=None)
+                _LOGGER.warning(
+                    "Re-enabled config entity %s (%s relay is assigned on controller)",
+                    entity_id,
+                    relay_name,
                 )
 
 
@@ -950,8 +1035,9 @@ def _disable_unavailable_mode_entities(hass: HomeAssistant, entry: NeoPoolConfig
 def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
     """Re-evaluate all dynamic entity disable rules; trigger reload on enable.
 
-    Runs the three disable management functions (relays, modules, hydrolysis
-    unit mode) atomically. If any entity transitions from INTEGRATION-disabled
+    Runs the disable management functions (relay-state binary sensors, module
+    sensors/numbers, relay-gated config switches/numbers, and hydrolysis unit
+    mode) atomically. If any entity transitions from INTEGRATION-disabled
     to enabled, schedules a config-entry reload so the re-enabled entities
     actually materialize (HA does NOT create entities on registry flag flip
     alone — a reload is required).
@@ -977,6 +1063,8 @@ def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry
         managed_keys.add(("binary_sensor", relay_key))
     for entries in _MODULE_ENTITY_MAP.values():
         managed_keys.update(entries)
+    for entries in _RELAY_CONFIG_ENTITY_MAP.values():
+        managed_keys.update(entries)
     managed_keys.update(_MODE_DEPENDENT_GH_ENTITIES)
 
     # Snapshot which managed entities are currently INTEGRATION-disabled
@@ -990,9 +1078,10 @@ def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry
         if e and e.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
             was_disabled.add(eid)
 
-    # Run all three management functions (each is idempotent)
+    # Run all management functions (each is idempotent)
     _disable_unavailable_relay_entities(hass, entry)
     _disable_unavailable_module_entities(hass, entry)
+    _disable_unavailable_relay_config_entities(hass, entry)
     _disable_unavailable_mode_entities(hass, entry)
 
     # Detect re-enable transitions (INTEGRATION → None)

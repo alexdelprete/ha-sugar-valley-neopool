@@ -27,6 +27,7 @@ from custom_components.sugar_valley_neopool import (
     _cleanup_removed_entities,
     _disable_unavailable_mode_entities,
     _disable_unavailable_module_entities,
+    _disable_unavailable_relay_config_entities,
     _disable_unavailable_relay_entities,
     _migrate_to_canonical_nodeid,
     _parse_register_int,
@@ -397,6 +398,92 @@ class TestDisableUnavailableRelayEntities:
         uv = entity_registry.async_get("binary_sensor.neopool_relay_uv")
         assert uv is not None
         assert uv.disabled_by == er.RegistryEntryDisabler.USER
+
+
+# ---------------------------------------------------------------------------
+# _disable_unavailable_relay_config_entities
+# ---------------------------------------------------------------------------
+class TestDisableUnavailableRelayConfigEntities:
+    """Tests for _disable_unavailable_relay_config_entities."""
+
+    def _entry(self, hass: HomeAssistant, relays: set[str], available: bool = True):
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="P",
+            mqtt_topic="T",
+            nodeid="ABC123",
+            available_relays=relays,
+            available=available,
+        )
+        return entry
+
+    def test_no_relay_data_skips(self, hass: HomeAssistant) -> None:
+        """No relay data and device unavailable → returns without changes."""
+        entry = self._entry(hass, set(), available=False)
+        _disable_unavailable_relay_config_entities(hass, entry)  # must not raise
+
+    def test_disables_config_entities_for_absent_relay(self, hass: HomeAssistant) -> None:
+        """climate_mode is disabled when the Heating relay is absent; uv_mode stays enabled."""
+        entry = self._entry(hass, {"UV"})  # UV present, Heating absent
+        entity_registry = er.async_get(hass)
+        entity_registry.async_get_or_create(
+            "switch",
+            DOMAIN,
+            "neopool_mqtt_ABC123_climate_mode",
+            config_entry=entry,
+            suggested_object_id="neopool_climate_mode",
+        )
+        entity_registry.async_get_or_create(
+            "switch",
+            DOMAIN,
+            "neopool_mqtt_ABC123_uv_mode",
+            config_entry=entry,
+            suggested_object_id="neopool_uv_mode",
+        )
+
+        _disable_unavailable_relay_config_entities(hass, entry)
+
+        climate = entity_registry.async_get("switch.neopool_climate_mode")
+        assert climate.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        uv = entity_registry.async_get("switch.neopool_uv_mode")
+        assert uv.disabled_by is None
+
+    def test_reenables_previously_disabled(self, hass: HomeAssistant) -> None:
+        """A config entity the integration disabled is re-enabled when its relay reappears."""
+        entry = self._entry(hass, {"Heating"})  # Heating now present
+        entity_registry = er.async_get(hass)
+        e = entity_registry.async_get_or_create(
+            "number",
+            DOMAIN,
+            "neopool_mqtt_ABC123_heating_temp",
+            config_entry=entry,
+            suggested_object_id="neopool_heating_temp",
+        )
+        entity_registry.async_update_entity(
+            e.entity_id, disabled_by=er.RegistryEntryDisabler.INTEGRATION
+        )
+
+        _disable_unavailable_relay_config_entities(hass, entry)
+
+        assert entity_registry.async_get(e.entity_id).disabled_by is None
+
+    def test_does_not_touch_user_disabled(self, hass: HomeAssistant) -> None:
+        """A user-disabled config entity is left alone even when its relay is present."""
+        entry = self._entry(hass, {"UV"})
+        entity_registry = er.async_get(hass)
+        e = entity_registry.async_get_or_create(
+            "switch",
+            DOMAIN,
+            "neopool_mqtt_ABC123_uv_mode",
+            config_entry=entry,
+            suggested_object_id="neopool_uv_mode",
+        )
+        entity_registry.async_update_entity(e.entity_id, disabled_by=er.RegistryEntryDisabler.USER)
+
+        _disable_unavailable_relay_config_entities(hass, entry)
+
+        assert entity_registry.async_get(e.entity_id).disabled_by == er.RegistryEntryDisabler.USER
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Config entities for hardware you don't have are now disabled instead of
+  shown as perpetually unavailable.** The heating/UV config controls (Climate
+  Mode, Heating Temperature, Intelligent Minimum Filtration Time, UV Mode) and
+  the hydrolysis/pH config controls now follow the same runtime enable/disable
+  mechanism already used for relay-state and module sensors: they are disabled
+  when their relay/module is absent from the telemetry and automatically
+  re-enabled if it appears. This keeps the device page clean rather than listing
+  controls that can never work on your installation. (User-disabled entities are
+  left untouched.)
+
 ### Fixed
 
 - **Register-backed config entities no longer stay unavailable after startup.**
