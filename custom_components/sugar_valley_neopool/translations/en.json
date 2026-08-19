@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Filtration Timer 3 Speed"
+      },
+      "filtration_timer1_mode": {
+        "name": "Filtration Timer 1 Mode",
+        "state": {
+          "disabled": "Disabled",
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Filtration Timer 2 Mode",
+        "state": {
+          "disabled": "Disabled",
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Filtration Timer 3 Mode",
+        "state": {
+          "disabled": "Disabled",
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Light Timer Mode",
+        "state": {
+          "disabled": "Disabled",
+          "auto": "Auto",
+          "on": "On",
+          "off": "Off"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Light"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Filtration Timer 1 Start"
+      },
+      "filtration_timer1_stop": {
+        "name": "Filtration Timer 1 Stop"
+      },
+      "filtration_timer2_start": {
+        "name": "Filtration Timer 2 Start"
+      },
+      "filtration_timer2_stop": {
+        "name": "Filtration Timer 2 Stop"
+      },
+      "filtration_timer3_start": {
+        "name": "Filtration Timer 3 Start"
+      },
+      "filtration_timer3_stop": {
+        "name": "Filtration Timer 3 Stop"
+      },
+      "light_timer_start": {
+        "name": "Light Timer Start"
+      },
+      "light_timer_stop": {
+        "name": "Light Timer Stop"
       }
     }
   },

@@ -48,6 +48,11 @@ from .const import (
     SHIFT_FILTRATION_TIMER1_SPEED,
     SHIFT_FILTRATION_TIMER2_SPEED,
     SHIFT_FILTRATION_TIMER3_SPEED,
+    TIMER_BLOCKS,
+    TIMER_FUNCTION_CODES,
+    TIMER_MODE_SELECT_MAP,
+    TIMER_OFFSET_ENABLE,
+    TIMER_OFFSET_FUNCTION,
 )
 from .entity import NeoPoolMQTTEntity
 from .helpers import get_nested_value, lookup_by_value, parse_json_payload, safe_int
@@ -198,6 +203,44 @@ TIMER_SPEED_SELECT_DESCRIPTIONS: tuple[NeoPoolTimerSpeedSelectEntityDescription,
 )
 
 
+@dataclass(frozen=True, kw_only=True)
+class NeoPoolTimerModeSelectEntityDescription(SelectEntityDescription):
+    """Describes a per-timer mode select (disabled/auto/on/off) for #1.
+
+    Backs one of the scheduled timer blocks (filtration 1-3, light). Distinct
+    from the AUX mode select only in that it exposes the full mode subset
+    (including disabled) and persists with NPSave, since a timer schedule is
+    meant to survive a reboot.
+    """
+
+    mode_register: int  # timer-block +0 (enable/mode word)
+    function_register: int  # timer-block +11 (relay/function binding)
+    function_code: int  # MBV_PAR_CTIMER_FCT_* value that binds the timer
+
+
+# (entity key, display name, TIMER_BLOCKS key) for the timers exposed as #1
+# entities. Registers/codes are derived from const so there is one source.
+_TIMER_MODE_SELECTS: tuple[tuple[str, str, str], ...] = (
+    ("filtration_timer1_mode", "Filtration Timer 1 Mode", "filtration1"),
+    ("filtration_timer2_mode", "Filtration Timer 2 Mode", "filtration2"),
+    ("filtration_timer3_mode", "Filtration Timer 3 Mode", "filtration3"),
+    ("light_timer_mode", "Light Timer Mode", "light"),
+)
+
+TIMER_MODE_SELECT_DESCRIPTIONS: tuple[NeoPoolTimerModeSelectEntityDescription, ...] = tuple(
+    NeoPoolTimerModeSelectEntityDescription(
+        key=key,
+        translation_key=key,
+        name=name,
+        mode_register=TIMER_BLOCKS[tkey] + TIMER_OFFSET_ENABLE,
+        function_register=TIMER_BLOCKS[tkey] + TIMER_OFFSET_FUNCTION,
+        function_code=TIMER_FUNCTION_CODES[tkey],
+        entity_category=EntityCategory.CONFIG,
+    )
+    for key, name, tkey in _TIMER_MODE_SELECTS
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: NeoPoolConfigEntry,
@@ -215,6 +258,9 @@ async def async_setup_entry(
     selects.extend(
         NeoPoolTimerSpeedSelect(entry, description)
         for description in TIMER_SPEED_SELECT_DESCRIPTIONS
+    )
+    selects.extend(
+        NeoPoolTimerModeSelect(entry, description) for description in TIMER_MODE_SELECT_DESCRIPTIONS
     )
 
     async_add_entities(selects)
@@ -523,4 +569,92 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
             field,
             REG_FILTRATION_CONF,
             new_value,
+        )
+
+
+class NeoPoolTimerModeSelect(NeoPoolMQTTEntity, SelectEntity):
+    """Per-timer mode select (disabled/auto/on/off) for a scheduled timer (#1).
+
+    Backs the enable/mode word (timer-block +0) of a filtration or light timer,
+    read on startup via NPRead and kept current by the write-ACK. Setting a mode
+    binds the timer to its relay (function word at +11) and commits with NPExec,
+    then persists with NPSave so the schedule survives a reboot. The displayed
+    mode is the raw register value: our writes always (re)bind, so anything set
+    through the integration is accurate. External keypad edits are not pushed and
+    only refresh on restart, hence timers are documented as integration-managed.
+    """
+
+    entity_description: NeoPoolTimerModeSelectEntityDescription
+
+    def __init__(
+        self,
+        config_entry: NeoPoolConfigEntry,
+        description: NeoPoolTimerModeSelectEntityDescription,
+    ) -> None:
+        """Initialize the timer mode select."""
+        super().__init__(config_entry, description.key)
+        self.entity_description = description
+        self._attr_options = list(TIMER_MODE_SELECT_MAP.values())
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to LWT and the config-register signal."""
+        await super().async_added_to_hass()
+
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                config_register_signal(self._config_entry),
+                self._handle_register_update,
+            )
+        )
+
+    @callback
+    def _handle_register_update(self) -> None:
+        """React to a config-register cache update."""
+        self.async_write_ha_state()
+
+    @property
+    def _register_value(self) -> int | None:
+        """Return the cached raw mode register value, if known."""
+        return self._config_entry.runtime_data.register_state.get(
+            self.entity_description.mode_register
+        )
+
+    @property
+    def current_option(self) -> str | None:
+        """Return the current mode option from the cached register."""
+        value = self._register_value
+        if value is None:
+            return None
+        return TIMER_MODE_SELECT_MAP.get(value)
+
+    @property
+    def available(self) -> bool:
+        """Available when online and the mode register is cached."""
+        return super().available and self._register_value is not None
+
+    async def async_select_option(self, option: str) -> None:
+        """Bind the timer (function word) then write the mode, commit and persist."""
+        mode = lookup_by_value(TIMER_MODE_SELECT_MAP, option)
+        if mode is None:
+            _LOGGER.warning("Invalid timer mode %s for %s", option, self.entity_description.key)
+            return
+        desc = self.entity_description
+        # (Re)bind the timer to its relay first — a schedule with an unbound
+        # function word is inert (verified on-device for AUX and filtration).
+        await self._publish_command(
+            CMD_NPWRITE, f"0x{desc.function_register:04X} {desc.function_code}"
+        )
+        await self._write_register(desc.mode_register, mode, save=True, execute=True)
+        rs = self._config_entry.runtime_data.register_state
+        rs[desc.function_register] = desc.function_code
+        rs[desc.mode_register] = mode
+        self.async_write_ha_state()
+        _LOGGER.debug(
+            "Set timer mode %s (%d, bound via 0x%04X=0x%04X) for %s",
+            option,
+            mode,
+            desc.function_register,
+            desc.function_code,
+            desc.key,
         )

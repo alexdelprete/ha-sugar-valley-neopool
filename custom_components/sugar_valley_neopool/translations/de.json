@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Filtrationstimer 3 Geschwindigkeit"
+      },
+      "filtration_timer1_mode": {
+        "name": "Filtrationstimer 1 Modus",
+        "state": {
+          "disabled": "Deaktiviert",
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Filtrationstimer 2 Modus",
+        "state": {
+          "disabled": "Deaktiviert",
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Filtrationstimer 3 Modus",
+        "state": {
+          "disabled": "Deaktiviert",
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Lichttimer Modus",
+        "state": {
+          "disabled": "Deaktiviert",
+          "auto": "Auto",
+          "on": "Ein",
+          "off": "Aus"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Licht"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Filtrationstimer 1 Start"
+      },
+      "filtration_timer1_stop": {
+        "name": "Filtrationstimer 1 Stopp"
+      },
+      "filtration_timer2_start": {
+        "name": "Filtrationstimer 2 Start"
+      },
+      "filtration_timer2_stop": {
+        "name": "Filtrationstimer 2 Stopp"
+      },
+      "filtration_timer3_start": {
+        "name": "Filtrationstimer 3 Start"
+      },
+      "filtration_timer3_stop": {
+        "name": "Filtrationstimer 3 Stopp"
+      },
+      "light_timer_start": {
+        "name": "Lichttimer Start"
+      },
+      "light_timer_stop": {
+        "name": "Lichttimer Stopp"
       }
     }
   },

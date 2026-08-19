@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Filtreerimistaimeri 3 kiirus"
+      },
+      "filtration_timer1_mode": {
+        "name": "Filtreerimistaimer 1 režiim",
+        "state": {
+          "disabled": "Keelatud",
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Filtreerimistaimer 2 režiim",
+        "state": {
+          "disabled": "Keelatud",
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Filtreerimistaimer 3 režiim",
+        "state": {
+          "disabled": "Keelatud",
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Valgustaimer režiim",
+        "state": {
+          "disabled": "Keelatud",
+          "auto": "Automaatne",
+          "on": "Sees",
+          "off": "Väljas"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Valgus"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Filtreerimistaimer 1 Algus"
+      },
+      "filtration_timer1_stop": {
+        "name": "Filtreerimistaimer 1 Lõpp"
+      },
+      "filtration_timer2_start": {
+        "name": "Filtreerimistaimer 2 Algus"
+      },
+      "filtration_timer2_stop": {
+        "name": "Filtreerimistaimer 2 Lõpp"
+      },
+      "filtration_timer3_start": {
+        "name": "Filtreerimistaimer 3 Algus"
+      },
+      "filtration_timer3_stop": {
+        "name": "Filtreerimistaimer 3 Lõpp"
+      },
+      "light_timer_start": {
+        "name": "Valgustaimer Algus"
+      },
+      "light_timer_stop": {
+        "name": "Valgustaimer Lõpp"
       }
     }
   },

@@ -24,6 +24,7 @@ PLATFORMS: Final[list[Platform]] = [
     Platform.NUMBER,
     Platform.BUTTON,
     Platform.LIGHT,
+    Platform.TIME,
 ]
 
 # Configuration keys (data - changed via reconfigure)
@@ -359,6 +360,39 @@ TIMER_MODE_MAP: Final[dict[str, int]] = {
     "off": 4,
 }
 SECONDS_PER_DAY: Final = 86400
+
+# Per-timer entities (#1) — the scheduled timers we expose as HA controls: a mode
+# select (disabled/auto/on/off) + start/stop time entities. Scope is filtration
+# 1-3 + light: AUX is excluded (its timer-block mode register IS already the
+# aux<n>_mode select) and the light on/off command is not a duplicate of the
+# light schedule. These blocks are NOT in SENSOR, so the entities are read-backed
+# (startup NPRead + write-ACK) and NOT push: external keypad edits are not
+# reflected until restart, so timers are documented as integration-managed only.
+TIMER_ENTITY_KEYS: Final[tuple[str, ...]] = (
+    "filtration1",
+    "filtration2",
+    "filtration3",
+    "light",
+)
+
+# Per-timer mode-select options: the full MBV_PAR_CTIMER_* subset including
+# disabled(0). int -> label, kept in sync with TIMER_MODE_MAP by inverting it.
+TIMER_MODE_SELECT_MAP: Final[dict[int, str]] = {v: k for k, v in TIMER_MODE_MAP.items()}
+
+# Registers read at startup for the per-timer entities: mode (+0) and the ON/OFF
+# 32-bit Low/High pairs (+1/+2, +3/+4). The run interval (+7) is recomputed from
+# the cached counterpart on write, so it is not read here.
+TIMER_ENTITY_REGISTERS: Final[tuple[int, ...]] = tuple(
+    reg
+    for key in TIMER_ENTITY_KEYS
+    for reg in (
+        TIMER_BLOCKS[key] + TIMER_OFFSET_ENABLE,
+        TIMER_BLOCKS[key] + TIMER_OFFSET_ON,
+        TIMER_BLOCKS[key] + TIMER_OFFSET_ON + 1,
+        TIMER_BLOCKS[key] + TIMER_OFFSET_OFF,
+        TIMER_BLOCKS[key] + TIMER_OFFSET_OFF + 1,
+    )
+)
 
 # Registers read once at startup (and refreshed by write-ACK) to populate the
 # config entities. Read individually for robust NPRead response parsing.

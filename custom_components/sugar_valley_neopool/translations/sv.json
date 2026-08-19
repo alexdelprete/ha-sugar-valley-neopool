@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Hastighet för filtreringstimer 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Filtreringstimer 1 läge",
+        "state": {
+          "disabled": "Inaktiverad",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Filtreringstimer 2 läge",
+        "state": {
+          "disabled": "Inaktiverad",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Filtreringstimer 3 läge",
+        "state": {
+          "disabled": "Inaktiverad",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Ljustimer läge",
+        "state": {
+          "disabled": "Inaktiverad",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Ljus"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Filtreringstimer 1 Start"
+      },
+      "filtration_timer1_stop": {
+        "name": "Filtreringstimer 1 Stopp"
+      },
+      "filtration_timer2_start": {
+        "name": "Filtreringstimer 2 Start"
+      },
+      "filtration_timer2_stop": {
+        "name": "Filtreringstimer 2 Stopp"
+      },
+      "filtration_timer3_start": {
+        "name": "Filtreringstimer 3 Start"
+      },
+      "filtration_timer3_stop": {
+        "name": "Filtreringstimer 3 Stopp"
+      },
+      "light_timer_start": {
+        "name": "Ljustimer Start"
+      },
+      "light_timer_stop": {
+        "name": "Ljustimer Stopp"
       }
     }
   },

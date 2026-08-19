@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Velocidade do temporizador de filtração 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Temporizador de filtração 1 Modo",
+        "state": {
+          "disabled": "Desativado",
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Temporizador de filtração 2 Modo",
+        "state": {
+          "disabled": "Desativado",
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Temporizador de filtração 3 Modo",
+        "state": {
+          "disabled": "Desativado",
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Temporizador de luz Modo",
+        "state": {
+          "disabled": "Desativado",
+          "auto": "Automático",
+          "on": "Ligado",
+          "off": "Desligado"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Luz"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Temporizador de filtração 1 Início"
+      },
+      "filtration_timer1_stop": {
+        "name": "Temporizador de filtração 1 Fim"
+      },
+      "filtration_timer2_start": {
+        "name": "Temporizador de filtração 2 Início"
+      },
+      "filtration_timer2_stop": {
+        "name": "Temporizador de filtração 2 Fim"
+      },
+      "filtration_timer3_start": {
+        "name": "Temporizador de filtração 3 Início"
+      },
+      "filtration_timer3_stop": {
+        "name": "Temporizador de filtração 3 Fim"
+      },
+      "light_timer_start": {
+        "name": "Temporizador de luz Início"
+      },
+      "light_timer_stop": {
+        "name": "Temporizador de luz Fim"
       }
     }
   },

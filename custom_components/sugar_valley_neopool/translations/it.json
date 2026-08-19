@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Velocità del timer di filtrazione 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Timer di filtrazione 1 Modalità",
+        "state": {
+          "disabled": "Disabilitato",
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Timer di filtrazione 2 Modalità",
+        "state": {
+          "disabled": "Disabilitato",
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Timer di filtrazione 3 Modalità",
+        "state": {
+          "disabled": "Disabilitato",
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Timer luce Modalità",
+        "state": {
+          "disabled": "Disabilitato",
+          "auto": "Auto",
+          "on": "Acceso",
+          "off": "Spento"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Luce"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Timer di filtrazione 1 Avvio"
+      },
+      "filtration_timer1_stop": {
+        "name": "Timer di filtrazione 1 Arresto"
+      },
+      "filtration_timer2_start": {
+        "name": "Timer di filtrazione 2 Avvio"
+      },
+      "filtration_timer2_stop": {
+        "name": "Timer di filtrazione 2 Arresto"
+      },
+      "filtration_timer3_start": {
+        "name": "Timer di filtrazione 3 Avvio"
+      },
+      "filtration_timer3_stop": {
+        "name": "Timer di filtrazione 3 Arresto"
+      },
+      "light_timer_start": {
+        "name": "Timer luce Avvio"
+      },
+      "light_timer_stop": {
+        "name": "Timer luce Arresto"
       }
     }
   },

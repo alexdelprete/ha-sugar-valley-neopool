@@ -38,6 +38,7 @@ from custom_components.sugar_valley_neopool.number import (
 from custom_components.sugar_valley_neopool.select import (
     AUX_MODE_SELECT_DESCRIPTIONS,
     SELECT_DESCRIPTIONS,
+    TIMER_MODE_SELECT_DESCRIPTIONS,
     TIMER_SPEED_SELECT_DESCRIPTIONS,
     NeoPoolSelect,
     async_setup_entry as select_setup,
@@ -283,6 +284,7 @@ class TestSelectPlatform:
             len(SELECT_DESCRIPTIONS)
             + len(AUX_MODE_SELECT_DESCRIPTIONS)
             + len(TIMER_SPEED_SELECT_DESCRIPTIONS)
+            + len(TIMER_MODE_SELECT_DESCRIPTIONS)
         )
 
     def test_all_selects_have_options_map(self) -> None:

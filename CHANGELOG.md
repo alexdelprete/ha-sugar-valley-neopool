@@ -29,6 +29,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   also writes each timer's function word to bind it to its relay (filtration,
   light, and AUX) — verified on hardware that an unbound timer's schedule is
   inert.
+- **Per-timer entities for the filtration and light schedules.** Each of the
+  three filtration timers and the light timer now has a **mode** select
+  (`select.<name>_filtration_timer<n>_mode`, `select.<name>_light_timer_mode`;
+  disabled/auto/on/off) plus **start** and **stop** time entities
+  (`time.<name>_filtration_timer<n>_start` / `_stop`, and the light equivalents)
+  so a schedule can be viewed and edited directly from the UI in addition to the
+  `set_timer` service. Setting a start or stop time recomputes the run interval
+  from the other end automatically. These registers are not in the SENSOR
+  telemetry, so the entities are read once at startup and kept current by the
+  integration's own writes — they do **not** reflect edits made at the
+  controller keypad until Home Assistant restarts, so **timers should be managed
+  through the integration**. AUX schedules are not exposed as entities (the AUX
+  mode select already covers that register); use `set_timer` for AUX.
 - **Pool light as a dedicated `light` entity** (`light.<name>_light`). It
   controls the same relay as before via `NPLight`, but as a proper light it
   now works with light cards, light groups, and "turn on the lights" voice

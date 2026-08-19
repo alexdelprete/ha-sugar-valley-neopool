@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Suodatusajastimen 3 nopeus"
+      },
+      "filtration_timer1_mode": {
+        "name": "Suodatusajastin 1 tila",
+        "state": {
+          "disabled": "Poistettu käytöstä",
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Suodatusajastin 2 tila",
+        "state": {
+          "disabled": "Poistettu käytöstä",
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Suodatusajastin 3 tila",
+        "state": {
+          "disabled": "Poistettu käytöstä",
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Valoajastin tila",
+        "state": {
+          "disabled": "Poistettu käytöstä",
+          "auto": "Automaattinen",
+          "on": "Päällä",
+          "off": "Pois"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Valo"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Suodatusajastin 1 Aloitus"
+      },
+      "filtration_timer1_stop": {
+        "name": "Suodatusajastin 1 Lopetus"
+      },
+      "filtration_timer2_start": {
+        "name": "Suodatusajastin 2 Aloitus"
+      },
+      "filtration_timer2_stop": {
+        "name": "Suodatusajastin 2 Lopetus"
+      },
+      "filtration_timer3_start": {
+        "name": "Suodatusajastin 3 Aloitus"
+      },
+      "filtration_timer3_stop": {
+        "name": "Suodatusajastin 3 Lopetus"
+      },
+      "light_timer_start": {
+        "name": "Valoajastin Aloitus"
+      },
+      "light_timer_stop": {
+        "name": "Valoajastin Lopetus"
       }
     }
   },

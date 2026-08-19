@@ -1,18 +1,23 @@
 # Feature Parity Plan — svasek Modbus Integration → our MQTT/Tasmota Integration
 
-**Status:** All planned features (Groups 1–5) implemented on `main`,
-CI-green (Lint/Tests/Validate), localized into all 10 languages, and
-hardware-validated (AUX mode write, light + filtration timer binding,
-granular `set_timer` edits, per-timer filtration speed). **Not yet released**
-(version still 1.1.4; two breaking entity moves, light and AUX, ship whenever
-tagged). Write-ACK design resolved with @curzon01 (discussion #16); SENSOR-emit
-of config/timer registers **declined by @curzon01** (#16, 2026-06-30; keeps the
-driver lean) so feature #1 timer entities would be read-layer-backed. Register
-addresses verified vs curzon01 driver (primary) + svasek `registers.py`
-(secondary); per-timer speed encoding corrected to 1/2/3 per his reply.
+**Status:** All planned features (Groups 1–5) plus **feature #1 (per-timer
+entities)** implemented on `main`, CI-green (Lint/Tests/Validate), localized
+into all 10 languages, and hardware-validated (AUX mode write, light +
+filtration timer binding, granular `set_timer` edits, per-timer filtration
+speed). **Not yet released** (version still 1.1.4; two breaking entity moves,
+light and AUX, ship whenever tagged). Write-ACK design resolved with @curzon01
+(discussion #16); SENSOR-emit of config/timer registers **declined by @curzon01**
+(#16, 2026-06-30; keeps the driver lean), so feature #1 timer entities are
+**read-layer-backed** (startup `NPRead` + write-ACK, not push) and are documented
+as **integration-managed only** (external keypad edits are not reflected until
+restart). Register addresses verified vs curzon01 driver (primary) + svasek
+`registers.py` (secondary); per-timer speed encoding corrected to 1/2/3 per his
+reply.
 **Created:** 2026-06-16
-**Updated:** 2026-06-30 (Groups 1–5 done + validated; @curzon01 replied in #16:
-speed encoding corrected, SENSOR-emit declined)
+**Updated:** 2026-08-19 (feature #1 per-timer entities built: mode selects +
+start/stop time entities for filtration 1–3 + light, on a new `time` platform;
+AUX excluded as its timer-block mode register is already the `aux<n>_mode`
+select. Replied to @curzon01's Aux 0/1/2/3 offer in #16, awaiting his answer)
 **Scope:** Bring the MQTT/Tasmota integration toward feature parity with the
 Modbus integration [`svasek/homeassistant-neopool-modbus`](https://github.com/svasek/homeassistant-neopool-modbus)
 (analyzed at v4.1.1).
@@ -485,11 +490,25 @@ to follow rather than a separate phase.
   field so `Relay.Aux` stays physical? Our AUX state binary sensors read
   `Relay.Aux` as physical 0/1 today, so both axes need a home. Would drive a new
   AUX-mode enum sensor.
-- **#1 per-timer timer entities** (time pickers / selects, in addition to the
-  `set_timer` service): since SENSOR-emit is declined, these would be
-  **read-layer-backed** (startup `NPRead`/`NPReadL` + write-ACK, stale on
-  external keypad/app edits, no polling). Build only if the entity UX is wanted
-  on top of the service. Not started.
+- **#1 per-timer timer entities: DONE (2026-08-19).** Scope: filtration 1-3 +
+  light. Built as Option A (editable entities) on a new `time` platform: per
+  timer a **mode** select (`select.*_filtration_timer<n>_mode` /
+  `*_light_timer_mode`, disabled/auto/on/off) + **start** and **stop** `time`
+  entities (`time.*_filtration_timer<n>_start` / `_stop`, light equivalents) =
+  12 entities. Read-layer-backed as expected (startup `NPRead` of mode +/ ON/OFF
+  32-bit pairs, kept current by write-ACK, no polling); setting a start/stop
+  recomputes the run interval from the cached counterpart; writes bind the
+  function word + `NPWrite`/`NPWriteL` + `NPExec` + `NPSave` (persist). Since
+  external keypad edits are not pushed, timers are **documented as
+  integration-managed only** (owner accepted this trade-off explicitly). **AUX
+  excluded:** its timer-block mode register (`0x04AC`/`0x04BB`/`0x04CA`/`0x04D9`)
+  IS already the `aux<n>_mode` select, so a per-timer AUX mode select would be a
+  literal duplicate; only start/stop would be additive (deferred — use
+  `set_timer` for AUX schedules). Light included because the `NPLight` on/off
+  command is not a duplicate of the light schedule. Not hardware-validated yet
+  (mechanism proven via the `set_timer` + AUX/light binding work); 32-bit
+  low-word-first ON/OFF reconstruction assumed per the driver's `NPWriteL`
+  pairing, worth a read-back confirmation on-device.
 
 ## Cross-repo note
 

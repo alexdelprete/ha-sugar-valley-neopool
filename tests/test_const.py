@@ -156,10 +156,11 @@ class TestPlatforms:
         assert Platform.NUMBER in PLATFORMS
         assert Platform.BUTTON in PLATFORMS
         assert Platform.LIGHT in PLATFORMS
+        assert Platform.TIME in PLATFORMS
 
     def test_platforms_count(self) -> None:
         """Test expected number of platforms."""
-        assert len(PLATFORMS) == 7
+        assert len(PLATFORMS) == 8
 
 
 class TestConfigurationKeys:

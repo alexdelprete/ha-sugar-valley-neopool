@@ -45,6 +45,7 @@ from .const import (
     PLATFORMS,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
+    TIMER_ENTITY_REGISTERS,
     YAML_ENTITIES_TO_DELETE,
     YAML_TO_INTEGRATION_KEY_MAP,
 )
@@ -1212,10 +1213,13 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
 
     Responses arrive asynchronously on stat/RESULT and populate
     runtime_data.register_state via _setup_result_watch. Reads are sent
-    individually for robust response parsing.
+    individually for robust response parsing. Includes the per-timer entity
+    registers (mode + ON/OFF pairs for filtration 1-3 + light), which are read
+    the same way and kept current by the write-ACK.
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
-    for address in CONFIG_REGISTERS:
+    addresses = (*CONFIG_REGISTERS, *TIMER_ENTITY_REGISTERS)
+    for address in addresses:
         await mqtt.async_publish(
             hass,
             f"cmnd/{mqtt_topic}/{CMD_NPREAD}",
@@ -1223,7 +1227,7 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
             qos=1,
             retain=False,
         )
-    _LOGGER.debug("Requested %d config registers via NPRead", len(CONFIG_REGISTERS))
+    _LOGGER.debug("Requested %d config registers via NPRead", len(addresses))
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:

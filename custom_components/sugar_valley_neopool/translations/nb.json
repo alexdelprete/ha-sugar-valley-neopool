@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Hastighet for filtreringstidsur 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Filtreringstidsur 1 modus",
+        "state": {
+          "disabled": "Deaktivert",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Filtreringstidsur 2 modus",
+        "state": {
+          "disabled": "Deaktivert",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Filtreringstidsur 3 modus",
+        "state": {
+          "disabled": "Deaktivert",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Lystidsur modus",
+        "state": {
+          "disabled": "Deaktivert",
+          "auto": "Auto",
+          "on": "På",
+          "off": "Av"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Lys"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Filtreringstidsur 1 Start"
+      },
+      "filtration_timer1_stop": {
+        "name": "Filtreringstidsur 1 Stopp"
+      },
+      "filtration_timer2_start": {
+        "name": "Filtreringstidsur 2 Start"
+      },
+      "filtration_timer2_stop": {
+        "name": "Filtreringstidsur 2 Stopp"
+      },
+      "filtration_timer3_start": {
+        "name": "Filtreringstidsur 3 Start"
+      },
+      "filtration_timer3_stop": {
+        "name": "Filtreringstidsur 3 Stopp"
+      },
+      "light_timer_start": {
+        "name": "Lystidsur Start"
+      },
+      "light_timer_stop": {
+        "name": "Lystidsur Stopp"
       }
     }
   },

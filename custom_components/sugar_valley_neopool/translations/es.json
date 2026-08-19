@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Velocidad del temporizador de filtración 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Temporizador de filtración 1 Modo",
+        "state": {
+          "disabled": "Deshabilitado",
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Temporizador de filtración 2 Modo",
+        "state": {
+          "disabled": "Deshabilitado",
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Temporizador de filtración 3 Modo",
+        "state": {
+          "disabled": "Deshabilitado",
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Temporizador de luz Modo",
+        "state": {
+          "disabled": "Deshabilitado",
+          "auto": "Automático",
+          "on": "Encendido",
+          "off": "Apagado"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Luz"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Temporizador de filtración 1 Inicio"
+      },
+      "filtration_timer1_stop": {
+        "name": "Temporizador de filtración 1 Fin"
+      },
+      "filtration_timer2_start": {
+        "name": "Temporizador de filtración 2 Inicio"
+      },
+      "filtration_timer2_stop": {
+        "name": "Temporizador de filtración 2 Fin"
+      },
+      "filtration_timer3_start": {
+        "name": "Temporizador de filtración 3 Inicio"
+      },
+      "filtration_timer3_stop": {
+        "name": "Temporizador de filtración 3 Fin"
+      },
+      "light_timer_start": {
+        "name": "Temporizador de luz Inicio"
+      },
+      "light_timer_stop": {
+        "name": "Temporizador de luz Fin"
       }
     }
   },

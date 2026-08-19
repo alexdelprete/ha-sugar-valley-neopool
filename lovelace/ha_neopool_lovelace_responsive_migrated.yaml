@@ -381,6 +381,49 @@
                 entity: select.neopool_mqtt_aux4_mode
                 name: Aux4
       - type: vertical-stack
+        title: Timer Schedules
+        cards:
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: tile
+                entity: select.neopool_mqtt_filtration_timer1_mode
+                name: Filt 1 Mode
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer1_start
+                name: Filt 1 Start
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer1_stop
+                name: Filt 1 Stop
+              - type: tile
+                entity: select.neopool_mqtt_filtration_timer2_mode
+                name: Filt 2 Mode
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer2_start
+                name: Filt 2 Start
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer2_stop
+                name: Filt 2 Stop
+              - type: tile
+                entity: select.neopool_mqtt_filtration_timer3_mode
+                name: Filt 3 Mode
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer3_start
+                name: Filt 3 Start
+              - type: tile
+                entity: time.neopool_mqtt_filtration_timer3_stop
+                name: Filt 3 Stop
+              - type: tile
+                entity: select.neopool_mqtt_light_timer_mode
+                name: Light Mode
+              - type: tile
+                entity: time.neopool_mqtt_light_timer_start
+                name: Light Start
+              - type: tile
+                entity: time.neopool_mqtt_light_timer_stop
+                name: Light Stop
+      - type: vertical-stack
         title: Power Unit Info
         cards:
           - square: false

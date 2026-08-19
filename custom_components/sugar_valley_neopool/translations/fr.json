@@ -405,6 +405,42 @@
       },
       "filtration_timer3_speed": {
         "name": "Vitesse de la minuterie de filtration 3"
+      },
+      "filtration_timer1_mode": {
+        "name": "Minuterie de filtration 1 Mode",
+        "state": {
+          "disabled": "Désactivé",
+          "auto": "Auto",
+          "on": "Activé",
+          "off": "Désactivé"
+        }
+      },
+      "filtration_timer2_mode": {
+        "name": "Minuterie de filtration 2 Mode",
+        "state": {
+          "disabled": "Désactivé",
+          "auto": "Auto",
+          "on": "Activé",
+          "off": "Désactivé"
+        }
+      },
+      "filtration_timer3_mode": {
+        "name": "Minuterie de filtration 3 Mode",
+        "state": {
+          "disabled": "Désactivé",
+          "auto": "Auto",
+          "on": "Activé",
+          "off": "Désactivé"
+        }
+      },
+      "light_timer_mode": {
+        "name": "Minuterie de lumière Mode",
+        "state": {
+          "disabled": "Désactivé",
+          "auto": "Auto",
+          "on": "Activé",
+          "off": "Désactivé"
+        }
       }
     },
     "number": {
@@ -456,6 +492,32 @@
     "light": {
       "light": {
         "name": "Lumière"
+      }
+    },
+    "time": {
+      "filtration_timer1_start": {
+        "name": "Minuterie de filtration 1 Début"
+      },
+      "filtration_timer1_stop": {
+        "name": "Minuterie de filtration 1 Fin"
+      },
+      "filtration_timer2_start": {
+        "name": "Minuterie de filtration 2 Début"
+      },
+      "filtration_timer2_stop": {
+        "name": "Minuterie de filtration 2 Fin"
+      },
+      "filtration_timer3_start": {
+        "name": "Minuterie de filtration 3 Début"
+      },
+      "filtration_timer3_stop": {
+        "name": "Minuterie de filtration 3 Fin"
+      },
+      "light_timer_start": {
+        "name": "Minuterie de lumière Début"
+      },
+      "light_timer_stop": {
+        "name": "Minuterie de lumière Fin"
       }
     }
   },
