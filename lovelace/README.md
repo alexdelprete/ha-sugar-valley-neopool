@@ -62,7 +62,7 @@ Install these via [HACS][hacs] before applying any dashboard.
 ### Required by the full-width variants only
 
 - [mushroom cards][mushroom] — provides `mushroom-entity-card`,
-  `mushroom-select-card`, `mushroom-number-card`
+  `mushroom-select-card`, `mushroom-number-card`, `mushroom-template-card`
 - [stack-in-card][stack-in-card]
 - [text-divider-row][text-divider-row]
 

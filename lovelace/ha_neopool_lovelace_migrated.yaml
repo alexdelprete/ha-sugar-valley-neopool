@@ -485,7 +485,11 @@
                 entity: sensor.neopool_mqtt_connection_error_rate
                 name: Err Rate
                 icon: mdi:percent
-              - type: custom:mushroom-entity-card
+              - type: custom:mushroom-template-card
                 entity: binary_sensor.neopool_mqtt_connection_problem
-                name: Health
+                primary: Health
+                secondary: >-
+                  {{ 'Problem' if is_state('binary_sensor.neopool_mqtt_connection_problem', 'on') else 'OK' }}
                 icon: mdi:alert-circle-outline
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_mqtt_connection_problem', 'on') else 'green' }}

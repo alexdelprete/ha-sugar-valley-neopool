@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Connection Health tile now shows green when OK, red on Problem.** On the two
+  mushroom dashboards (`ha_neopool_lovelace.yaml`, `ha_neopool_lovelace_migrated.yaml`)
+  the Health tile switched from `mushroom-entity-card` to `mushroom-template-card`
+  so its icon color reflects state — `binary_sensor.connection_problem` is a
+  `problem`-class sensor, which HA renders neutral/gray when OK, so an at-a-glance
+  status color needs a state-based template. `mushroom-template-card` ships in the
+  same mushroom HACS package (no new dependency). The responsive dashboards use the
+  native `tile` card, which only supports a static color, so they are unchanged.
+
 ## [2.1.1] - 2026-08-19
 
 ### Fixed
