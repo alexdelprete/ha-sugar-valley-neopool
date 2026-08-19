@@ -34,7 +34,6 @@ BUTTON_DESCRIPTIONS: tuple[NeoPoolButtonEntityDescription, ...] = (
         key="clear_error",
         translation_key="clear_error",
         name="Clear Error State",
-        icon="mdi:alert-remove",
         entity_category=EntityCategory.CONFIG,
         command=CMD_ESCAPE,
     ),
@@ -42,7 +41,6 @@ BUTTON_DESCRIPTIONS: tuple[NeoPoolButtonEntityDescription, ...] = (
         key="sync_controller_time",
         translation_key="sync_controller_time",
         name="Sync Controller Time",
-        icon="mdi:clock-check-outline",
         entity_category=EntityCategory.CONFIG,
         command=CMD_TIME,
         payload="0",  # NPTime 0 = sync controller clock to Tasmota's current time
@@ -105,7 +103,6 @@ class NeoPoolResetCellRuntimeButton(NeoPoolMQTTEntity, ButtonEntity):
 
     _attr_translation_key = "reset_cell_runtime"
     _attr_name = "Reset Cell Runtime"
-    _attr_icon = "mdi:counter"
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_entity_registry_enabled_default = False
 

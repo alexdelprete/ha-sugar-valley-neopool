@@ -755,7 +755,6 @@ class NeoPoolConnectionRateSensor(NeoPoolEntity, SensorEntity):
     _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_translation_key = "connection_error_rate"
-    _attr_icon = "mdi:percent"
     _attr_suggested_display_precision = 2
 
     def __init__(self, config_entry: NeoPoolConfigEntry) -> None:

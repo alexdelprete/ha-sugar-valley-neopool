@@ -9,14 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Auto Time Sync switch icon fix now actually takes effect.** v2.1.0 changed
-  the icon in `icons.json`, but this entity sets its icon in code via
-  `_attr_icon`, which overrides `icons.json` — so the invalid
-  `mdi:clock-sync-outline` still rendered blank. Fixed the code-level icon to
-  `mdi:update`.
+- **Auto Time Sync switch icon now renders.** Its icon was set in code via
+  `_attr_icon` (an invalid `mdi:clock-sync-outline`), which overrides
+  `icons.json` — so the v2.1.0 `icons.json`-only change had no effect and the
+  icon stayed blank. All entity icons are now defined in **`icons.json` only**
+  (single source of truth): the redundant/invalid code-level `_attr_icon` /
+  description `icon=` assignments were removed, and the Auto Time Sync icon is
+  now `mdi:update`.
 - **Responsive dashboards labeled the pH pump tile just "Pump".** Renamed to
   "pH Pump" to match the non-responsive dashboards and avoid confusion with the
   filtration pump. (`sensor.<name>_ph_pump`, in the pH Module Info section.)
+- **Responsive dashboards mislabeled the pH state tile as "Controller".** Renamed
+  to "pH State" (`sensor.<name>_ph_state`, the pH alarm state) to match the
+  non-responsive dashboards.
 
 ## [2.1.0] - 2026-08-19
 

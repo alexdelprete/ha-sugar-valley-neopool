@@ -236,7 +236,7 @@
             cards:
               - type: tile
                 entity: sensor.neopool_ph_state
-                name: Controller
+                name: pH State
               - type: tile
                 entity: sensor.neopool_ph_pump
                 name: pH Pump

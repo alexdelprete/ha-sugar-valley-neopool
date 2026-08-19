@@ -361,7 +361,6 @@ class NeoPoolConnectionProblemBinarySensor(NeoPoolEntity, BinarySensorEntity):
     _attr_device_class = BinarySensorDeviceClass.PROBLEM
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_translation_key = "connection_problem"
-    _attr_icon = "mdi:alert-circle-outline"
 
     def __init__(self, config_entry: NeoPoolConfigEntry) -> None:
         """Initialize the problem binary sensor."""

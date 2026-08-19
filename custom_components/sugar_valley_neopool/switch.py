@@ -230,10 +230,6 @@ class NeoPoolAutoTimeSyncSwitch(NeoPoolEntity, SwitchEntity, RestoreEntity):
 
     _attr_translation_key = "auto_time_sync"
     _attr_name = "Auto Time Sync"
-    # mdi:clock-sync-outline is not a valid MDI name and rendered blank. This
-    # code-level _attr_icon takes precedence over icons.json, so it must be fixed
-    # here (fixing icons.json alone had no effect).
-    _attr_icon = "mdi:update"
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, config_entry: NeoPoolConfigEntry) -> None:

@@ -76,6 +76,9 @@
       "connection_out_of_range": {
         "default": "mdi:alert-octagon-outline"
       },
+      "connection_error_rate": {
+        "default": "mdi:percent"
+      },
       "system_id": {
         "default": "mdi:information-outline"
       },
@@ -105,6 +108,9 @@
       }
     },
     "binary_sensor": {
+      "connection_problem": {
+        "default": "mdi:alert-circle-outline"
+      },
       "modules_ph": {
         "default": "mdi:ph"
       },

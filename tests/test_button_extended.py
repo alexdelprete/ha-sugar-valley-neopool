@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -22,9 +24,17 @@ class TestButtonDescriptionsExtended:
         assert desc.payload == ""
 
     def test_all_buttons_have_icon(self) -> None:
-        """Test all buttons have an icon."""
+        """Every button's icon comes from icons.json (single source of truth)."""
+        icons = json.loads(
+            (
+                Path(__file__).parent.parent / "custom_components/sugar_valley_neopool/icons.json"
+            ).read_text()
+        )
+        button_icons = icons["entity"]["button"]
         for desc in BUTTON_DESCRIPTIONS:
-            assert desc.icon is not None
+            # Icons are no longer set on the description; they live in icons.json.
+            assert desc.icon is None
+            assert button_icons.get(desc.translation_key, {}).get("default")
 
 
 class TestNeoPoolButtonExtended:
