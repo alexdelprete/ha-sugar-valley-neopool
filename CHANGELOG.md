@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Responsive dashboards labeled the pH pump tile just "Pump".** Renamed to
+  "pH Pump" to match the non-responsive dashboards and avoid confusion with the
+  filtration pump. (`sensor.<name>_ph_pump`, in the pH Module Info section.)
+
 ## [2.1.0] - 2026-08-19
 
 ### Changed

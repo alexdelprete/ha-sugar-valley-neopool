@@ -239,7 +239,7 @@
                 name: Controller
               - type: tile
                 entity: sensor.neopool_ph_pump
-                name: Pump
+                name: pH Pump
                 icon: phu:pool-filter
               - type: tile
                 entity: binary_sensor.neopool_ph_tank_level_low
