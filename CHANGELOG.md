@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   slugifies the entity IDs as `..._filtration_timer_1_mode` (underscore before
   the digit), so the twelve timer tiles were dead. All four dashboards now use
   the correct entity IDs.
+- **Auto Time Sync switch now shows an icon.** Its configured icon
+  (`mdi:clock-sync-outline`) is not a valid Material Design Icons name, so the
+  frontend rendered no icon; changed to `mdi:update`.
 
 ## [2.0.0] - 2026-08-19
 

@@ -186,7 +186,7 @@
         "default": "mdi:toggle-switch"
       },
       "auto_time_sync": {
-        "default": "mdi:clock-sync-outline"
+        "default": "mdi:update"
       },
       "uv_mode": {
         "default": "mdi:weather-sunny"
