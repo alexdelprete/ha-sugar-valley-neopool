@@ -51,6 +51,7 @@ from custom_components.sugar_valley_neopool.const import (
     CONFIG_REGISTERS,
     DOMAIN,
     REG_UV_MODE,
+    TIMER_ENTITY_REGISTERS,
 )
 from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker
 from homeassistant.core import HomeAssistant
@@ -2183,7 +2184,7 @@ class TestResultWatch:
         ) as mock_publish:
             await _read_config_registers(hass, entry)
 
-        assert mock_publish.await_count == len(CONFIG_REGISTERS)
+        assert mock_publish.await_count == len(CONFIG_REGISTERS) + len(TIMER_ENTITY_REGISTERS)
         topics = {call.args[1] for call in mock_publish.await_args_list}
         assert all(t == "cmnd/MyPool/NPRead" for t in topics)
 
