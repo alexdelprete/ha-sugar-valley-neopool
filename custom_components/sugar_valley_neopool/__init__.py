@@ -1274,7 +1274,8 @@ async def _setup_result_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) ->
     We store the value in runtime_data.register_state, fanning out via
     config_register_signal so the register-backed entities update. This is
     on-demand request/response, not polling: reads are only issued at startup
-    (and writes echo their state).
+    and on LWT recovery (see _setup_register_recovery_watch); writes echo
+    their state.
 
     Data shapes handled: a single-register NPRead returns a scalar Data
     (``{"NPRead":{"Address":1046,"Data":28}}``); a multi-register read (NPReadL)
