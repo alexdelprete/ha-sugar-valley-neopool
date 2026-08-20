@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Register-backed entities no longer get stuck unavailable after an LWT
+  blip.** The config entities not present in SENSOR telemetry (filtration/light
+  timer selects and times, AUX1–4 mode selects, UV/climate/antifreeze switches,
+  heating/pH-delay/cover numbers) are populated by a paced NPRead sweep that ran
+  only at setup. NPReads issued while the device was offline are silently
+  dropped, so a sweep that raced a Tasmota LWT offline→online blip left those
+  entities unavailable until a config-entry reload. The integration now watches
+  the LWT topic and re-runs the paced sweep whenever availability is regained.
+  The re-sweep is debounced — at most one sweep in flight; a new blip restarts
+  it rather than queuing another — so a flapping link can't pile up sweeps, and
+  each read stays paced (`NPREAD_BURST_INTERVAL`) because the controller drops
+  fast bursts. Entities restore instantly from the cached register values on
+  reconnect (the sweep only refreshes them); they are only ever unavailable
+  before the first successful read.
+
 ### Changed
 
 - **Connection Health tile now shows green when OK, red on Problem.** On the two

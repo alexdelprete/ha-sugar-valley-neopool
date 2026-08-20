@@ -43,6 +43,8 @@ from .const import (
     MANUFACTURER,
     MODEL,
     NPREAD_BURST_INTERVAL,
+    PAYLOAD_OFFLINE,
+    PAYLOAD_ONLINE,
     PLATFORMS,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
@@ -126,8 +128,16 @@ class NeoPoolData:
     # Cache of Group 2 config registers (address -> raw value). These are not in
     # the SENSOR payload; populated by a startup NPRead and kept current by the
     # write-ACK. The stat/RESULT watch updates this and fans out via
-    # config_register_signal.
+    # config_register_signal. Values are never removed, so register-backed
+    # entities restore instantly from this cache when availability is regained
+    # after an LWT blip — they are only ever unavailable before the first
+    # successful read.
     register_state: dict[int, int] = field(default_factory=dict)
+    # Handle of the in-flight paced NPRead sweep (startup or LWT recovery).
+    # _async_start_register_sweep uses it to guarantee at most one sweep at a
+    # time under a flapping link (restart semantics: a new trigger cancels the
+    # stale sweep and starts a fresh, complete one).
+    register_sweep_task: asyncio.Task[None] | None = None
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -215,9 +225,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # blocked for the several seconds the paced sequence takes; entities populate
     # progressively as each response arrives.
     await _setup_result_watch(hass, entry)
-    entry.async_create_background_task(
-        hass, _read_config_registers(hass, entry), "neopool_read_config_registers"
-    )
+    _async_start_register_sweep(hass, entry, reason="startup")
+
+    # Re-run the sweep whenever the device regains availability (LWT
+    # Offline -> Online): reads issued while the device was offline are lost,
+    # so without this the register-backed entities could stay unavailable
+    # until a config-entry reload.
+    await _setup_register_recovery_watch(hass, entry)
 
     # Forward setup to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -1329,6 +1343,69 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
         )
         await asyncio.sleep(NPREAD_BURST_INTERVAL)
     _LOGGER.debug("Requested %d config registers via NPRead", len(addresses))
+
+
+@callback
+def _async_start_register_sweep(
+    hass: HomeAssistant, entry: NeoPoolConfigEntry, *, reason: str
+) -> None:
+    """Start the paced NPRead config-register sweep as a background task.
+
+    At most one sweep runs at a time: if one is already in flight (the startup
+    sweep still pacing, or an earlier LWT recovery), it is cancelled and a
+    fresh sweep starts from the beginning. Restarting (rather than skipping)
+    guarantees that after the *last* Offline -> Online transition a complete
+    sweep runs — an in-flight sweep may have issued part of its reads into an
+    offline window, where the device drops them silently. A flapping link
+    therefore never queues overlapping sweeps; it just keeps restarting the
+    single one.
+    """
+    task = entry.runtime_data.register_sweep_task
+    if task is not None and not task.done():
+        _LOGGER.debug("Register sweep already in flight - restarting (%s)", reason)
+        task.cancel()
+    entry.runtime_data.register_sweep_task = entry.async_create_background_task(
+        hass,
+        _read_config_registers(hass, entry),
+        f"neopool_read_config_registers_{reason}",
+    )
+
+
+async def _setup_register_recovery_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Subscribe to LWT and re-run the register sweep on Offline -> Online.
+
+    The Group 2 / timer config registers are not in the SENSOR payload — they
+    are only read by the paced NPRead sweep. Reads that fall into an offline
+    window are lost (nothing retries them), so a sweep that raced an LWT blip
+    left the register-backed entities unavailable until a config-entry reload.
+
+    The LWT topic is retained, so this subscription immediately replays the
+    current state on setup; only a genuine Offline -> Online *transition*
+    triggers a recovery sweep (the startup sweep covers the initial read).
+    Entities restore from runtime_data.register_state the moment availability
+    returns — the recovery sweep only refreshes the cached values.
+    """
+    mqtt_topic = entry.runtime_data.mqtt_topic
+    lwt_topic = f"tele/{mqtt_topic}/LWT"
+    last_payload: str | None = None
+
+    @callback
+    def on_lwt(msg: mqtt.ReceiveMessage) -> None:
+        nonlocal last_payload
+        payload = msg.payload
+        was_offline = last_payload == PAYLOAD_OFFLINE
+        if isinstance(payload, str):
+            last_payload = payload
+        if payload == PAYLOAD_ONLINE and was_offline:
+            _LOGGER.info(
+                "Device %s regained availability - re-reading config registers",
+                mqtt_topic,
+            )
+            _async_start_register_sweep(hass, entry, reason="lwt_recovery")
+
+    unsub = await mqtt.async_subscribe(hass, lwt_topic, on_lwt, qos=1)
+    entry.async_on_unload(unsub)
+    _LOGGER.debug("Register recovery watch subscribed to %s", lwt_topic)
 
 
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:

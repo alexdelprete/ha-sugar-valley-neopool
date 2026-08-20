@@ -68,6 +68,11 @@ class TestAsyncSetupEntryExtended:
                 return_value=None,
             ),
             patch(
+                "custom_components.sugar_valley_neopool._setup_register_recovery_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
                 "custom_components.sugar_valley_neopool._read_config_registers",
                 new_callable=AsyncMock,
                 return_value=None,
@@ -146,6 +151,11 @@ class TestAsyncSetupEntryExtended:
             ),
             patch(
                 "custom_components.sugar_valley_neopool._setup_result_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._setup_register_recovery_watch",
                 new_callable=AsyncMock,
                 return_value=None,
             ),

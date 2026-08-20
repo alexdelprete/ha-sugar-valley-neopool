@@ -535,6 +535,10 @@ class TestSetupEntryLogging:
                 new_callable=AsyncMock,
             ),
             patch(
+                "custom_components.sugar_valley_neopool._setup_register_recovery_watch",
+                new_callable=AsyncMock,
+            ),
+            patch(
                 "custom_components.sugar_valley_neopool._read_config_registers",
                 new_callable=AsyncMock,
             ),
