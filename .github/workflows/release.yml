@@ -29,9 +29,9 @@ jobs:
             "${{ github.workspace }}/custom_components/sugar_valley_neopool/manifest.json")
 
           # Extract VERSION from const.py
-          CONST_VERSION=$(grep -E "^VERSION: Final = " \
+          CONST_VERSION=$(grep -E "^VERSION = " \
             "${{ github.workspace }}/custom_components/sugar_valley_neopool/const.py" \
-            | sed 's/VERSION: Final = "\(.*\)"/\1/')
+            | sed 's/VERSION = "\(.*\)"/\1/')
 
           # Fail early if extraction produced nothing (e.g. const.py declaration
           # style drifted from the configured grep pattern)
@@ -39,7 +39,7 @@ jobs:
             echo "::error::Could not extract VERSION from const.py"
             echo ""
             echo "ERROR: could not extract VERSION from const.py."
-            echo "The pattern 'VERSION: Final = ' matched no line —"
+            echo "The pattern 'VERSION = ' matched no line —"
             echo "check that version_grep_pattern in .repo-sync.yaml matches the"
             echo "exact VERSION declaration form used in const.py."
             exit 1
