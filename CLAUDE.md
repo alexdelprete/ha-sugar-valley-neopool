@@ -634,7 +634,7 @@ was added alongside these tests when the persistent SENSOR watch
 landed.
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-06-27 -->
+<!-- Synced by repo-sync on 2026-08-20 -->
 
 <!--
 ==============================================================================
@@ -985,6 +985,9 @@ in manifest.json and const.py.
 
 1. `custom_components/sugar_valley_neopool/manifest.json` → `"version": "X.Y.Z"`
 1. `custom_components/sugar_valley_neopool/const.py` → `VERSION = "X.Y.Z"`
+
+> const.py must declare the version as plain `VERSION = "X.Y.Z"` — no `Final`
+> annotation — because the release workflow and repo-sync validate that exact form.
 
 ### Complete Release Workflow
 
