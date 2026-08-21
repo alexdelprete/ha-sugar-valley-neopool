@@ -9,14 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Flow Alarm tile now shows green when OK, red on alarm.** Same treatment the
-  Connection Health tile got in v2.1.2: on the two mushroom dashboards
-  (`ha_neopool_lovelace.yaml`, `ha_neopool_lovelace_migrated.yaml`) the
-  hydrolysis Flow Alarm tile switched from `mushroom-entity-card` to
-  `mushroom-template-card` so its icon color reflects state — the flow alarm is
-  a `problem`-class binary sensor, which HA renders neutral/gray when OK. The
-  secondary text reads OK/No Flow. No new card dependency; the responsive
-  dashboards use the native `tile` card (static color only) and are unchanged.
+- **Flow Alarm and Low Production tiles now show green when OK, red on alarm.**
+  Same treatment the Connection Health tile got in v2.1.2, now applied to the
+  remaining `problem`-class tiles on the two mushroom dashboards
+  (`ha_neopool_lovelace.yaml`, `ha_neopool_lovelace_migrated.yaml`): the
+  hydrolysis Flow Alarm and Low Production tiles switched from
+  `mushroom-entity-card` to `mushroom-template-card` so their icon color
+  reflects state — HA renders `problem`-class sensors neutral/gray when OK. The
+  secondary text reads OK/No Flow and OK/Low respectively. No new card
+  dependency; the responsive dashboards use the native `tile` card (static
+  color only) and are unchanged.
 
 ## [2.1.2] - 2026-08-20
 

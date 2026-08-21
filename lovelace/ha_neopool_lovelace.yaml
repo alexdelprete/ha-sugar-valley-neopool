@@ -248,10 +248,14 @@
                 entity: sensor.neopool_hydrolysis
                 name: Hydro Production %
                 icon: phu:pool-clorine
-              - type: custom:mushroom-entity-card
+              - type: custom:mushroom-template-card
                 entity: binary_sensor.neopool_hydrolysis_low_production
+                primary: Low Production
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'OK' }}
                 icon: mdi:alarm-light-outline
-                name: Low Production
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'green' }}
               - type: custom:mushroom-template-card
                 entity: binary_sensor.neopool_hydrolysis_flow_alarm
                 primary: Flow Alarm
