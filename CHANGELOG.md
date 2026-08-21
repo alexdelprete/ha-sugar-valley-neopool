@@ -14,11 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   remaining `problem`-class tiles on the two mushroom dashboards
   (`ha_neopool_lovelace.yaml`, `ha_neopool_lovelace_migrated.yaml`): the
   hydrolysis Flow Alarm and Low Production tiles switched from
-  `mushroom-entity-card` to `mushroom-template-card` so their icon color
+  `mushroom-entity-card` to `mushroom-legacy-template-card` so their icon color
   reflects state — HA renders `problem`-class sensors neutral/gray when OK. The
-  secondary text reads OK/No Flow and OK/Low respectively. No new card
-  dependency; the responsive dashboards use the native `tile` card (static
-  color only) and are unchanged.
+  secondary text reads OK/No Flow and OK/Low respectively. The Connection
+  Health tile (added in v2.1.2 as `mushroom-template-card`) also moved to the
+  legacy template card: in Mushroom v5 the new template card is rebuilt on HA's
+  native tile card and is **not compatible with Mushroom themes** (per upstream
+  docs), so it lost the icon shape background under themes like Mushroom
+  Square; the legacy card keeps the classic rendering and matches the
+  surrounding `mushroom-entity-card` tiles. No new card dependency; the
+  responsive dashboards use the native `tile` card (static color only) and are
+  unchanged.
 
 ## [2.1.2] - 2026-08-20
 
