@@ -9,13 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **New "Alarms" row groups the problem-class tiles on the mushroom
-  dashboards.** The three state-colored alarm tiles — Flow Alarm, Low
-  Production, and Connection Health — moved out of their home sections
-  (Hydrolysis Module Info and Connection Statistics) into a dedicated Alarms
-  row placed right after Modules Detected, so all at-a-glance alarm states live
-  in one place. Applies to `ha_neopool_lovelace.yaml` and
-  `ha_neopool_lovelace_migrated.yaml`; the responsive dashboards are unchanged.
+- **New "Alarms" row groups all six problem-class tiles on the mushroom
+  dashboards.** A dedicated Alarms row placed right after Modules Detected now
+  holds every `problem`-class sensor the integration ships, state-colored
+  (green OK, red alarm): Hydro Flow Alarm, pH Flow Alarm, and Low Production
+  moved out of Hydrolysis Module Info, Connection Health out of Connection
+  Statistics, and the previously dashboard-less pH Flow Alarm, pH Tank, and
+  Redox Tank sensors got tiles for the first time — the tank-level tiles tell
+  you when a reagent canister needs refilling. Applies to
+  `ha_neopool_lovelace.yaml` and `ha_neopool_lovelace_migrated.yaml`; the
+  responsive dashboards are unchanged.
 
 - **Flow Alarm and Low Production tiles now show green when OK, red on alarm.**
   Same treatment the Connection Health tile got in v2.1.2, now applied to the

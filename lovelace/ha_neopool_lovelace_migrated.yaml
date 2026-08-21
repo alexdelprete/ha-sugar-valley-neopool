@@ -378,12 +378,20 @@
             cards:
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_hydrolysis_fl1
-                primary: Flow Alarm
+                primary: Hydro Flow Alarm
                 secondary: >-
                   {{ 'No Flow' if is_state('binary_sensor.neopool_mqtt_hydrolysis_fl1', 'on') else 'OK' }}
                 icon: mdi:water-alert
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_hydrolysis_fl1', 'on') else 'green' }}
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_mqtt_ph_fl1
+                primary: pH Flow Alarm
+                secondary: >-
+                  {{ 'No Flow' if is_state('binary_sensor.neopool_mqtt_ph_fl1', 'on') else 'OK' }}
+                icon: mdi:water-alert
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_mqtt_ph_fl1', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_hydrolysis_low_production
                 primary: Low Production
@@ -392,6 +400,22 @@
                 icon: mdi:alarm-light-outline
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_hydrolysis_low_production', 'on') else 'green' }}
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_mqtt_ph_tank_level
+                primary: pH Tank
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_mqtt_ph_tank_level', 'on') else 'OK' }}
+                icon: mdi:cup-water
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_mqtt_ph_tank_level', 'on') else 'green' }}
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_mqtt_redox_tank_level_low
+                primary: Redox Tank
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_mqtt_redox_tank_level_low', 'on') else 'OK' }}
+                icon: mdi:cup-water
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_mqtt_redox_tank_level_low', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_connection_problem
                 primary: Health
