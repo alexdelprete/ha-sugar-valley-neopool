@@ -13,10 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dashboards.** A dedicated Alarms row placed right after Modules Detected now
   holds every `problem`-class sensor the integration ships, state-colored
   (green OK, red alarm): Hydro Flow Alarm, pH Flow Alarm, and Low Production
-  moved out of Hydrolysis Module Info, Connection Health out of Connection
-  Statistics, and the previously dashboard-less pH Flow Alarm, pH Tank, and
-  Redox Tank sensors got tiles for the first time — the tank-level tiles tell
-  you when a reagent canister needs refilling. Applies to
+  moved out of Hydrolysis Module Info, the Connection Health tile out of
+  Connection Statistics (renamed **Controller Link** — it watches the
+  RS-485/Modbus link to the NeoPool board, so the generic "Health" undersold
+  it), and the previously dashboard-less pH Flow Alarm, pH Tank, and Redox
+  Tank sensors got tiles for the first time — the tank-level tiles tell you
+  when a reagent canister needs refilling. Applies to
   `ha_neopool_lovelace.yaml` and `ha_neopool_lovelace_migrated.yaml`; the
   responsive dashboards are unchanged.
 

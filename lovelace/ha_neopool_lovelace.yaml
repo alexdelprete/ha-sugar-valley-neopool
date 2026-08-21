@@ -410,7 +410,7 @@
                   {{ 'red' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_connection_problem
-                primary: Health
+                primary: Controller Link
                 secondary: >-
                   {{ 'Problem' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'OK' }}
                 icon: mdi:alert-circle-outline
