@@ -867,17 +867,28 @@ _MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
 # but keyed on relay presence (available_relays), so e.g. the heating/UV config
 # controls are disabled on controllers without those relays instead of sitting
 # perpetually unavailable. smart_antifreeze is intentionally omitted: it gates
-# only on Temperature, which is always present.
+# only on Temperature, which is always present. intelligent_min_time is
+# likewise ungated: Intelligent *filtration* mode needs only the (always
+# present) water temperature, not a heating relay.
 _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     "Heating": [
         ("switch", "climate_mode"),
         ("number", "heating_temp"),
-        ("number", "intelligent_min_time"),
     ],
     "UV": [
         ("switch", "uv_mode"),
     ],
 }
+
+# Config entities that older versions (< 2.1.3) wrongly gated on a relay
+# (intelligent_min_time sat in the Heating group, so heater-less installs
+# could select Intelligent filtration mode but not set its minimum-time
+# floor). Removing an entity from _RELAY_CONFIG_ENTITY_MAP alone leaves
+# existing installs stuck INTEGRATION-disabled — the re-enable path only
+# walks mapped entities — so these get an explicit one-time re-enable in
+# _disable_unavailable_relay_config_entities. User-disabled entities are
+# left alone, matching the convention of the other management functions.
+_UNGATED_CONFIG_ENTITIES: Final[tuple[tuple[str, str], ...]] = (("number", "intelligent_min_time"),)
 
 
 @callback
@@ -982,6 +993,22 @@ def _disable_unavailable_relay_config_entities(
                     relay_name,
                 )
 
+    # One-time recovery for entities that older versions wrongly relay-gated
+    # (see _UNGATED_CONFIG_ENTITIES): clear the stale INTEGRATION disable so
+    # they materialize again on installs where the gating relay is absent.
+    for domain, entity_key in _UNGATED_CONFIG_ENTITIES:
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+        if not entity_id:
+            continue
+        entity_entry = entity_registry.async_get(entity_id)
+        if entity_entry and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            entity_registry.async_update_entity(entity_id, disabled_by=None)
+            _LOGGER.warning(
+                "Re-enabled config entity %s (no longer gated on relay presence)",
+                entity_id,
+            )
+
 
 # (domain, entity_key) entries that go unavailable when the controller's
 # hydrolysis display unit is "%": the JSON values exist but in % mode the
@@ -1079,6 +1106,7 @@ def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry
         managed_keys.update(entries)
     for entries in _RELAY_CONFIG_ENTITY_MAP.values():
         managed_keys.update(entries)
+    managed_keys.update(_UNGATED_CONFIG_ENTITIES)
     managed_keys.update(_MODE_DEPENDENT_GH_ENTITIES)
 
     # Snapshot which managed entities are currently INTEGRATION-disabled

@@ -7,7 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Intelligent Min Filtration Time is no longer disabled on heater-less
+  controllers.** The `intelligent_min_time` number was wrongly grouped with the
+  Heating-relay config entities, so installations without a heating relay could
+  select Intelligent filtration mode but not set its minimum-time floor from
+  Home Assistant. The entity is now ungated (Intelligent mode needs only the
+  always-present water temperature), and installs where an older version had
+  disabled it get a one-time automatic re-enable (user-disabled entities are
+  left alone, as always).
+
 ### Changed
+
+- **Mushroom dashboards: more of the integration surfaced.** The filtration
+  mode tile is renamed "Filtr. Mode"; the Timer Schedules section now shows
+  each filtration timer's per-timer Speed select (rows are Mode / Speed /
+  Start / Stop); the AUX Relays Mode row gained AUX1–4 relay state indicators
+  above the mode selects; and a new Configuration section (before Connection
+  Statistics) exposes the register-backed tuning knobs that previously lived
+  only on the device page: pH Pump Delay, Cover Reduction (switch + %),
+  Temp Shutdown, Smart Antifreeze, Auto Time Sync, and Int. Min Filt Time.
+  Both mushroom dashboards; responsive dashboards unchanged.
 
 - **New "Alarms" row groups all six problem-class tiles on the mushroom
   dashboards.** A dedicated Alarms row placed right after Modules Detected now
