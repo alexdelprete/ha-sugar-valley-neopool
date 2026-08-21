@@ -384,6 +384,8 @@
                 icon: mdi:waves-arrow-right
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_hydrolysis_fl1', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_ph_fl1
                 primary: pH Flow Alarm
@@ -392,6 +394,8 @@
                 icon: mdi:pipe-valve
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_ph_fl1', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_hydrolysis_low_production
                 primary: Low Production
@@ -400,6 +404,8 @@
                 icon: mdi:gauge-low
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_hydrolysis_low_production', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_ph_tank_level
                 primary: pH Tank
@@ -408,6 +414,8 @@
                 icon: mdi:cup-water
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_ph_tank_level', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_redox_tank_level_low
                 primary: Redox Tank
@@ -416,6 +424,8 @@
                 icon: mdi:cup-water
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_redox_tank_level_low', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_mqtt_connection_problem
                 primary: Controller Link
@@ -424,6 +434,8 @@
                 icon: mdi:cable-data
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_mqtt_connection_problem', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
           # Relay-state tiles: only Acid is kept from the package layout
           # (pH/Filtration/Light state tiles are removed — the integration
           # deletes those entities during migration because the YAML

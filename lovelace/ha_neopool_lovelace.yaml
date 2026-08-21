@@ -376,6 +376,8 @@
                 icon: mdi:waves-arrow-right
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_ph_flow_alarm
                 primary: pH Flow Alarm
@@ -384,6 +386,8 @@
                 icon: mdi:pipe-valve
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_hydrolysis_low_production
                 primary: Low Production
@@ -392,6 +396,8 @@
                 icon: mdi:gauge-low
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_ph_tank_level_low
                 primary: pH Tank
@@ -400,6 +406,8 @@
                 icon: mdi:cup-water
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_ph_tank_level_low', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_redox_tank_level_low
                 primary: Redox Tank
@@ -408,6 +416,8 @@
                 icon: mdi:cup-water
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
               - type: custom:mushroom-legacy-template-card
                 entity: binary_sensor.neopool_connection_problem
                 primary: Controller Link
@@ -416,6 +426,8 @@
                 icon: mdi:cable-data
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
           - type: custom:text-divider-row
             text: Relays State
           - type: grid

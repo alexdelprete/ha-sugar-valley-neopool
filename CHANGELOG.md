@@ -22,7 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already signals the alarm state, the tiles use icons that identify the
   circuit instead of repeating an alert glyph: `mdi:waves-arrow-right` (hydro
   flow), `mdi:pipe-valve` (pH dosing flow), `mdi:gauge-low` (low production),
-  `mdi:cup-water` (tanks), and `mdi:cable-data` (controller link). Applies to
+  `mdi:cup-water` (tanks), and `mdi:cable-data` (controller link). Each tile
+  sets `tap_action: more-info` explicitly — the legacy template card's default
+  tap is `toggle`, which is invalid for binary sensors and popped an "Action
+  binary_sensor.turn_on not found" error on tap. Applies to
   `ha_neopool_lovelace.yaml` and `ha_neopool_lovelace_migrated.yaml`; the
   responsive dashboards are unchanged.
 
