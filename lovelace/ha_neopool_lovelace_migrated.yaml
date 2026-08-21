@@ -133,7 +133,7 @@
             cards:
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_filtration_mode
-                name: Mode
+                name: Filtr. Mode
                 icon: mdi:auto-mode
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_filtration_speed
@@ -197,12 +197,16 @@
           - type: custom:text-divider-row
             text: Timer Schedules
           - type: grid
-            columns: 3
+            columns: 4
             square: false
             cards:
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_filtration_timer_1_mode
                 name: Filt 1 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_filtration_timer_1_speed
+                name: Filt 1 Speed
+                icon: si:speedtest
               - type: tile
                 entity: time.neopool_mqtt_filtration_timer_1_start
                 name: Filt 1 Start
@@ -212,6 +216,10 @@
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_filtration_timer_2_mode
                 name: Filt 2 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_filtration_timer_2_speed
+                name: Filt 2 Speed
+                icon: si:speedtest
               - type: tile
                 entity: time.neopool_mqtt_filtration_timer_2_start
                 name: Filt 2 Start
@@ -221,6 +229,10 @@
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_filtration_timer_3_mode
                 name: Filt 3 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_mqtt_filtration_timer_3_speed
+                name: Filt 3 Speed
+                icon: si:speedtest
               - type: tile
                 entity: time.neopool_mqtt_filtration_timer_3_start
                 name: Filt 3 Start
@@ -471,6 +483,22 @@
             columns: 4
             square: false
             cards:
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_aux1
+                name: Aux1 State
+                icon: mdi:electric-switch
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_aux2
+                name: Aux2 State
+                icon: mdi:electric-switch
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_aux3
+                name: Aux3 State
+                icon: mdi:electric-switch
+              - type: custom:mushroom-entity-card
+                entity: binary_sensor.neopool_mqtt_aux4
+                name: Aux4 State
+                icon: mdi:electric-switch
               - type: custom:mushroom-select-card
                 entity: select.neopool_mqtt_aux1_mode
                 name: Aux1
@@ -521,6 +549,47 @@
                   action: more-info
                 double_tap_action:
                   action: none
+          - type: custom:text-divider-row
+            text: Configuration
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_ph_pump_activation_delay
+                name: pH Pump Delay
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_hydrolysis_cover_reduction
+                name: Cover Reduct. %
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_intelligent_min_filtration_time
+                name: Int. Min Filt Time
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_hydrolysis_cover_reduction
+                name: Cover Reduction
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_hydrolysis_temperature_shutdown
+                name: Temp Shutdown
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_smart_antifreeze
+                name: Smart Antifreeze
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_mqtt_auto_time_sync
+                name: Auto Time Sync
+                tap_action:
+                  action: toggle
           - type: custom:text-divider-row
             text: Connection Statistics
           - square: false
