@@ -252,10 +252,14 @@
                 entity: binary_sensor.neopool_hydrolysis_low_production
                 icon: mdi:alarm-light-outline
                 name: Low Production
-              - type: custom:mushroom-entity-card
+              - type: custom:mushroom-template-card
                 entity: binary_sensor.neopool_hydrolysis_flow_alarm
-                name: Flow Alarm
+                primary: Flow Alarm
+                secondary: >-
+                  {{ 'No Flow' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'OK' }}
                 icon: mdi:water-alert
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'green' }}
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_hydrolysis_polarity_changes
                 name: Polarity Changes
