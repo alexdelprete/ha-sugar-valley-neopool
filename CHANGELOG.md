@@ -18,7 +18,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   RS-485/Modbus link to the NeoPool board, so the generic "Health" undersold
   it), and the previously dashboard-less pH Flow Alarm, pH Tank, and Redox
   Tank sensors got tiles for the first time — the tank-level tiles tell you
-  when a reagent canister needs refilling. Applies to
+  when a reagent canister needs refilling. Since the red/green coloring
+  already signals the alarm state, the tiles use icons that identify the
+  circuit instead of repeating an alert glyph: `mdi:waves-arrow-right` (hydro
+  flow), `mdi:pipe-valve` (pH dosing flow), `mdi:gauge-low` (low production),
+  `mdi:cup-water` (tanks), and `mdi:cable-data` (controller link). Applies to
   `ha_neopool_lovelace.yaml` and `ha_neopool_lovelace_migrated.yaml`; the
   responsive dashboards are unchanged.
 

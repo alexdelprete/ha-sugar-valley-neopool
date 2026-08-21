@@ -373,7 +373,7 @@
                 primary: Hydro Flow Alarm
                 secondary: >-
                   {{ 'No Flow' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'OK' }}
-                icon: mdi:water-alert
+                icon: mdi:waves-arrow-right
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
@@ -381,7 +381,7 @@
                 primary: pH Flow Alarm
                 secondary: >-
                   {{ 'No Flow' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'OK' }}
-                icon: mdi:water-alert
+                icon: mdi:pipe-valve
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
@@ -389,7 +389,7 @@
                 primary: Low Production
                 secondary: >-
                   {{ 'Low' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'OK' }}
-                icon: mdi:alarm-light-outline
+                icon: mdi:gauge-low
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'green' }}
               - type: custom:mushroom-legacy-template-card
@@ -413,7 +413,7 @@
                 primary: Controller Link
                 secondary: >-
                   {{ 'Problem' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'OK' }}
-                icon: mdi:alert-circle-outline
+                icon: mdi:cable-data
                 icon_color: >-
                   {{ 'red' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'green' }}
           - type: custom:text-divider-row
