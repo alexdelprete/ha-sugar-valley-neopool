@@ -129,12 +129,12 @@
                 icon: mdi:auto-mode
               - type: custom:mushroom-select-card
                 entity: select.neopool_filtration_speed
-                name: Speed
+                name: Filtr. Speed
                 icon: si:speedtest
               - type: custom:mushroom-select-card
                 entity: select.neopool_boost_mode
                 icon: mdi:lightning-bolt-outline
-                name: Boost
+                name: Hydro Boost
           - type: custom:text-divider-row
             text: Setpoints
           - type: grid
@@ -187,61 +187,114 @@
                   layout: horizontal
                   display_mode: slider
           - type: custom:text-divider-row
-            text: Timer Schedules
+            text: Configuration
           - type: grid
-            columns: 4
+            columns: 2
             square: false
             cards:
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_1_mode
-                name: Filt 1 Mode
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_1_speed
-                name: Filt 1 Speed
-                icon: si:speedtest
-              - type: tile
-                entity: time.neopool_filtration_timer_1_start
-                name: Filt 1 Start
-              - type: tile
-                entity: time.neopool_filtration_timer_1_stop
-                name: Filt 1 Stop
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_2_mode
-                name: Filt 2 Mode
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_2_speed
-                name: Filt 2 Speed
-                icon: si:speedtest
-              - type: tile
-                entity: time.neopool_filtration_timer_2_start
-                name: Filt 2 Start
-              - type: tile
-                entity: time.neopool_filtration_timer_2_stop
-                name: Filt 2 Stop
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_3_mode
-                name: Filt 3 Mode
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_timer_3_speed
-                name: Filt 3 Speed
-                icon: si:speedtest
-              - type: tile
-                entity: time.neopool_filtration_timer_3_start
-                name: Filt 3 Start
-              - type: tile
-                entity: time.neopool_filtration_timer_3_stop
-                name: Filt 3 Stop
-              - type: custom:mushroom-select-card
-                entity: select.neopool_light_timer_mode
-                name: Light Mode
-              - type: tile
-                entity: time.neopool_light_timer_start
-                name: Light Start
-              - type: tile
-                entity: time.neopool_light_timer_stop
-                name: Light Stop
+              - type: custom:mushroom-number-card
+                entity: number.neopool_ph_pump_activation_delay
+                name: pH Pump Delay
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_hydrolysis_cover_reduction
+                name: Cover Reduct. %
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-number-card
+                entity: number.neopool_intelligent_min_filtration_time
+                name: Int. Min Filt Time
+                layout: horizontal
+                display_mode: slider
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_hydrolysis_cover_reduction
+                name: Cover Reduction
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_hydrolysis_temperature_shutdown
+                name: Temp Shutdown
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_smart_antifreeze
+                name: Smart Antifreeze
+                tap_action:
+                  action: toggle
+              - type: custom:mushroom-entity-card
+                entity: switch.neopool_auto_time_sync
+                name: Auto Time Sync
+                tap_action:
+                  action: toggle
       - type: custom:stack-in-card
         cards:
+          - type: custom:text-divider-row
+            text: Alarms
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_hydrolysis_flow_alarm
+                primary: Hydro Flow Alarm
+                secondary: >-
+                  {{ 'No Flow' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'OK' }}
+                icon: mdi:waves-arrow-right
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_ph_flow_alarm
+                primary: pH Flow Alarm
+                secondary: >-
+                  {{ 'No Flow' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'OK' }}
+                icon: mdi:pipe-valve
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_hydrolysis_low_production
+                primary: Low Production
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'OK' }}
+                icon: mdi:gauge-low
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_ph_tank_level_low
+                primary: pH Tank
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_ph_tank_level_low', 'on') else 'OK' }}
+                icon: mdi:cup-water
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_ph_tank_level_low', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_redox_tank_level_low
+                primary: Redox Tank
+                secondary: >-
+                  {{ 'Low' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'OK' }}
+                icon: mdi:cup-water
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
+              - type: custom:mushroom-legacy-template-card
+                entity: binary_sensor.neopool_connection_problem
+                primary: Controller Link
+                secondary: >-
+                  {{ 'Problem' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'OK' }}
+                icon: mdi:cable-data
+                icon_color: >-
+                  {{ 'red' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'green' }}
+                tap_action:
+                  action: more-info
           - type: custom:text-divider-row
             text: Hydrolysis Module Info
           - type: grid
@@ -375,72 +428,6 @@
                 entity: binary_sensor.neopool_ionization_module
                 name: Ionization
           - type: custom:text-divider-row
-            text: Alarms
-          - type: grid
-            columns: 3
-            square: false
-            cards:
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_hydrolysis_flow_alarm
-                primary: Hydro Flow Alarm
-                secondary: >-
-                  {{ 'No Flow' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'OK' }}
-                icon: mdi:waves-arrow-right
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_flow_alarm', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_ph_flow_alarm
-                primary: pH Flow Alarm
-                secondary: >-
-                  {{ 'No Flow' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'OK' }}
-                icon: mdi:pipe-valve
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_ph_flow_alarm', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_hydrolysis_low_production
-                primary: Low Production
-                secondary: >-
-                  {{ 'Low' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'OK' }}
-                icon: mdi:gauge-low
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_hydrolysis_low_production', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_ph_tank_level_low
-                primary: pH Tank
-                secondary: >-
-                  {{ 'Low' if is_state('binary_sensor.neopool_ph_tank_level_low', 'on') else 'OK' }}
-                icon: mdi:cup-water
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_ph_tank_level_low', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_redox_tank_level_low
-                primary: Redox Tank
-                secondary: >-
-                  {{ 'Low' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'OK' }}
-                icon: mdi:cup-water
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_redox_tank_level_low', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-              - type: custom:mushroom-legacy-template-card
-                entity: binary_sensor.neopool_connection_problem
-                primary: Controller Link
-                secondary: >-
-                  {{ 'Problem' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'OK' }}
-                icon: mdi:cable-data
-                icon_color: >-
-                  {{ 'red' if is_state('binary_sensor.neopool_connection_problem', 'on') else 'green' }}
-                tap_action:
-                  action: more-info
-          - type: custom:text-divider-row
             text: Relays State
           - type: grid
             columns: 4
@@ -488,34 +475,72 @@
                 icon: mdi:electric-switch
               - type: custom:mushroom-select-card
                 entity: select.neopool_aux1_mode
-                name: Aux1
+                name: Aux1 Mode
               - type: custom:mushroom-select-card
                 entity: select.neopool_aux2_mode
-                name: Aux2
+                name: Aux2 Mode
               - type: custom:mushroom-select-card
                 entity: select.neopool_aux3_mode
-                name: Aux3
+                name: Aux3 Mode
               - type: custom:mushroom-select-card
                 entity: select.neopool_aux4_mode
-                name: Aux4
+                name: Aux4 Mode
+      - type: custom:stack-in-card
+        cards:
           - type: custom:text-divider-row
-            text: Power Unit Info
-          - square: false
-            type: grid
+            text: Timer Schedules
+          - type: grid
             columns: 4
+            square: false
             cards:
-              - type: custom:mushroom-entity-card
-                entity: sensor.neopool_powerunit_5v
-                name: 5V
-              - type: custom:mushroom-entity-card
-                entity: sensor.neopool_powerunit_12v
-                name: 12V
-              - type: custom:mushroom-entity-card
-                entity: sensor.neopool_powerunit_24_30v
-                name: 24V
-              - type: custom:mushroom-entity-card
-                entity: sensor.neopool_powerunit_4_20ma
-                name: 4mA
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_1_mode
+                name: Filt 1 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_1_speed
+                name: Filt 1 Speed
+                icon: si:speedtest
+              - type: tile
+                entity: time.neopool_filtration_timer_1_start
+                name: Filt 1 Start
+              - type: tile
+                entity: time.neopool_filtration_timer_1_stop
+                name: Filt 1 Stop
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_2_mode
+                name: Filt 2 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_2_speed
+                name: Filt 2 Speed
+                icon: si:speedtest
+              - type: tile
+                entity: time.neopool_filtration_timer_2_start
+                name: Filt 2 Start
+              - type: tile
+                entity: time.neopool_filtration_timer_2_stop
+                name: Filt 2 Stop
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_3_mode
+                name: Filt 3 Mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_timer_3_speed
+                name: Filt 3 Speed
+                icon: si:speedtest
+              - type: tile
+                entity: time.neopool_filtration_timer_3_start
+                name: Filt 3 Start
+              - type: tile
+                entity: time.neopool_filtration_timer_3_stop
+                name: Filt 3 Stop
+              - type: custom:mushroom-select-card
+                entity: select.neopool_light_timer_mode
+                name: Light Mode
+              - type: tile
+                entity: time.neopool_light_timer_start
+                name: Light Start
+              - type: tile
+                entity: time.neopool_light_timer_stop
+                name: Light Stop
           - type: custom:text-divider-row
             text: Controller
           - type: grid
@@ -537,46 +562,23 @@
                 double_tap_action:
                   action: none
           - type: custom:text-divider-row
-            text: Configuration
-          - type: grid
-            columns: 2
-            square: false
+            text: Power Unit Info
+          - square: false
+            type: grid
+            columns: 4
             cards:
-              - type: custom:mushroom-number-card
-                entity: number.neopool_ph_pump_activation_delay
-                name: pH Pump Delay
-                layout: horizontal
-                display_mode: slider
-              - type: custom:mushroom-number-card
-                entity: number.neopool_hydrolysis_cover_reduction
-                name: Cover Reduct. %
-                layout: horizontal
-                display_mode: slider
-              - type: custom:mushroom-number-card
-                entity: number.neopool_intelligent_min_filtration_time
-                name: Int. Min Filt Time
-                layout: horizontal
-                display_mode: slider
               - type: custom:mushroom-entity-card
-                entity: switch.neopool_hydrolysis_cover_reduction
-                name: Cover Reduction
-                tap_action:
-                  action: toggle
+                entity: sensor.neopool_powerunit_5v
+                name: 5V
               - type: custom:mushroom-entity-card
-                entity: switch.neopool_hydrolysis_temperature_shutdown
-                name: Temp Shutdown
-                tap_action:
-                  action: toggle
+                entity: sensor.neopool_powerunit_12v
+                name: 12V
               - type: custom:mushroom-entity-card
-                entity: switch.neopool_smart_antifreeze
-                name: Smart Antifreeze
-                tap_action:
-                  action: toggle
+                entity: sensor.neopool_powerunit_24_30v
+                name: 24V
               - type: custom:mushroom-entity-card
-                entity: switch.neopool_auto_time_sync
-                name: Auto Time Sync
-                tap_action:
-                  action: toggle
+                entity: sensor.neopool_powerunit_4_20ma
+                name: 4mA
           - type: custom:text-divider-row
             text: Connection Statistics
           - square: false

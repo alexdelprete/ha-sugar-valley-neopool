@@ -20,6 +20,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Mushroom dashboards regrouped into three logical columns.** The two
+  masonry stacks are now three, grouped by purpose: *Monitor & Control*
+  (readings + graphs, Main Controls, Setpoints, Configuration — Configuration
+  moved up next to Setpoints since both are things you tune), *Status &
+  Modules* (Alarms promoted to the top so problems are visible without
+  scrolling, then Hydrolysis Module Info, the conditional module sections,
+  Modules Detected, Relays State, AUX Relays Mode), and *Schedules & System*
+  (Timer Schedules, Controller, Power Unit Info, Connection Statistics).
+  Also clearer tile names: "Speed" → "Filtr. Speed", "Boost" → "Hydro Boost"
+  (it is the hydrolysis boost), and the AUX mode selects "Aux1".."Aux4" →
+  "Aux1 Mode".."Aux4 Mode" to distinguish them from the adjacent Aux state
+  tiles. No entities added or removed. Both mushroom dashboards; responsive
+  dashboards unchanged.
+
 - **Mushroom dashboards: more of the integration surfaced.** The filtration
   mode tile is renamed "Filtr. Mode"; the Timer Schedules section now shows
   each filtration timer's per-timer Speed select (rows are Mode / Speed /
