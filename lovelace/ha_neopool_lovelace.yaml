@@ -123,22 +123,6 @@
             columns: 3
             square: false
             cards:
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_mode
-                name: Filtr. Mode
-                icon: mdi:auto-mode
-              - type: custom:mushroom-select-card
-                entity: select.neopool_filtration_speed
-                name: Filtr. Speed
-                icon: si:speedtest
-              - type: custom:mushroom-select-card
-                entity: select.neopool_boost_mode
-                icon: mdi:lightning-bolt-outline
-                name: Hydro Boost
-          - type: grid
-            columns: 3
-            square: false
-            cards:
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_filtration_mode
                 name: Mode Status
@@ -151,6 +135,22 @@
                 entity: sensor.neopool_boost_mode
                 name: Boost Status
                 icon: mdi:lightning-bolt-outline
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_mode
+                name: Filtr. Mode
+                icon: mdi:auto-mode
+              - type: custom:mushroom-select-card
+                entity: select.neopool_filtration_speed
+                name: Filtr. Speed
+                icon: si:speedtest
+              - type: custom:mushroom-select-card
+                entity: select.neopool_boost_mode
+                icon: mdi:lightning-bolt-outline
+                name: Hydro Boost
           - type: custom:text-divider-row
             text: Setpoints
           - type: grid
