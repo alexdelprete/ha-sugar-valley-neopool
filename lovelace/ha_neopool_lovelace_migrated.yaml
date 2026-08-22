@@ -545,24 +545,78 @@
             columns: 4
             square: false
             cards:
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_acid_state
-                name: Acid
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_base_state
-                name: Base
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_redox_state
-                name: Redox
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_heating_state
-                name: Heating
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_uv_state
-                name: UV
-              - type: custom:mushroom-entity-card
-                entity: binary_sensor.neopool_mqtt_relay_valve_state
-                name: Valve
+              # Hidden when the Acid relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_acid_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_acid_state
+                  name: Acid
+              # Hidden when the Base relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_base_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_base_state
+                  name: Base
+              # Hidden when the Redox relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_redox_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_redox_state
+                  name: Redox
+              # Hidden when the Heating relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_heating_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_heating_state
+                  name: Heating
+              # Hidden when the UV relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_uv_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_uv_state
+                  name: UV
+              # Hidden when the Valve relay function is not assigned on the
+              # controller (the integration disables the entity).
+              - type: conditional
+                conditions:
+                  - entity: binary_sensor.neopool_mqtt_relay_valve_state
+                    state:
+                      - "on"
+                      - "off"
+                card:
+                  type: custom:mushroom-entity-card
+                  entity: binary_sensor.neopool_mqtt_relay_valve_state
+                  name: Valve
           - type: custom:text-divider-row
             text: AUX Relays Mode
           - type: grid

@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Model + System ID in Controller. Both mushroom dashboards; responsive
   dashboards unchanged.
 
+- **Relays State tiles hide when their relay function is not assigned.**
+  Each of the six relay-state tiles (Acid, Base, Redox, Heating, UV, Valve)
+  on the mushroom dashboards is now wrapped in a conditional card, so
+  installs whose controller has no relay assigned to a function no longer
+  see a dead tile — the integration disables those entities dynamically,
+  and now the dashboard follows. Both mushroom dashboards; responsive
+  dashboards unchanged.
+
 - **Conditional Heating section on the mushroom dashboards.** The three
   heating-gated config knobs — Climate Mode, Heating Temperature, and
   Intelligent Min Filtration Time — get their own "Heating" section after
