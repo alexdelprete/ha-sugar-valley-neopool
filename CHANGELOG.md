@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Mushroom dashboards now cover every entity the integration ships.** A
+  full audit against the entity inventory added the last 13 missing tiles,
+  each in its logical section: a Filtration Status row under Main Controls
+  (the telemetry-reported Mode/Speed/Boost sensors, which can diverge from
+  the command selects when someone uses the physical panel); Hydrolysis
+  Shutdown Temperature beside the Temp Shutdown switch in Configuration; a
+  conditional UV section (UV Mode switch, rendered only when a UV relay is
+  assigned — same pattern as Heating); Setpoint g/h, Max Prod., Unit,
+  Part. Runtime, and a confirmation-guarded Reset Runtime button in
+  Hydrolysis Module Info; Powerunit Version in Power Unit Info; and System
+  Model + System ID in Controller. Both mushroom dashboards; responsive
+  dashboards unchanged.
+
 - **Conditional Heating section on the mushroom dashboards.** The three
   heating-gated config knobs — Climate Mode, Heating Temperature, and
   Intelligent Min Filtration Time — get their own "Heating" section after

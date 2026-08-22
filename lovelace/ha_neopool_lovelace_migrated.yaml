@@ -143,6 +143,22 @@
                 entity: select.neopool_mqtt_boost_mode
                 icon: mdi:lightning-bolt-outline
                 name: Hydro Boost
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_filtration_mode
+                name: Mode Status
+                icon: mdi:auto-mode
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_filtration_speed
+                name: Speed Status
+                icon: si:speedtest
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_boost_mode
+                name: Boost Status
+                icon: mdi:lightning-bolt-outline
           - type: custom:text-divider-row
             text: Setpoints
           - type: grid
@@ -220,6 +236,11 @@
                 name: Temp Shutdown
                 tap_action:
                   action: toggle
+              - type: custom:mushroom-number-card
+                entity: number.neopool_mqtt_hydrolysis_shutdown_temperature
+                name: Shutdown Temp
+                layout: horizontal
+                display_mode: slider
               - type: custom:mushroom-entity-card
                 entity: switch.neopool_mqtt_smart_antifreeze
                 name: Smart Antifreeze
@@ -264,6 +285,28 @@
                       name: Int. Min Filt Time
                       layout: horizontal
                       display_mode: slider
+          # Conditional: UV knob — only render when a UV relay is assigned
+          # on the controller (the integration disables uv_mode otherwise).
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.neopool_mqtt_relay_uv_state
+                state:
+                  - "on"
+                  - "off"
+            card:
+              type: custom:stack-in-card
+              cards:
+                - type: custom:text-divider-row
+                  text: UV
+                - type: grid
+                  columns: 1
+                  square: false
+                  cards:
+                    - type: custom:mushroom-entity-card
+                      entity: switch.neopool_mqtt_uv_mode
+                      name: UV Mode
+                      tap_action:
+                        action: toggle
       - type: custom:stack-in-card
         cards:
           - type: custom:text-divider-row
@@ -351,6 +394,18 @@
                 name: Hydro Production %
                 icon: phu:pool-clorine
               - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_setpoint_g_h
+                name: Setpoint g/h
+                icon: phu:pool-clorine
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_max
+                name: Max Prod.
+                icon: mdi:gauge
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_unit
+                name: Unit
+                icon: mdi:counter
+              - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_hydrolysis_runtime_polarity_changes
                 name: Polarity Changes
                 icon: mdi:swap-horizontal-circle-outline
@@ -358,11 +413,26 @@
                 entity: sensor.neopool_mqtt_hydrolysis_runtime_total
                 name: Tot. Runtime
               - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_hydrolysis_runtime_part
+                name: Part. Runtime
+              - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_hydrolysis_runtime_pol1
                 name: Pol1 Runtime
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_hydrolysis_runtime_pol2
                 name: Pol2 Runtime
+              - type: custom:mushroom-entity-card
+                entity: button.neopool_mqtt_reset_cell_runtime
+                name: Reset Runtime
+                icon: mdi:restore-alert
+                tap_action:
+                  action: toggle
+                  confirmation:
+                    text: Reset the hydrolysis cell runtime counters?
+                hold_action:
+                  action: more-info
+                double_tap_action:
+                  action: none
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_ph_state
                 name: pH State
@@ -603,6 +673,12 @@
                   action: more-info
                 double_tap_action:
                   action: none
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_system_model
+                name: Model
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_system_id
+                name: System ID
           - type: custom:text-divider-row
             text: Power Unit Info
           - square: false
@@ -621,6 +697,9 @@
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_mqtt_powerunit_4_20ma
                 name: 4mA
+              - type: custom:mushroom-entity-card
+                entity: sensor.neopool_mqtt_powerunit_version
+                name: Version
           - type: custom:text-divider-row
             text: Connection Statistics
           - square: false
