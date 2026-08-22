@@ -485,60 +485,6 @@ class TestDisableUnavailableRelayConfigEntities:
 
         assert entity_registry.async_get(e.entity_id).disabled_by == er.RegistryEntryDisabler.USER
 
-    def test_intelligent_min_time_not_gated_on_heating(self, hass: HomeAssistant) -> None:
-        """intelligent_min_time stays enabled on heater-less installs (ungated in 2.1.3)."""
-        entry = self._entry(hass, {"UV"})  # Heating absent
-        entity_registry = er.async_get(hass)
-        entity_registry.async_get_or_create(
-            "number",
-            DOMAIN,
-            "neopool_mqtt_ABC123_intelligent_min_time",
-            config_entry=entry,
-            suggested_object_id="neopool_intelligent_min_time",
-        )
-
-        _disable_unavailable_relay_config_entities(hass, entry)
-
-        e = entity_registry.async_get("number.neopool_intelligent_min_time")
-        assert e.disabled_by is None
-
-    def test_intelligent_min_time_stale_disable_recovered(self, hass: HomeAssistant) -> None:
-        """A pre-2.1.3 INTEGRATION disable on intelligent_min_time is cleared once,
-        even while the Heating relay (its former gate) is still absent."""
-        entry = self._entry(hass, {"UV"})  # Heating absent
-        entity_registry = er.async_get(hass)
-        e = entity_registry.async_get_or_create(
-            "number",
-            DOMAIN,
-            "neopool_mqtt_ABC123_intelligent_min_time",
-            config_entry=entry,
-            suggested_object_id="neopool_intelligent_min_time",
-        )
-        entity_registry.async_update_entity(
-            e.entity_id, disabled_by=er.RegistryEntryDisabler.INTEGRATION
-        )
-
-        _disable_unavailable_relay_config_entities(hass, entry)
-
-        assert entity_registry.async_get(e.entity_id).disabled_by is None
-
-    def test_intelligent_min_time_user_disable_kept(self, hass: HomeAssistant) -> None:
-        """A USER disable on intelligent_min_time survives the ungate recovery pass."""
-        entry = self._entry(hass, {"UV"})
-        entity_registry = er.async_get(hass)
-        e = entity_registry.async_get_or_create(
-            "number",
-            DOMAIN,
-            "neopool_mqtt_ABC123_intelligent_min_time",
-            config_entry=entry,
-            suggested_object_id="neopool_intelligent_min_time",
-        )
-        entity_registry.async_update_entity(e.entity_id, disabled_by=er.RegistryEntryDisabler.USER)
-
-        _disable_unavailable_relay_config_entities(hass, entry)
-
-        assert entity_registry.async_get(e.entity_id).disabled_by == er.RegistryEntryDisabler.USER
-
 
 # ---------------------------------------------------------------------------
 # _disable_unavailable_module_entities

@@ -202,11 +202,6 @@
                 name: Cover Reduct. %
                 layout: horizontal
                 display_mode: slider
-              - type: custom:mushroom-number-card
-                entity: number.neopool_intelligent_min_filtration_time
-                name: Int. Min Filt Time
-                layout: horizontal
-                display_mode: slider
               - type: custom:mushroom-entity-card
                 entity: switch.neopool_hydrolysis_cover_reduction
                 name: Cover Reduction
