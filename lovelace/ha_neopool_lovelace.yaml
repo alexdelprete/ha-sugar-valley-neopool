@@ -125,15 +125,15 @@
             cards:
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_filtration_mode
-                name: Mode Status
+                name: Filtr. Mode Status
                 icon: mdi:auto-mode
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_filtration_speed
-                name: Speed Status
+                name: Filtr. Speed Status
                 icon: si:speedtest
               - type: custom:mushroom-entity-card
                 entity: sensor.neopool_boost_mode
-                name: Boost Status
+                name: Hydro Boost Status
                 icon: mdi:lightning-bolt-outline
           - type: grid
             columns: 3
