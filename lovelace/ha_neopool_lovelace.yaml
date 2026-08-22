@@ -222,6 +222,40 @@
                 name: Auto Time Sync
                 tap_action:
                   action: toggle
+          # Conditional: Heating knobs — only render when a heating relay is
+          # assigned on the controller (the integration disables these
+          # entities otherwise, and per the Tasmota driver register map
+          # Intelligent mode itself requires the heating function).
+          - type: conditional
+            conditions:
+              - entity: binary_sensor.neopool_relay_heating_state
+                state:
+                  - "on"
+                  - "off"
+            card:
+              type: custom:stack-in-card
+              cards:
+                - type: custom:text-divider-row
+                  text: Heating
+                - type: grid
+                  columns: 2
+                  square: false
+                  cards:
+                    - type: custom:mushroom-entity-card
+                      entity: switch.neopool_climate_mode
+                      name: Climate Mode
+                      tap_action:
+                        action: toggle
+                    - type: custom:mushroom-number-card
+                      entity: number.neopool_heating_temperature
+                      name: Heating Temp.
+                      layout: horizontal
+                      display_mode: slider
+                    - type: custom:mushroom-number-card
+                      entity: number.neopool_intelligent_min_filtration_time
+                      name: Int. Min Filt Time
+                      layout: horizontal
+                      display_mode: slider
       - type: custom:stack-in-card
         cards:
           - type: custom:text-divider-row

@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Conditional Heating section on the mushroom dashboards.** The three
+  heating-gated config knobs — Climate Mode, Heating Temperature, and
+  Intelligent Min Filtration Time — get their own "Heating" section after
+  Configuration, wrapped in a conditional card keyed on
+  `binary_sensor.<prefix>_relay_heating_state` so it only renders when the
+  controller has a heating relay assigned (the integration disables these
+  entities otherwise, and per the Tasmota driver register map Intelligent
+  mode itself requires the heating function). Heater-less installs see
+  nothing; heat-pump installs get all three knobs. Same pattern as the
+  conditional Chlorine/Ionization/Conductivity sections. Both mushroom
+  dashboards; responsive dashboards unchanged.
+
 - **Mushroom dashboards regrouped into three logical columns.** The two
   masonry stacks are now three, grouped by purpose: *Monitor & Control*
   (readings + graphs, Main Controls, Setpoints, Configuration — Configuration
