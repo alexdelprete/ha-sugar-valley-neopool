@@ -12,7 +12,7 @@
         "GIT_EDITOR=code --wait",
         "--security-opt",
         "label=disable",
-        "--label", "proxy.aliases=neopool.code,neopool.hass",
+        "--label", "proxy.aliases=neopool.code,neopool.hadev",
         "--label", "proxy.#1.port=8443",
         "--label", "proxy.#2.port=8123"
     ],
