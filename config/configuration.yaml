@@ -1,23 +1,28 @@
-# Home Assistant configuration for local development
-# This config is used when running HA in devcontainer
-
-default_config:
+# Shared dev-instance configuration (see scripts/develop).
+# Runtime state (.storage, db, logs) is gitignored; only this file is versioned.
+# Explicit component list instead of default_config: go2rtc (bundled there)
+# needs a binary absent from the devcontainer and fails the whole meta-setup.
+frontend:
+config:
+api:
+history:
+logbook:
+energy:
+system_health:
 
 logger:
   default: info
   logs:
     custom_components.sugar_valley_neopool: debug
-    homeassistant.components.mqtt: debug
-
-# MQTT broker configuration
-# Create config/secrets.yaml (gitignored) with:
-#   mqtt_broker: "your-broker-ip"
-#   mqtt_username: "your-username"
-#   mqtt_password: "your-password"
-mqtt:
-  broker: !secret mqtt_broker
-  port: 1883
-  username: !secret mqtt_username
-  password: !secret mqtt_password
+    # Reverse-proxy healthcheck probes may carry an empty X-Forwarded-For;
+    # silence the per-probe ERROR
+    homeassistant.components.http.forwarded: fatal
 
 debugpy:
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
