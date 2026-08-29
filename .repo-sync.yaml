@@ -12,6 +12,7 @@ vars:
   component_dir: sugar_valley_neopool
   domain: sugar_valley_neopool
   default_branch: main
+  dev_alias: neopool                      # devbox: <alias>.code / <alias>.hass hostnames
 
   # ── 4noks workaround ──
   needs_symlink: false
