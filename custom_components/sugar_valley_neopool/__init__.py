@@ -580,8 +580,12 @@ def _migrate_to_canonical_nodeid(hass: HomeAssistant, entry: NeoPoolConfigEntry)
 
     # Step 1: Migrate device registry identifiers
     for old_nodeid in old_nodeids:
-        old_device = device_registry.async_get_device(identifiers={(DOMAIN, old_nodeid)})
-        canonical_device = device_registry.async_get_device(identifiers={(DOMAIN, canonical)})
+        old_device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, old_nodeid), entry.entry_id
+        )
+        canonical_device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, canonical), entry.entry_id
+        )
 
         if old_device and canonical_device and old_device.id != canonical_device.id:
             # Both exist — remove the NEW duplicate (empty), keep the
@@ -1424,7 +1428,7 @@ async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) 
     # Use hashed NodeID as serial_number for privacy
     serial_number = entry.data.get(CONF_NODEID_HASHED)
 
-    device_registry.async_get_or_create(
+    device = device_registry.async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, nodeid)},
         manufacturer=MANUFACTURER,
@@ -1435,13 +1439,11 @@ async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) 
     )
 
     # Store device_id in runtime_data for device triggers
-    device = device_registry.async_get_device(identifiers={(DOMAIN, nodeid)})
-    if device:
-        entry.runtime_data.device_id = device.id
-        _LOGGER.debug(
-            "Device ID stored in runtime_data: %s",
-            device.id,
-        )
+    entry.runtime_data.device_id = device.id
+    _LOGGER.debug(
+        "Device ID stored in runtime_data: %s",
+        device.id,
+    )
 
     _LOGGER.debug("Registered device: %s (NodeID: %s)", device_name, nodeid)
 
@@ -1676,7 +1678,9 @@ async def async_migrate_masked_unique_ids(
 
     # Step 6: Update device registry identifier
     device_registry = dr.async_get(hass)
-    old_device = device_registry.async_get_device(identifiers={(DOMAIN, current_nodeid)})
+    old_device = device_registry.async_get_device_by_identifier(
+        (DOMAIN, current_nodeid), entry.entry_id
+    )
     if old_device and current_nodeid != real_nodeid:
         # Update device identifiers to use real NodeID
         device_registry.async_update_device(
@@ -1924,7 +1928,7 @@ async def _update_device_registry_metadata(
     device_registry = dr.async_get(hass)
     nodeid = entry.runtime_data.nodeid
 
-    device = device_registry.async_get_device(identifiers={(DOMAIN, nodeid)})
+    device = device_registry.async_get_device_by_identifier((DOMAIN, nodeid), entry.entry_id)
     if not device:
         _LOGGER.debug("Device not found in registry for NodeID: %s", nodeid)
         return

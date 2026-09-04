@@ -10,6 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.sugar_valley_neopool import (
     CONFIG_ENTRY_VERSION,
     NeoPoolData,
+    _update_device_registry_metadata,
     async_migrate_entry,
     async_register_device,
     async_remove_config_entry_device,
@@ -23,6 +24,8 @@ from custom_components.sugar_valley_neopool.const import (
     CONF_ENABLE_REPAIR_NOTIFICATION,
     CONF_FAILURES_THRESHOLD,
     CONF_NODEID,
+    CONF_NODEID_HASHED,
+    CONF_NODEID_REAL,
     CONF_OFFLINE_TIMEOUT,
     CONF_RECOVERY_SCRIPT,
     DEFAULT_DEVICE_NAME,
@@ -102,6 +105,92 @@ class TestAsyncSetupEntry:
         assert entry.runtime_data.device_name == "Test Pool"
         assert entry.runtime_data.mqtt_topic == "SmartPool"
         assert entry.runtime_data.nodeid == "ABC123"
+
+    @pytest.mark.asyncio
+    async def test_setup_entry_no_device_registry_deprecation_warning(
+        self, hass: HomeAssistant, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test setup emits no deprecated device_registry.async_get_device warning.
+
+        Runs setup against the real device registry with the canonical-NodeID
+        migration path active (real != canonical, old-identifier device exists),
+        then exercises the metadata-update lookup — covering every device lookup
+        the integration performs during setup. HA 2026.9.0 logs a
+        "Detected code that calls `device_registry.async_get_device`" warning
+        for the deprecated lookup; none may appear.
+        """
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={
+                CONF_DEVICE_NAME: "Test Pool",
+                CONF_DISCOVERY_PREFIX: "SmartPool",
+                CONF_NODEID: "AA55HASHED",
+                CONF_NODEID_REAL: "REAL123",
+                CONF_NODEID_HASHED: "AA55HASHED",
+            },
+        )
+        entry.add_to_hass(hass)
+
+        # Pre-create a device with the old (real) NodeID identifier so
+        # _migrate_to_canonical_nodeid takes the device-migration path.
+        device_registry = dr.async_get(hass)
+        device_registry.async_get_or_create(
+            config_entry_id=entry.entry_id,
+            identifiers={(DOMAIN, "REAL123")},
+            manufacturer="Sugar Valley",
+            name="Test Pool",
+        )
+
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_wait_for_mqtt_client",
+                return_value=True,
+            ),
+            patch.object(hass.config_entries, "async_forward_entry_setups", return_value=True),
+            patch(
+                "custom_components.sugar_valley_neopool._auto_acquire_dual_nodeids",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._setup_dynamic_disable_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._setup_result_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._setup_register_recovery_watch",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+            patch(
+                "custom_components.sugar_valley_neopool._read_config_registers",
+                new_callable=AsyncMock,
+                return_value=None,
+            ),
+        ):
+            result = await async_setup_entry(hass, entry)
+            # Exercise the same-entry metadata lookup as well.
+            await _update_device_registry_metadata(hass, entry)
+
+        assert result is True
+        # Device was migrated to the canonical identifier via the real registry.
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "AA55HASHED"), entry.entry_id
+        )
+        assert device is not None
+        # No deprecated async_get_device lookup was reported.
+        assert "Detected code that calls" not in caplog.text
+        assert "async_get_device" not in caplog.text
 
     @pytest.mark.asyncio
     async def test_setup_entry_mqtt_not_available(self, hass: HomeAssistant) -> None:
