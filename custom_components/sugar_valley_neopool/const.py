@@ -271,6 +271,32 @@ AUX_MODE_MAP: Final[dict[int, str]] = {
     AUX_MODE_OFF: "off",
 }
 
+# AUX operating mode pushed by the Tasmota driver in SENSOR NeoPool.Relay.AuxMode
+# (arendst/Tasmota PR #24998, merged 2026-09-03 into 15.6.0.1 — absent on
+# stable 15.6.0 and earlier). One int per AUX, derived by the driver from the
+# low byte of the AUX INT1 timer-block mode word (MBV_TIMER_OFFMB_TIMER_ENABLE):
+#   0 = Manual    (MBV_PAR_CTIMER_ALWAYS_ON / ALWAYS_OFF)
+#   1 = Timer     (MBV_PAR_CTIMER_DISABLE / ENABLED / ENABLED_LINKED)
+#   2 = Countdown (MBV_PAR_CTIMER_COUNTDOWN_KEY_*)
+#  -1 = Unknown   (anything else)
+# Together with the physical Relay.Aux[n] this yields the aux<n>_mode select's
+# option push-natively (Manual+on → "on", Manual+off → "off", Timer → "auto").
+# Note the numbering differs from an earlier proposal (Countdown=2, Timer=3).
+JSON_PATH_RELAY_AUX_MODE: Final = "NeoPool.Relay.AuxMode"
+AUX_OPERATING_MODE_MANUAL: Final = 0
+AUX_OPERATING_MODE_TIMER: Final = 1
+AUX_OPERATING_MODE_COUNTDOWN: Final = 2
+AUX_OPERATING_MODE_MAP: Final[dict[int, str]] = {
+    AUX_OPERATING_MODE_MANUAL: "manual",
+    AUX_OPERATING_MODE_TIMER: "timer",
+    AUX_OPERATING_MODE_COUNTDOWN: "countdown",
+}
+# The driver serves the AUX timer-block registers from a lazy cache with a
+# 30 s lifetime (NEOPOOL_CACHE_INVALID_TIME) that a write does NOT refresh, so
+# the SENSOR echo right after our own mode write can still carry the previous
+# AuxMode. Keep our optimistic value for this long before trusting the push.
+AUX_MODE_PUSH_GRACE_SECONDS: Final = 35.0
+
 # Group 5 — per-timer filtration speed (variable-speed pumps). MBF_PAR_FILTRATION_CONF
 # (0x050F) is bit-packed (verified vs @curzon01's xsns_83_neopool.ino; svasek
 # cross-check agrees). Not in SENSOR → read on demand via NPRead, written

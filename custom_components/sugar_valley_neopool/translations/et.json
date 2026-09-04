@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Ühenduse veamäär"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 töörežiim",
+        "state": {
+          "manual": "Käsitsi",
+          "timer": "Taimer",
+          "countdown": "Pöördloendus"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 töörežiim",
+        "state": {
+          "manual": "Käsitsi",
+          "timer": "Taimer",
+          "countdown": "Pöördloendus"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 töörežiim",
+        "state": {
+          "manual": "Käsitsi",
+          "timer": "Taimer",
+          "countdown": "Pöördloendus"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 töörežiim",
+        "state": {
+          "manual": "Käsitsi",
+          "timer": "Taimer",
+          "countdown": "Pöördloendus"
+        }
       }
     },
     "binary_sensor": {

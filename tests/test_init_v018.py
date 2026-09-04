@@ -22,6 +22,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import (
+    _RELAY_CONFIG_ENTITY_MAP,
     NeoPoolData,
     _auto_acquire_dual_nodeids,
     _cleanup_removed_entities,
@@ -472,6 +473,35 @@ class TestDisableUnavailableRelayConfigEntities:
 
         _disable_unavailable_relay_config_entities(hass, entry)
 
+        assert entity_registry.async_get(e.entity_id).disabled_by is None
+
+    def test_auxmode_gates_operating_mode_sensors(self, hass: HomeAssistant) -> None:
+        """The AUX operating-mode sensors follow the AuxMode firmware capability.
+
+        Tasmota publishes NeoPool.Relay.AuxMode from 15.6.0.1 (PR #24998); on
+        older builds the four sensors are disabled (not left dead), and they
+        come back once the key appears in telemetry.
+        """
+        assert _RELAY_CONFIG_ENTITY_MAP["AuxMode"] == [
+            ("sensor", f"aux{n}_operating_mode") for n in range(1, 5)
+        ]
+        entry = self._entry(hass, {"UV"})  # no AuxMode in telemetry
+        entity_registry = er.async_get(hass)
+        e = entity_registry.async_get_or_create(
+            "sensor",
+            DOMAIN,
+            "neopool_mqtt_ABC123_aux3_operating_mode",
+            config_entry=entry,
+            suggested_object_id="neopool_aux3_operating_mode",
+        )
+
+        _disable_unavailable_relay_config_entities(hass, entry)
+        assert entity_registry.async_get(e.entity_id).disabled_by == (
+            er.RegistryEntryDisabler.INTEGRATION
+        )
+
+        entry.runtime_data.available_relays = {"UV", "AuxMode"}  # firmware updated
+        _disable_unavailable_relay_config_entities(hass, entry)
         assert entity_registry.async_get(e.entity_id).disabled_by is None
 
     def test_does_not_touch_user_disabled(self, hass: HomeAssistant) -> None:
@@ -1946,6 +1976,36 @@ class TestSetupDynamicDisableWatch:
             await _setup_dynamic_disable_watch(hass, entry)
 
         assert captured_topic == "tele/MyPool/SENSOR"
+
+    @pytest.mark.asyncio
+    async def test_on_sensor_tracks_auxmode_capability(self, hass: HomeAssistant) -> None:
+        """Relay.AuxMode presence is tracked like a relay so its sensors can be gated."""
+
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(device_name="P", mqtt_topic="MyPool", nodeid="ABC123")
+
+        captured_cb = None
+
+        async def capture_subscribe(_hass, _topic, cb, **_kwargs):
+            nonlocal captured_cb
+            captured_cb = cb
+            return MagicMock()
+
+        with patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture_subscribe):
+            await _setup_dynamic_disable_watch(hass, entry)
+
+        msg = MagicMock()
+        msg.payload = json.dumps(
+            {"NeoPool": {"Relay": {"Aux": [0, 0, 0, 0], "AuxMode": [0, 1, 2, 0], "Acid": 1}}}
+        )
+        captured_cb(msg)
+        assert entry.runtime_data.available_relays == {"Acid", "AuxMode"}
+
+        # Older firmware payload: the capability disappears again.
+        msg.payload = json.dumps({"NeoPool": {"Relay": {"Aux": [0, 0, 0, 0], "Acid": 1}}})
+        captured_cb(msg)
+        assert entry.runtime_data.available_relays == {"Acid"}
 
     @pytest.mark.asyncio
     async def test_on_sensor_feeds_tracker_and_dispatches(self, hass: HomeAssistant) -> None:

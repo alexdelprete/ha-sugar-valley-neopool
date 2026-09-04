@@ -373,6 +373,18 @@
               - type: tile
                 entity: select.neopool_aux4_mode
                 name: Aux4
+              - type: tile
+                entity: sensor.neopool_aux1_operating_mode
+                name: Aux1 Op. Mode
+              - type: tile
+                entity: sensor.neopool_aux2_operating_mode
+                name: Aux2 Op. Mode
+              - type: tile
+                entity: sensor.neopool_aux3_operating_mode
+                name: Aux3 Op. Mode
+              - type: tile
+                entity: sensor.neopool_aux4_operating_mode
+                name: Aux4 Op. Mode
       - type: vertical-stack
         title: Timer Schedules
         cards:

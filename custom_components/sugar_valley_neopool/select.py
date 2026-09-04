@@ -10,6 +10,7 @@ from homeassistant.components.select import SelectEntity, SelectEntityDescriptio
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.util import dt as dt_util
 
 from . import config_register_signal
 from .const import (
@@ -18,6 +19,9 @@ from .const import (
     AUX3_FUNCTION_CODE,
     AUX4_FUNCTION_CODE,
     AUX_MODE_MAP,
+    AUX_MODE_PUSH_GRACE_SECONDS,
+    AUX_OPERATING_MODE_MANUAL,
+    AUX_OPERATING_MODE_TIMER,
     BOOST_MODE_MAP,
     CMD_BOOST,
     CMD_FILTRATION_MODE,
@@ -33,6 +37,7 @@ from .const import (
     JSON_PATH_FILTRATION_SPEED,
     JSON_PATH_HYDROLYSIS_BOOST,
     JSON_PATH_RELAY_AUX,
+    JSON_PATH_RELAY_AUX_MODE,
     MASK_FILTRATION_PUMP_TYPE,
     PUMP_TYPE_STANDARD,
     PUMP_TYPE_VARIABLE,
@@ -346,11 +351,26 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
     """AUX relay mode select (auto/on/off) backed by a timer-block register.
 
     Replaces the Berry-only NPAux switches. The mode lives in the relay's
-    timer-block enable register (read on startup via NPRead, cached in
-    runtime_data.register_state, fanned out via config_register_signal); writes
-    go through NPWrite + NPExec (no NPSave, so a manual override is transient and
-    does not wear the EEPROM). Availability gates on the AUX entry being present
-    in the SENSOR NeoPool.Relay.Aux array, like the relay binary sensors.
+    timer-block enable register; writes go through NPWrite + NPExec (no NPSave,
+    so a manual override is transient and does not wear the EEPROM).
+    Availability gates on the AUX entry being present in the SENSOR
+    NeoPool.Relay.Aux array, like the relay binary sensors.
+
+    The displayed option has two sources, in order of preference:
+
+    1. Push (Tasmota 15.6.0.1+, PR #24998): SENSOR NeoPool.Relay.AuxMode[n]
+       (0 Manual / 1 Timer / 2 Countdown) combined with the physical
+       NeoPool.Relay.Aux[n] gives Manual+on → "on", Manual+off → "off",
+       Timer → "auto"; Countdown has no select option (None). Keypad edits are
+       reflected at the next telemetry, no polling.
+    2. Register cache fallback (older Tasmota): the mode word read on startup
+       via NPRead, cached in runtime_data.register_state, fanned out via
+       config_register_signal, and kept current by our own writes.
+
+    The driver serves the timer-block registers from a lazy 30 s cache that a
+    write does not refresh, so pushed AuxMode values arriving within
+    AUX_MODE_PUSH_GRACE_SECONDS of our own write are ignored and the optimistic
+    cache value is shown instead; the first message after the window is fresh.
     """
 
     entity_description: NeoPoolAuxModeSelectEntityDescription
@@ -365,6 +385,12 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         self.entity_description = description
         self._attr_options = list(AUX_MODE_MAP.values())
         self._gating_ok = False
+        # Pushed operating mode (Relay.AuxMode[n]) and physical relay state
+        # (Relay.Aux[n]); None until seen / when the firmware lacks AuxMode.
+        self._pushed_mode: int | None = None
+        self._pushed_state: int | None = None
+        # End of the post-write window during which pushed AuxMode is ignored.
+        self._push_ignore_until: float | None = None
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to LWT, the config-register signal, and SENSOR gating."""
@@ -385,8 +411,19 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
             payload = parse_json_payload(msg.payload)
             if payload is None:
                 return
+            idx = self.entity_description.aux_index
             aux = get_nested_value(payload, JSON_PATH_RELAY_AUX)
-            self._gating_ok = isinstance(aux, list) and len(aux) > self.entity_description.aux_index
+            if isinstance(aux, list) and len(aux) > idx:
+                self._gating_ok = True
+                self._pushed_state = safe_int(aux[idx])
+            else:
+                self._gating_ok = False
+                self._pushed_state = None
+            if not self._in_push_ignore_window:
+                modes = get_nested_value(payload, JSON_PATH_RELAY_AUX_MODE)
+                self._pushed_mode = (
+                    safe_int(modes[idx]) if isinstance(modes, list) and len(modes) > idx else None
+                )
             self.async_write_ha_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
@@ -395,6 +432,25 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
         self.async_write_ha_state()
+
+    @property
+    def _in_push_ignore_window(self) -> bool:
+        """True while pushed AuxMode may still predate our own last write."""
+        until = self._push_ignore_until
+        return until is not None and dt_util.utcnow().timestamp() < until
+
+    @property
+    def _pushed_option(self) -> str | None:
+        """Option derived from the pushed AuxMode + physical relay state.
+
+        Only meaningful when _pushed_mode is not None. Countdown and unknown
+        modes have no select option and yield None.
+        """
+        if self._pushed_mode == AUX_OPERATING_MODE_TIMER:
+            return "auto"
+        if self._pushed_mode == AUX_OPERATING_MODE_MANUAL and self._pushed_state is not None:
+            return "on" if self._pushed_state else "off"
+        return None
 
     @property
     def _register_value(self) -> int | None:
@@ -420,7 +476,13 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
 
     @property
     def current_option(self) -> str | None:
-        """Return the current mode option (only meaningful while bound)."""
+        """Return the current mode option.
+
+        Prefers the pushed AuxMode (see class docstring); falls back to the
+        cached register value, which is only meaningful while bound.
+        """
+        if self._pushed_mode is not None:
+            return self._pushed_option
         value = self._register_value
         if value is None or not self._is_bound:
             return None
@@ -428,8 +490,12 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
 
     @property
     def available(self) -> bool:
-        """Available when online, AUX present in SENSOR, and a mode is cached."""
-        return super().available and self._gating_ok and self._register_value is not None
+        """Available when online, AUX present in SENSOR, and a mode is known."""
+        return (
+            super().available
+            and self._gating_ok
+            and (self._pushed_mode is not None or self._register_value is not None)
+        )
 
     async def async_select_option(self, option: str) -> None:
         """Set the AUX mode: bind the timer (function word) then write the mode.
@@ -438,6 +504,9 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         must carry the AUX relay bit to bind the timer to the relay. We write the
         function code (no commit), then the mode with NPExec to apply both. No
         NPSave: a manual override is transient and reverts on power-cycle.
+
+        The pushed AuxMode is dropped and ignored for AUX_MODE_PUSH_GRACE_SECONDS
+        so a stale driver-cache echo cannot overwrite the optimistic value.
         """
         mode = lookup_by_value(AUX_MODE_MAP, option)
         if mode is None:
@@ -452,6 +521,8 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         rs = self._config_entry.runtime_data.register_state
         rs[desc.function_register] = desc.function_code
         rs[desc.register] = mode
+        self._pushed_mode = None
+        self._push_ignore_until = dt_util.utcnow().timestamp() + AUX_MODE_PUSH_GRACE_SECONDS
         self.async_write_ha_state()
         _LOGGER.debug(
             "Set AUX mode %s (%d, bound via 0x%04X=0x%04X) for %s",

@@ -40,6 +40,9 @@ of your pool system through Home Assistant.
   reset-aware across Tasmota reboots)
 - **Connection Error Rate** - Rolling 10-minute Modbus failure
   percentage (diagnostic)
+- **AUX Operating Mode** - AUX1–4 operating mode (Manual / Timer / Countdown),
+  pushed by the Tasmota driver in `Relay.AuxMode` (Tasmota 15.6.0.1 and later;
+  auto-disabled on older firmware)
 
 ### Binary Sensors
 
@@ -63,7 +66,11 @@ of your pool system through Home Assistant.
   > controller timer-block mode register using the built-in `NPWrite` / `NPExec`
   > commands: **Auto** follows the controller schedule, **On** forces the relay
   > on, **Off** forces it off. The live relay output is exposed separately as
-  > read-only `AUX1–4` binary sensors.
+  > read-only `AUX1–4` binary sensors. With Tasmota 15.6.0.1 or later the
+  > driver also pushes each AUX's operating mode (`Relay.AuxMode`), so the mode
+  > selects reflect keypad changes at the next telemetry without polling; on
+  > older firmware the mode is read once at startup and kept current by the
+  > integration's own writes.
 - **Numbers** - pH Min/Max, Redox setpoint, Hydrolysis setpoint, Chlorine setpoint,
   Ionization setpoint
 - **Buttons** - Clear error state, Sync controller time

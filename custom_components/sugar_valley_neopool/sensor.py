@@ -31,6 +31,7 @@ from homeassistant.util import dt as dt_util
 
 from . import connection_rate_signal
 from .const import (
+    AUX_OPERATING_MODE_MAP,
     BOOST_MODE_MAP,
     FILTRATION_MODE_MAP,
     FILTRATION_SPEED_MAP,
@@ -66,6 +67,7 @@ from .const import (
     JSON_PATH_POWERUNIT_NODEID,
     JSON_PATH_POWERUNIT_VERSION,
     JSON_PATH_REDOX_DATA,
+    JSON_PATH_RELAY_AUX_MODE,
     JSON_PATH_TEMPERATURE,
     JSON_PATH_TIME,
     JSON_PATH_TYPE,
@@ -142,6 +144,23 @@ def _hydrolysis_percent_fn(payload: dict[str, Any]) -> float | None:
         return round(data * 100.0 / max_val, 0)
     fallback = safe_float(get_nested_value(payload, JSON_PATH_HYDROLYSIS_PERCENT), None)
     return None if fallback is None else round(fallback, 0)
+
+
+def _aux_operating_mode_fn(index: int) -> Callable[[dict[str, Any]], str | None]:
+    """Build a payload_fn mapping NeoPool.Relay.AuxMode[index] to its enum option.
+
+    The Tasmota driver publishes AuxMode from 15.6.0.1 (PR #24998) as one int
+    per AUX: 0 Manual, 1 Timer, 2 Countdown, -1 Unknown. A missing array, a
+    short array, or an unknown value yields None (entity unavailable).
+    """
+
+    def _fn(payload: dict[str, Any]) -> str | None:
+        modes = get_nested_value(payload, JSON_PATH_RELAY_AUX_MODE)
+        if not isinstance(modes, list) or len(modes) <= index:
+            return None
+        return AUX_OPERATING_MODE_MAP.get(safe_int(modes[index], -1))
+
+    return _fn
 
 
 def _hydrolysis_gh_only_fn(json_path: str) -> Callable[[dict[str, Any]], float | None]:
@@ -479,6 +498,47 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         json_path=JSON_PATH_CONNECTION_OUTOFRANGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         min_update_interval=3600.0,
+    ),
+    # AUX operating mode (Manual / Timer / Countdown), pushed by the Tasmota
+    # driver in NeoPool.Relay.AuxMode (15.6.0.1+). Complements the aux<n>_mode
+    # selects (which cannot express Countdown) and the aux<n> binary sensors
+    # (physical relay state). Disabled by the dynamic-disable watch when the
+    # firmware does not publish the array.
+    NeoPoolSensorEntityDescription(
+        key="aux1_operating_mode",
+        translation_key="aux1_operating_mode",
+        name="AUX1 Operating Mode",
+        json_path=JSON_PATH_RELAY_AUX_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(AUX_OPERATING_MODE_MAP.values()),
+        payload_fn=_aux_operating_mode_fn(0),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="aux2_operating_mode",
+        translation_key="aux2_operating_mode",
+        name="AUX2 Operating Mode",
+        json_path=JSON_PATH_RELAY_AUX_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(AUX_OPERATING_MODE_MAP.values()),
+        payload_fn=_aux_operating_mode_fn(1),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="aux3_operating_mode",
+        translation_key="aux3_operating_mode",
+        name="AUX3 Operating Mode",
+        json_path=JSON_PATH_RELAY_AUX_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(AUX_OPERATING_MODE_MAP.values()),
+        payload_fn=_aux_operating_mode_fn(2),
+    ),
+    NeoPoolSensorEntityDescription(
+        key="aux4_operating_mode",
+        translation_key="aux4_operating_mode",
+        name="AUX4 Operating Mode",
+        json_path=JSON_PATH_RELAY_AUX_MODE,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(AUX_OPERATING_MODE_MAP.values()),
+        payload_fn=_aux_operating_mode_fn(3),
     ),
     # Diagnostic sensors
     NeoPoolSensorEntityDescription(

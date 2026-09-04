@@ -482,7 +482,24 @@ to follow rather than a separate phase.
 - **SENSOR-emit of config/timer registers: DECLINED by @curzon01** (#16,
   2026-06-30). Reason: generating it is complex and bloats the ESP82xx code, and
   the driver is kept lean. So it is not coming.
-- **AUX mode via `Relay.Aux` 0/1/2/3 (OFF/ON/Countdown/Timer): wanted** — it
+- **AUX operating mode: SHIPPED upstream as `Relay.AuxMode`** (@curzon01,
+  arendst/Tasmota #24998, merged 2026-09-03 into 15.6.0.1). He took the
+  "supplement" option below: `Relay.Aux` stays physical 0/1 and a separate
+  `Relay.AuxMode` array carries `0 Manual / 1 Timer / 2 Countdown / -1 Unknown`
+  per AUX (derived from the low byte of each AUX INT1 timer-block mode word:
+  ALWAYS_ON/OFF → Manual, DISABLE/ENABLED/LINKED → Timer, COUNTDOWN_KEY →
+  Countdown). Integration side (2.1.3): four enum sensors
+  `aux<n>_operating_mode`, dynamic-disabled when the key is absent; the
+  `aux<n>_mode` selects derive their option from AuxMode + Relay.Aux when
+  present and fall back to the NPRead cache otherwise. Caveat from the driver
+  source: the timer-block registers are served from a lazy 30 s cache
+  (`NEOPOOL_CACHE_INVALID_TIME`) that a write does not refresh, and the AUX
+  mode registers are not in `NeoPoolRegCheck`, so (a) the SENSOR echo right
+  after our own write may still carry the old mode — the select ignores pushed
+  AuxMode for 35 s after a write — and (b) a keypad mode change does not itself
+  trigger a SENSOR; it shows at the next telemetry. The original request and
+  the question it answered are kept below for context.
+- *(historical)* **AUX mode via `Relay.Aux` 0/1/2/3 (OFF/ON/Countdown/Timer): wanted** — it
   would push the AUX operating mode (which we do not surface today) and reflect
   keypad mode changes for free. **Open question to @curzon01:** does `0/1/2/3`
   *replace* the current physical-state `Relay.Aux` (in which case where does

@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Tasso di errori di connessione"
+      },
+      "aux1_operating_mode": {
+        "name": "Modalità operativa AUX1",
+        "state": {
+          "manual": "Manuale",
+          "timer": "Timer",
+          "countdown": "Conto alla rovescia"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "Modalità operativa AUX2",
+        "state": {
+          "manual": "Manuale",
+          "timer": "Timer",
+          "countdown": "Conto alla rovescia"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "Modalità operativa AUX3",
+        "state": {
+          "manual": "Manuale",
+          "timer": "Timer",
+          "countdown": "Conto alla rovescia"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "Modalità operativa AUX4",
+        "state": {
+          "manual": "Manuale",
+          "timer": "Timer",
+          "countdown": "Conto alla rovescia"
+        }
       }
     },
     "binary_sensor": {

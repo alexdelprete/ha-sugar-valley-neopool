@@ -866,12 +866,15 @@ _MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     ],
 }
 
-# Map: named relay in NeoPool.Relay → config entities (switch/number) that are
-# only meaningful when that relay is assigned. Same idea as _MODULE_ENTITY_MAP
-# but keyed on relay presence (available_relays), so e.g. the heating/UV config
-# controls are disabled on controllers without those relays instead of sitting
-# perpetually unavailable. smart_antifreeze is intentionally omitted: it gates
-# only on Temperature, which is always present.
+# Map: key in NeoPool.Relay → entities that are only meaningful when that key
+# is present in telemetry. Same idea as _MODULE_ENTITY_MAP but keyed on
+# available_relays, so e.g. the heating/UV config controls are disabled on
+# controllers without those relays instead of sitting perpetually unavailable.
+# smart_antifreeze is intentionally omitted: it gates only on Temperature, which
+# is always present. "AuxMode" is not a relay but a firmware capability: the
+# Tasmota driver publishes NeoPool.Relay.AuxMode from 15.6.0.1 (PR #24998), so
+# on older builds the AUX operating-mode sensors are disabled rather than dead,
+# and they re-enable automatically after a firmware update.
 _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     "Heating": [
         ("switch", "climate_mode"),
@@ -880,6 +883,12 @@ _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     ],
     "UV": [
         ("switch", "uv_mode"),
+    ],
+    "AuxMode": [
+        ("sensor", "aux1_operating_mode"),
+        ("sensor", "aux2_operating_mode"),
+        ("sensor", "aux3_operating_mode"),
+        ("sensor", "aux4_operating_mode"),
     ],
 }
 
@@ -974,14 +983,14 @@ def _disable_unavailable_relay_config_entities(
                     disabled_by=er.RegistryEntryDisabler.INTEGRATION,
                 )
                 _LOGGER.warning(
-                    "Disabled config entity %s (%s relay not assigned on controller)",
+                    "Disabled config entity %s (%s not present in controller telemetry)",
                     entity_id,
                     relay_name,
                 )
             elif is_present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
                 entity_registry.async_update_entity(entity_id, disabled_by=None)
                 _LOGGER.warning(
-                    "Re-enabled config entity %s (%s relay is assigned on controller)",
+                    "Re-enabled config entity %s (%s is present in controller telemetry)",
                     entity_id,
                     relay_name,
                 )
@@ -1133,7 +1142,20 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
     mqtt_topic = entry.runtime_data.mqtt_topic
     sensor_topic = f"tele/{mqtt_topic}/SENSOR"
 
-    relay_names = {"Acid", "Base", "Redox", "Chlorine", "Conductivity", "Heating", "UV", "Valve"}
+    # Named relays plus "AuxMode", the per-AUX operating-mode array the Tasmota
+    # driver publishes from 15.6.0.1 — tracked here so the AUX operating-mode
+    # sensors are disabled/enabled with the firmware capability.
+    relay_names = {
+        "Acid",
+        "Base",
+        "Redox",
+        "Chlorine",
+        "Conductivity",
+        "Heating",
+        "UV",
+        "Valve",
+        "AuxMode",
+    }
     rate_signal = connection_rate_signal(entry)
 
     @callback

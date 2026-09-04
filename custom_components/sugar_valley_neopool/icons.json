@@ -82,6 +82,38 @@
       "system_id": {
         "default": "mdi:information-outline"
       },
+      "aux1_operating_mode": {
+        "default": "mdi:electric-switch",
+        "state": {
+          "manual": "mdi:hand-back-right-outline",
+          "timer": "mdi:timer-outline",
+          "countdown": "mdi:timer-sand"
+        }
+      },
+      "aux2_operating_mode": {
+        "default": "mdi:electric-switch",
+        "state": {
+          "manual": "mdi:hand-back-right-outline",
+          "timer": "mdi:timer-outline",
+          "countdown": "mdi:timer-sand"
+        }
+      },
+      "aux3_operating_mode": {
+        "default": "mdi:electric-switch",
+        "state": {
+          "manual": "mdi:hand-back-right-outline",
+          "timer": "mdi:timer-outline",
+          "countdown": "mdi:timer-sand"
+        }
+      },
+      "aux4_operating_mode": {
+        "default": "mdi:electric-switch",
+        "state": {
+          "manual": "mdi:hand-back-right-outline",
+          "timer": "mdi:timer-outline",
+          "countdown": "mdi:timer-sand"
+        }
+      },
       "boost_mode": {
         "default": "mdi:rocket-launch"
       },

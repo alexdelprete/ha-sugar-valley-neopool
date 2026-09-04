@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **AUX operating-mode sensors, push-native from the Tasmota driver.** Four new
+  enum sensors (`sensor.<prefix>_aux1..4_operating_mode`, Manual / Timer /
+  Countdown) read `NeoPool.Relay.AuxMode`, which @curzon01 added to the NeoPool
+  driver at our request (arendst/Tasmota #24998, merged 2026-09-03 into
+  15.6.0.1, so it ships with the next Tasmota stable after 15.6.0). They
+  surface a mode we could not see before (Countdown) and are automatically
+  disabled on firmware that does not publish the array, re-enabling after a
+  firmware update. Discussed in #16.
+- **AUX mode selects now follow the keypad.** With `Relay.AuxMode` present the
+  `aux<n>_mode` selects derive their option from the pushed mode plus the
+  physical relay state (Timer → Auto, Manual + on/off → On/Off), so a mode
+  change made at the controller is reflected at the next telemetry with no
+  polling. Older firmware keeps the startup-read + write-ACK behaviour. After
+  one of our own writes the pushed value is ignored for 35 s because the driver
+  serves the timer-block registers from a 30 s cache that a write does not
+  refresh. All four example dashboards gained the operating-mode tiles.
+
 ### Changed
 
 - **Mushroom dashboards now cover every entity the integration ships.** A

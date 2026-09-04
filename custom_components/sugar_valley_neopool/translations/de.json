@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Verbindungsfehlerrate"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 Betriebsart",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 Betriebsart",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 Betriebsart",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 Betriebsart",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
       }
     },
     "binary_sensor": {

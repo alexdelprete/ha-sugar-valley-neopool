@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Tilkoblingsfeilrate"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 driftsmodus",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedtelling"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 driftsmodus",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedtelling"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 driftsmodus",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedtelling"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 driftsmodus",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedtelling"
+        }
       }
     },
     "binary_sensor": {

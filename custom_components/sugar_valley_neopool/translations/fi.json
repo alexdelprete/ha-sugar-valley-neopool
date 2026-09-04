@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Yhteysvirheiden osuus"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 toimintatila",
+        "state": {
+          "manual": "Manuaalinen",
+          "timer": "Ajastin",
+          "countdown": "Lähtölaskenta"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 toimintatila",
+        "state": {
+          "manual": "Manuaalinen",
+          "timer": "Ajastin",
+          "countdown": "Lähtölaskenta"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 toimintatila",
+        "state": {
+          "manual": "Manuaalinen",
+          "timer": "Ajastin",
+          "countdown": "Lähtölaskenta"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 toimintatila",
+        "state": {
+          "manual": "Manuaalinen",
+          "timer": "Ajastin",
+          "countdown": "Lähtölaskenta"
+        }
       }
     },
     "binary_sensor": {

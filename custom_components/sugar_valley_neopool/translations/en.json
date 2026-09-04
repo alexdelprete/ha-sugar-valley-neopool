@@ -250,6 +250,38 @@
       },
       "controller_time": {
         "name": "Controller Time"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 Operating Mode",
+        "state": {
+          "manual": "Manual",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 Operating Mode",
+        "state": {
+          "manual": "Manual",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 Operating Mode",
+        "state": {
+          "manual": "Manual",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 Operating Mode",
+        "state": {
+          "manual": "Manual",
+          "timer": "Timer",
+          "countdown": "Countdown"
+        }
       }
     },
     "binary_sensor": {

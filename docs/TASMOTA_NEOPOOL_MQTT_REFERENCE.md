@@ -193,6 +193,7 @@ Published to: `tele/%topic%/SENSOR`
     "Relay": {
       "State": [0, 1, 0, 0, 0, 0, 1],
       "Aux": [1, 0, 0, 1],
+      "AuxMode": [0, 1, 2, 0],
       "Acid": 0,
       "Base": 0,
       "Redox": 1,
@@ -353,6 +354,7 @@ System voltage and version information:
 "Relay": {
   "State": [0, 1, 0, 0, 0, 0, 1],  // Array of 7 relay states (0=off, 1=on)
   "Aux": [1, 0, 0, 1],              // Array of 4 auxiliary relay states
+  "AuxMode": [0, 1, 2, 0],          // Array of 4 AUX operating modes (Tasmota 15.6.0.1+)
   "Acid": 0,                         // Acid dosing relay
   "Base": 0,                         // Base dosing relay
   "Redox": 1,                        // Redox control relay
@@ -1415,7 +1417,13 @@ ______________________________________________________________________
 **Auxiliary Relays (Aux1-4):**
 
 - Additional control outputs
-- Array index 0-3 in `Relay.Aux`
+- Array index 0-3 in `Relay.Aux` (physical relay state, 0/1)
+- Array index 0-3 in `Relay.AuxMode` (operating mode, Tasmota 15.6.0.1+,
+  [arendst/Tasmota #24998](https://github.com/arendst/Tasmota/pull/24998)):
+  `0` Manual (timer-block mode ALWAYS_ON / ALWAYS_OFF), `1` Timer (DISABLE /
+  ENABLED / ENABLED_LINKED), `2` Countdown (COUNTDOWN_KEY_*), `-1` Unknown.
+  Derived by the driver from the low byte of each AUX INT1 timer-block mode
+  word, served from a 30 s lazy register cache that writes do not refresh.
 - ESP32 Berry scripting support for extended control
 
 **Functional Assignments:**

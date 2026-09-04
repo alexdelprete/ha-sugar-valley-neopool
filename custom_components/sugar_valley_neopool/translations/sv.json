@@ -250,6 +250,38 @@
       },
       "connection_error_rate": {
         "name": "Anslutningsfelfrekvens"
+      },
+      "aux1_operating_mode": {
+        "name": "AUX1 driftläge",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedräkning"
+        }
+      },
+      "aux2_operating_mode": {
+        "name": "AUX2 driftläge",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedräkning"
+        }
+      },
+      "aux3_operating_mode": {
+        "name": "AUX3 driftläge",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedräkning"
+        }
+      },
+      "aux4_operating_mode": {
+        "name": "AUX4 driftläge",
+        "state": {
+          "manual": "Manuell",
+          "timer": "Timer",
+          "countdown": "Nedräkning"
+        }
       }
     },
     "binary_sensor": {

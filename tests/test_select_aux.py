@@ -9,6 +9,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from custom_components.sugar_valley_neopool.const import (
+    AUX_MODE_PUSH_GRACE_SECONDS,
+    AUX_OPERATING_MODE_COUNTDOWN,
+    AUX_OPERATING_MODE_MANUAL,
+    AUX_OPERATING_MODE_TIMER,
     CMD_NPEXEC,
     CMD_NPSAVE,
     CMD_NPWRITE,
@@ -182,3 +186,152 @@ class TestNeoPoolAuxModeSelect:
         sel.async_write_ha_state = MagicMock()
         sel._handle_register_update()
         sel.async_write_ha_state.assert_called_once()
+
+
+class TestNeoPoolAuxModeSelectPush:
+    """Push-native option from NeoPool.Relay.AuxMode (Tasmota 15.6.0.1+, PR #24998)."""
+
+    def _make(self, entry: MagicMock) -> tuple[NeoPoolAuxModeSelect, Any]:
+        desc = AUX_MODE_SELECT_DESCRIPTIONS[1]  # aux2_mode -> index 1
+        return NeoPoolAuxModeSelect(entry, desc), desc
+
+    async def _wire(self, sel: NeoPoolAuxModeSelect, hass: MagicMock):
+        sel.hass = hass
+        sel.async_write_ha_state = MagicMock()
+        sensor_cb = None
+
+        async def capture(hass, topic, cb, **kwargs):
+            nonlocal sensor_cb
+            if "SENSOR" in topic:
+                sensor_cb = cb
+            return MagicMock()
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=capture),
+            patch(
+                "custom_components.sugar_valley_neopool.select.async_dispatcher_connect",
+                return_value=MagicMock(),
+            ),
+        ):
+            await sel.async_added_to_hass()
+        return sensor_cb
+
+    @staticmethod
+    def _msg(aux: list[int] | None, modes: list[int] | None) -> MagicMock:
+        relay: dict[str, Any] = {}
+        if aux is not None:
+            relay["Aux"] = aux
+        if modes is not None:
+            relay["AuxMode"] = modes
+        msg = MagicMock()
+        msg.payload = json.dumps({"NeoPool": {"Relay": relay}})
+        return msg
+
+    @pytest.mark.asyncio
+    async def test_pushed_mode_derives_option(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Timer -> auto; Manual + physical on/off -> on/off; Countdown/unknown -> None."""
+        sel, _desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        cb = await self._wire(sel, mock_hass)
+
+        cb(self._msg([0, 0, 0, 0], [0, AUX_OPERATING_MODE_TIMER, 0, 0]))
+        assert sel.current_option == "auto"
+        cb(self._msg([0, 1, 0, 0], [0, AUX_OPERATING_MODE_MANUAL, 0, 0]))
+        assert sel.current_option == "on"
+        cb(self._msg([0, 0, 0, 0], [0, AUX_OPERATING_MODE_MANUAL, 0, 0]))
+        assert sel.current_option == "off"
+        cb(self._msg([0, 1, 0, 0], [0, AUX_OPERATING_MODE_COUNTDOWN, 0, 0]))
+        assert sel.current_option is None
+        cb(self._msg([0, 1, 0, 0], [0, -1, 0, 0]))
+        assert sel.current_option is None
+
+    @pytest.mark.asyncio
+    async def test_push_available_without_register_cache(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """With AuxMode pushed the select is available even before any NPRead."""
+        sel, _desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        cb = await self._wire(sel, mock_hass)
+        sel._attr_available = True  # LWT online
+
+        cb(self._msg([0, 0, 0, 0], None))  # old firmware: no AuxMode
+        assert sel.available is False
+        cb(self._msg([0, 0, 0, 0], [1, 1, 1, 1]))
+        assert sel.available is True
+
+    @pytest.mark.asyncio
+    async def test_push_wins_over_register_cache(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """A pushed mode overrides a (possibly stale) cached register value."""
+        sel, desc = self._make(mock_config_entry)
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        rs[desc.function_register] = desc.function_code
+        rs[desc.register] = 3  # cache says ALWAYS_ON
+        cb = await self._wire(sel, mock_hass)
+        assert sel.current_option == "on"  # fallback path
+
+        cb(self._msg([0, 0, 0, 0], [0, AUX_OPERATING_MODE_TIMER, 0, 0]))
+        assert sel.current_option == "auto"  # push path
+
+    @pytest.mark.asyncio
+    async def test_message_without_auxmode_keeps_fallback(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """Firmware without AuxMode leaves the register-cache path untouched."""
+        sel, desc = self._make(mock_config_entry)
+        rs = mock_config_entry.runtime_data.register_state
+        rs.clear()
+        rs[desc.function_register] = desc.function_code
+        rs[desc.register] = 4
+        cb = await self._wire(sel, mock_hass)
+
+        cb(self._msg([0, 1, 0, 0], None))
+        assert sel._pushed_mode is None
+        assert sel._pushed_state == 1
+        assert sel.current_option == "off"
+        # A short AuxMode array (index missing) is treated as absent too.
+        cb(self._msg([0, 1, 0, 0], [0]))
+        assert sel._pushed_mode is None
+        assert sel.current_option == "off"
+
+    @pytest.mark.asyncio
+    async def test_select_option_ignores_push_during_grace(
+        self, mock_config_entry: MagicMock, mock_hass: MagicMock
+    ) -> None:
+        """After our own write, stale pushed AuxMode is ignored until the grace elapses."""
+        sel, _desc = self._make(mock_config_entry)
+        mock_config_entry.runtime_data.register_state.clear()
+        cb = await self._wire(sel, mock_hass)
+
+        cb(self._msg([0, 0, 0, 0], [0, AUX_OPERATING_MODE_TIMER, 0, 0]))
+        assert sel.current_option == "auto"
+
+        t0 = 1_000_000.0
+        with (
+            patch.object(sel, "_publish_command", new_callable=AsyncMock),
+            patch("custom_components.sugar_valley_neopool.select.dt_util.utcnow") as utcnow,
+        ):
+            utcnow.return_value.timestamp.return_value = t0
+            await sel.async_select_option("on")
+            # Optimistic cache value shown; pushed mode dropped.
+            assert sel._pushed_mode is None
+            assert sel.current_option == "on"
+
+            # Driver echo within the window still carries the stale Timer mode
+            # (its 30 s register cache): ignored, physical state still tracked.
+            utcnow.return_value.timestamp.return_value = t0 + 2
+            cb(self._msg([0, 1, 0, 0], [0, AUX_OPERATING_MODE_TIMER, 0, 0]))
+            assert sel._pushed_mode is None
+            assert sel._pushed_state == 1
+            assert sel.current_option == "on"
+
+            # First message after the window is fresh and trusted again.
+            utcnow.return_value.timestamp.return_value = t0 + AUX_MODE_PUSH_GRACE_SECONDS + 1
+            cb(self._msg([0, 1, 0, 0], [0, AUX_OPERATING_MODE_MANUAL, 0, 0]))
+            assert sel._pushed_mode == AUX_OPERATING_MODE_MANUAL
+            assert sel.current_option == "on"
