@@ -380,18 +380,52 @@
               - type: tile
                 entity: select.neopool_mqtt_aux4_mode
                 name: Aux4
-              - type: tile
-                entity: sensor.neopool_mqtt_aux1_operating_mode
-                name: Aux1 Op. Mode
-              - type: tile
-                entity: sensor.neopool_mqtt_aux2_operating_mode
-                name: Aux2 Op. Mode
-              - type: tile
-                entity: sensor.neopool_mqtt_aux3_operating_mode
-                name: Aux3 Op. Mode
-              - type: tile
-                entity: sensor.neopool_mqtt_aux4_operating_mode
-                name: Aux4 Op. Mode
+              # Hidden until the Tasmota firmware publishes Relay.AuxMode
+              # (15.6.0.1+); the integration disables the entity before that.
+              - type: conditional
+                conditions:
+                  - entity: sensor.neopool_mqtt_aux1_operating_mode
+                    state:
+                      - manual
+                      - timer
+                      - countdown
+                card:
+                  type: tile
+                  entity: sensor.neopool_mqtt_aux1_operating_mode
+                  name: Aux1 Op. Mode
+              - type: conditional
+                conditions:
+                  - entity: sensor.neopool_mqtt_aux2_operating_mode
+                    state:
+                      - manual
+                      - timer
+                      - countdown
+                card:
+                  type: tile
+                  entity: sensor.neopool_mqtt_aux2_operating_mode
+                  name: Aux2 Op. Mode
+              - type: conditional
+                conditions:
+                  - entity: sensor.neopool_mqtt_aux3_operating_mode
+                    state:
+                      - manual
+                      - timer
+                      - countdown
+                card:
+                  type: tile
+                  entity: sensor.neopool_mqtt_aux3_operating_mode
+                  name: Aux3 Op. Mode
+              - type: conditional
+                conditions:
+                  - entity: sensor.neopool_mqtt_aux4_operating_mode
+                    state:
+                      - manual
+                      - timer
+                      - countdown
+                card:
+                  type: tile
+                  entity: sensor.neopool_mqtt_aux4_operating_mode
+                  name: Aux4 Op. Mode
       - type: vertical-stack
         title: Timer Schedules
         cards:

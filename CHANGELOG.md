@@ -24,7 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   polling. Older firmware keeps the startup-read + write-ACK behaviour. After
   one of our own writes the pushed value is ignored for 35 s because the driver
   serves the timer-block registers from a 30 s cache that a write does not
-  refresh. All four example dashboards gained the operating-mode tiles.
+  refresh. All four example dashboards gained the operating-mode tiles,
+  wrapped in conditional cards so they stay hidden until the firmware
+  publishes the array.
 
 ### Changed
 
