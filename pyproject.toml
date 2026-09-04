@@ -19,11 +19,10 @@ classifiers = [
 
 [project.optional-dependencies]
 dev = [
-    "homeassistant>=2026.3.0",
+    "homeassistant>=2026.8.0",
     "homeassistant-stubs",
     "mdformat",
     "mdformat-gfm",
-    "mypy",
     "pre-commit",
     "pymarkdownlnt",
     "ruff>=0.8.0",
@@ -40,7 +39,6 @@ lint = [
     "homeassistant-stubs",
     "mdformat",
     "mdformat-gfm",
-    "mypy",
     "pre-commit",
     "pymarkdownlnt",
     "ruff>=0.8.0",
@@ -54,7 +52,7 @@ pytest = [
     "pytest-timeout",
 ]
 dev = [
-    "homeassistant>=2026.3.0",
+    "homeassistant>=2026.8.0",
     { include-group = "lint" },
     { include-group = "pytest" },
 ]

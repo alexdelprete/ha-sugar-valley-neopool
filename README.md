@@ -1,7 +1,7 @@
 # Sugar Valley NeoPool - Home Assistant Integration
 
 <!-- BEGIN SHARED:repo-sync:badges -->
-<!-- Synced by repo-sync on 2026-06-27 -->
+<!-- Synced by repo-sync on 2026-09-04 -->
 
 [![GitHub Release](https://img.shields.io/github/v/release/alexdelprete/ha-sugar-valley-neopool?style=for-the-badge)](https://github.com/alexdelprete/ha-sugar-valley-neopool/releases)
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-donate-yellow?style=for-the-badge&logo=buy-me-a-coffee)](https://www.buymeacoffee.com/alexdelprete)
@@ -127,7 +127,7 @@ the device is recognized regardless of how SO157 is set afterward.
 No manual configuration of SO157 is required.
 
 <!-- BEGIN SHARED:repo-sync:installation -->
-<!-- Synced by repo-sync on 2026-06-27 -->
+<!-- Synced by repo-sync on 2026-09-04 -->
 
 ## Installation
 
@@ -1054,7 +1054,7 @@ mypy custom_components/sugar_valley_neopool --ignore-missing-imports
   version validation
 
 <!-- BEGIN SHARED:repo-sync:contributing -->
-<!-- Synced by repo-sync on 2026-06-27 -->
+<!-- Synced by repo-sync on 2026-09-04 -->
 
 ## Contributing
 
@@ -1069,6 +1069,9 @@ Contributions are welcome! Please follow these steps:
 1. Open a Pull Request
 
 Please ensure all CI checks pass before requesting a review.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development environment (devcontainer, tests, live
+Home Assistant instance) and the Windows caveats.
 
 <!-- END SHARED:repo-sync:contributing -->
 
@@ -1095,7 +1098,7 @@ but please don't feel obliged._ :)
 [![BuyMeCoffee][buymecoffee-button]][buymecoffee]
 
 <!-- BEGIN SHARED:repo-sync:license -->
-<!-- Synced by repo-sync on 2026-06-27 -->
+<!-- Synced by repo-sync on 2026-09-04 -->
 
 ## License
 
