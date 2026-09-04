@@ -424,7 +424,7 @@ class TestUpdateDeviceRegistryMetadata:
 
         await _update_device_registry_metadata(hass, entry)
 
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device is not None
         assert device.manufacturer == "Hayward"
         assert device.sw_version == "Powerunit V2.5.0"

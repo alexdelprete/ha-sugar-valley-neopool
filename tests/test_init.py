@@ -333,7 +333,7 @@ class TestAsyncRegisterDevice:
         await async_register_device(hass, entry)
 
         device_registry = dr.async_get(hass)
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
 
         assert device is not None
         assert device.name == "Test Pool"

@@ -540,7 +540,9 @@ class TestAsyncMigrateMaskedUniqueIds:
         assert result is True
 
         # Device should now have real NodeID identifier
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "REALNODEID123")})
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "REALNODEID123"), entry.entry_id
+        )
         assert device is not None
 
 

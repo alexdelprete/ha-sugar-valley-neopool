@@ -116,10 +116,14 @@ class TestMigrateToCanonicalNodeid:
         _migrate_to_canonical_nodeid(hass, entry)
 
         # Device should now have canonical identifier
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "AA55HASHED")})
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "AA55HASHED"), entry.entry_id
+        )
         assert device is not None
         # Old identifier should be gone
-        old_device = device_registry.async_get_device(identifiers={(DOMAIN, "REAL123")})
+        old_device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "REAL123"), entry.entry_id
+        )
         assert old_device is None
 
     def test_device_migration_both_exist_removes_duplicate(self, hass: HomeAssistant) -> None:
@@ -154,7 +158,9 @@ class TestMigrateToCanonicalNodeid:
         _migrate_to_canonical_nodeid(hass, entry)
 
         # Canonical device should exist (migrated from old)
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "AA55HASHED")})
+        device = device_registry.async_get_device_by_identifier(
+            (DOMAIN, "AA55HASHED"), entry.entry_id
+        )
         assert device is not None
         # The old device was kept (migrated), its id should match the original
         assert device.id == old_dev.id
@@ -964,7 +970,7 @@ class TestAsyncFetchDeviceMetadata:
         assert entry.runtime_data.available_relays == {"Acid", "Redox"}
 
         # Check device registry was updated
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device is not None
         assert device.sw_version == "Tasmota 14.4.1 / Powerunit V6.0.0"
         assert device.configuration_url == "http://192.168.1.50"
@@ -1113,7 +1119,7 @@ class TestUpdateDeviceRegistryMetadata:
 
         await _update_device_registry_metadata(hass, entry)
 
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device.sw_version == "Tasmota 14.4.1 / Powerunit V6.0.0"
         assert device.configuration_url == "http://10.0.0.1"
 
@@ -1141,7 +1147,7 @@ class TestUpdateDeviceRegistryMetadata:
 
         await _update_device_registry_metadata(hass, entry)
 
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device.sw_version == "Tasmota 14.4.1"
 
     @pytest.mark.asyncio
@@ -1169,7 +1175,7 @@ class TestUpdateDeviceRegistryMetadata:
 
         await _update_device_registry_metadata(hass, entry)
 
-        device = device_registry.async_get_device(identifiers={(DOMAIN, "ABC123")})
+        device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device.configuration_url == "https://tasmota.github.io/docs/NeoPool/"
 
 
