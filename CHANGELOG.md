@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.1.3] - 2026-10-03
 
 ### Added
 
@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **No more `async_get_device` deprecation warnings on HA 2026.9+.** The
+  device lookups (run on every startup and device-metadata refresh) used
+  `device_registry.async_get_device`, deprecated in HA 2026.9 and removed in
+  2027.8; they now use `async_get_device_by_identifier`.
 - **`set_timer` no longer uses the deprecated `DeviceEntry.config_entries`.**
   Home Assistant now ties a device to a single config entry; the old
   set-valued property logs a deprecation warning from HA 2026.10 and is
@@ -40,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Minimum Home Assistant version raised to 2026.8.0** (was 2026.3.0), the
+  first release with `DeviceRegistry.async_get_device_by_identifier`. HACS no
+  longer offers updates to older installs.
+- **Bundled Tasmota firmware updated to v15.6.0 Sylvie** in `firmware/`
+  (ESP32, ESP32-C3, ESP32-S3), contributed by @curzon01 in #24.
 - **Mushroom dashboards now cover every entity the integration ships.** A
   full audit against the entity inventory added the last 13 missing tiles,
   each in its logical section: a Filtration Status row under Main Controls
