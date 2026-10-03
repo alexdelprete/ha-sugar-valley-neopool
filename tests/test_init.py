@@ -16,6 +16,7 @@ from custom_components.sugar_valley_neopool import (
     async_remove_config_entry_device,
     async_setup_entry,
     async_unload_entry,
+    device_model,
     get_device_info,
 )
 from custom_components.sugar_valley_neopool.const import (
@@ -494,12 +495,12 @@ class TestGetDeviceInfo:
                 CONF_NODEID: "ABC123",
             },
         )
-        # Set up runtime_data with manufacturer and fw_version
+        # Set up runtime_data with machine type and fw_version
         entry.runtime_data = NeoPoolData(
             device_name="Test Pool",
             mqtt_topic="SmartPool",
             nodeid="ABC123",
-            manufacturer="Bayrol",
+            machine_type="Bayrol",
             fw_version="V6.0.0",
         )
 
@@ -507,7 +508,8 @@ class TestGetDeviceInfo:
 
         assert device_info["identifiers"] == {(DOMAIN, "ABC123")}
         assert device_info["name"] == "Test Pool"
-        assert device_info["manufacturer"] == "Bayrol"
+        assert device_info["manufacturer"] == "Sugar Valley"
+        assert device_info["model"] == "Bayrol"
         assert device_info["sw_version"] == "Powerunit V6.0.0"
 
     def test_get_device_info_default_name(self) -> None:
@@ -562,3 +564,22 @@ class TestConfigEntryVersion:
     def test_config_entry_version(self) -> None:
         """Test CONFIG_ENTRY_VERSION is defined."""
         assert CONFIG_ENTRY_VERSION == 2
+
+
+class TestDeviceModel:
+    """NeoPool.Type is the machine type: shown as the model, never the maker."""
+
+    @pytest.mark.parametrize(
+        ("machine_type", "expected"),
+        [
+            (None, "NeoPool Controller"),  # not fetched yet
+            ("", "NeoPool Controller"),
+            ("NeoPool", "NeoPool Controller"),  # driver name for "no machine assigned"
+            ("Hay", "Hayward"),  # abbreviated driver name, expanded
+            ("Hidrolife", "Hidrolife"),
+            ("Bayrol", "Bayrol"),
+        ],
+    )
+    def test_mapping(self, machine_type: str | None, expected: str) -> None:
+        """Unknown/unassigned fall back to MODEL; known abbreviations expand."""
+        assert device_model(machine_type) == expected

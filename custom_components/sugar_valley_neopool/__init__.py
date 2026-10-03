@@ -40,6 +40,8 @@ from .const import (
     JSON_PATH_POWERUNIT_VERSION,
     JSON_PATH_TIME,
     JSON_PATH_TYPE,
+    MACHINE_TYPE_DISPLAY_NAMES,
+    MACHINE_TYPE_NONE,
     MANUFACTURER,
     METADATA_STATUS_REPLY_TIMEOUT,
     MODEL,
@@ -108,7 +110,7 @@ class NeoPoolData:
     device_id: str | None = None  # For device triggers
     entity_id_mapping: dict[str, str] = field(default_factory=dict)  # For YAML migration
     # Device metadata from MQTT (updated dynamically)
-    manufacturer: str | None = None  # From NeoPool.Type
+    machine_type: str | None = None  # Raw NeoPool.Type, e.g. "Hay" (shown as model)
     fw_version: str | None = None  # From NeoPool.Powerunit.Version
     tasmota_version: str | None = None  # From StatusFWR.Version
     available_relays: set[str] = field(default_factory=set)  # Relay keys present in SENSOR
@@ -202,7 +204,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Register device in device registry and store device_id for triggers
     await async_register_device(hass, entry)
 
-    # Fetch device metadata (manufacturer, firmware version) from MQTT
+    # Fetch device metadata (machine type, firmware version, IP) from MQTT
     # This updates the device registry with actual device info
     await async_fetch_device_metadata(hass, entry)
 
@@ -1577,9 +1579,10 @@ async def _setup_register_recovery_watch(hass: HomeAssistant, entry: NeoPoolConf
 async def async_register_device(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
     """Register the NeoPool device in the device registry.
 
-    Initial registration uses default manufacturer. Device metadata (actual manufacturer
-    from NeoPool.Type and firmware from NeoPool.Powerunit.Version) is fetched separately
-    via async_fetch_device_metadata() and updates the registry dynamically.
+    Initial registration uses the default model. Device metadata (machine type from
+    NeoPool.Type, shown as the model, and firmware from NeoPool.Powerunit.Version) is
+    fetched separately via async_fetch_device_metadata() and updates the registry
+    dynamically. The manufacturer is always MANUFACTURER.
     """
     device_registry = dr.async_get(hass)
 
@@ -1619,22 +1622,34 @@ async def async_remove_config_entry_device(
     return True
 
 
+def device_model(machine_type: str | None) -> str:
+    """Return the device model shown for a raw NeoPool.Type machine type.
+
+    NeoPool.Type is the controller's machine type (product line or OEM variant),
+    not the manufacturer. Abbreviated driver names are expanded ("Hay" ->
+    "Hayward"); an unknown or unassigned type falls back to MODEL.
+    """
+    if not machine_type or machine_type == MACHINE_TYPE_NONE:
+        return MODEL
+    return MACHINE_TYPE_DISPLAY_NAMES.get(machine_type, machine_type)
+
+
 def get_device_info(entry: NeoPoolConfigEntry) -> dr.DeviceInfo:
     """Get device info for NeoPool entities.
 
-    Uses dynamic manufacturer and firmware version from runtime_data if available,
-    otherwise falls back to defaults.
+    The manufacturer is always MANUFACTURER; the model is the controller's
+    machine type and the firmware version comes from runtime_data when known,
+    otherwise both fall back to defaults.
     """
     device_name = entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME)
     nodeid = entry.data.get(CONF_NODEID, "")
 
     # Use dynamic metadata from runtime_data if available
-    manufacturer = MANUFACTURER
+    model = MODEL
     sw_version: str | None = None
 
     if hasattr(entry, "runtime_data") and entry.runtime_data:
-        if entry.runtime_data.manufacturer:
-            manufacturer = entry.runtime_data.manufacturer
+        model = device_model(entry.runtime_data.machine_type)
         # Build sw_version: "Tasmota X.Y.Z / Powerunit VX.Y"
         sw_parts = []
         if entry.runtime_data.tasmota_version:
@@ -1652,9 +1667,9 @@ def get_device_info(entry: NeoPoolConfigEntry) -> dr.DeviceInfo:
 
     return dr.DeviceInfo(
         identifiers={(DOMAIN, nodeid)},
-        manufacturer=manufacturer,
+        manufacturer=MANUFACTURER,
         name=device_name,
-        model=MODEL,
+        model=model,
         sw_version=sw_version,
         configuration_url=config_url,
     )
@@ -1933,7 +1948,7 @@ async def async_fetch_device_metadata(  # noqa: C901
     """Fetch device metadata from MQTT.
 
     Fetches from three sources:
-    - SENSOR topic: manufacturer (NeoPool.Type), powerunit firmware (Powerunit.Version)
+    - SENSOR topic: machine type (NeoPool.Type), powerunit firmware (Powerunit.Version)
     - Status 2: Tasmota firmware version (StatusFWR.Version)
     - Status 5: Device IP address (StatusNET.IPAddress)
 
@@ -1943,7 +1958,7 @@ async def async_fetch_device_metadata(  # noqa: C901
         wait_timeout: Maximum time to wait for responses (seconds)
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
-    manufacturer: str | None = None
+    machine_type: str | None = None
     fw_version: str | None = None
     tasmota_version: str | None = None
     device_ip: str | None = None
@@ -1957,8 +1972,8 @@ async def async_fetch_device_metadata(  # noqa: C901
 
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
-        """Handle SENSOR telemetry for manufacturer, version, relay, module, and unit detection."""
-        nonlocal manufacturer, fw_version, available_relays, available_modules
+        """Handle SENSOR telemetry for machine type, version, relay, module, and unit detection."""
+        nonlocal machine_type, fw_version, available_relays, available_modules
         nonlocal hydrolysis_unit, temperature_present
         try:
             payload = json.loads(
@@ -1968,8 +1983,8 @@ async def async_fetch_device_metadata(  # noqa: C901
             )
             device_type = get_nested_value(payload, JSON_PATH_TYPE)
             if device_type:
-                manufacturer = str(device_type)
-                _LOGGER.debug("Extracted manufacturer: %s", manufacturer)
+                machine_type = str(device_type)
+                _LOGGER.debug("Extracted machine type: %s", machine_type)
             version = get_nested_value(payload, JSON_PATH_POWERUNIT_VERSION)
             if version:
                 fw_version = str(version)
@@ -2003,7 +2018,7 @@ async def async_fetch_device_metadata(  # noqa: C901
             neopool = payload.get("NeoPool") if isinstance(payload, dict) else None
             if isinstance(neopool, dict):
                 temperature_present = "Temperature" in neopool
-            if manufacturer or fw_version:
+            if machine_type or fw_version:
                 sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
             _LOGGER.debug("Failed to parse SENSOR for metadata: %s", err)
@@ -2086,9 +2101,9 @@ async def async_fetch_device_metadata(  # noqa: C901
             except TimeoutError:
                 _LOGGER.debug("Timeout waiting for SENSOR from %s", mqtt_topic)
         _LOGGER.debug(
-            "Device metadata fetch complete for %s (manufacturer=%s, fw=%s, tasmota=%s, ip=%s)",
+            "Device metadata fetch complete for %s (machine_type=%s, fw=%s, tasmota=%s, ip=%s)",
             mqtt_topic,
-            manufacturer,
+            machine_type,
             fw_version,
             tasmota_version,
             device_ip,
@@ -2099,8 +2114,8 @@ async def async_fetch_device_metadata(  # noqa: C901
         unsub_status5()
 
     # Update runtime_data
-    if manufacturer:
-        entry.runtime_data.manufacturer = manufacturer
+    if machine_type:
+        entry.runtime_data.machine_type = machine_type
     if fw_version:
         entry.runtime_data.fw_version = fw_version
     if tasmota_version:
@@ -2125,11 +2140,11 @@ async def async_fetch_device_metadata(  # noqa: C901
         entry.runtime_data.temperature_present = temperature_present
 
     # Update device registry if we got any metadata
-    if manufacturer or fw_version or tasmota_version or device_ip:
+    if machine_type or fw_version or tasmota_version or device_ip:
         await _update_device_registry_metadata(hass, entry)
         _LOGGER.info(
-            "Device metadata updated - Manufacturer: %s, Powerunit: %s, Tasmota: %s, IP: %s",
-            manufacturer or "unknown",
+            "Device metadata updated - Machine type: %s, Powerunit: %s, Tasmota: %s, IP: %s",
+            machine_type or "unknown",
             fw_version or "unknown",
             tasmota_version or "unknown",
             device_ip or "unknown",
@@ -2172,13 +2187,14 @@ async def _update_device_registry_metadata(
     # Update device with new metadata
     device_registry.async_update_device(
         device.id,
-        manufacturer=entry.runtime_data.manufacturer or MANUFACTURER,
+        manufacturer=MANUFACTURER,
+        model=device_model(entry.runtime_data.machine_type),
         sw_version=sw_version,
         configuration_url=config_url,
     )
     _LOGGER.debug(
-        "Updated device registry - manufacturer: %s, sw_version: %s",
-        entry.runtime_data.manufacturer or MANUFACTURER,
+        "Updated device registry - model: %s, sw_version: %s",
+        device_model(entry.runtime_data.machine_type),
         sw_version,
     )
 

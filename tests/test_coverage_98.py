@@ -223,7 +223,7 @@ class TestAsyncFetchDeviceMetadata:
 
             await task
 
-        assert entry.runtime_data.manufacturer == "Hayward AquaRite"
+        assert entry.runtime_data.machine_type == "Hayward AquaRite"
         assert entry.runtime_data.fw_version == "V3.2.1"
 
     @pytest.mark.asyncio
@@ -254,7 +254,7 @@ class TestAsyncFetchDeviceMetadata:
             await async_fetch_device_metadata(hass, entry, wait_timeout=0.1)
 
         # Should complete without error, metadata remains None
-        assert entry.runtime_data.manufacturer is None
+        assert entry.runtime_data.machine_type is None
 
     @pytest.mark.asyncio
     async def test_fetch_metadata_invalid_json(self, hass: HomeAssistant) -> None:
@@ -297,7 +297,7 @@ class TestAsyncFetchDeviceMetadata:
             await task
 
         # Should complete without error
-        assert entry.runtime_data.manufacturer is None
+        assert entry.runtime_data.machine_type is None
 
     @pytest.mark.asyncio
     async def test_fetch_metadata_bytes_payload(self, hass: HomeAssistant) -> None:
@@ -364,7 +364,7 @@ class TestAsyncFetchDeviceMetadata:
 
             await task
 
-        assert entry.runtime_data.manufacturer == "Zodiac"
+        assert entry.runtime_data.machine_type == "Zodiac"
 
 
 class TestUpdateDeviceRegistryMetadata:
@@ -386,7 +386,7 @@ class TestUpdateDeviceRegistryMetadata:
             device_name="Test Pool",
             mqtt_topic="SmartPool",
             nodeid="NONEXISTENT",
-            manufacturer="Test Manufacturer",
+            machine_type="Bayrol",
         )
 
         # Don't create device - let it be missing
@@ -409,7 +409,7 @@ class TestUpdateDeviceRegistryMetadata:
             device_name="Test Pool",
             mqtt_topic="SmartPool",
             nodeid="ABC123",
-            manufacturer="Hayward",
+            machine_type="Hay",
             fw_version="V2.5.0",
         )
 
@@ -426,7 +426,9 @@ class TestUpdateDeviceRegistryMetadata:
 
         device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)
         assert device is not None
-        assert device.manufacturer == "Hayward"
+        # The machine type is the model ("Hay" expanded); the maker stays Sugar Valley
+        assert device.manufacturer == "Sugar Valley"
+        assert device.model == "Hayward"
         assert device.sw_version == "Powerunit V2.5.0"
 
 
@@ -444,13 +446,14 @@ class TestGetDeviceInfo:
             device_name="My Pool",
             mqtt_topic="SmartPool",
             nodeid="ABC123",
-            manufacturer="Hayward",
+            machine_type="Hay",
             fw_version="V2.0.0",
         )
 
         info = get_device_info(entry)
 
-        assert info["manufacturer"] == "Hayward"
+        assert info["manufacturer"] == "Sugar Valley"
+        assert info["model"] == "Hayward"
         assert info["sw_version"] == "Powerunit V2.0.0"
 
     def test_device_info_without_runtime_data(self) -> None:

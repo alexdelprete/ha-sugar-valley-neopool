@@ -79,8 +79,10 @@ of your pool system through Home Assistant.
 
 - **Dynamic device info**: Device registry shows actual device metadata from
   MQTT telemetry:
-  - **Manufacturer**: Actual brand from `NeoPool.Type` (e.g., "Bayrol",
-    "Hidrolife", "Aquascenic") instead of generic "Sugar Valley"
+  - **Model**: The controller's machine type from `NeoPool.Type` (e.g.,
+    "Hidrolife", "Oxilife", "Bayrol", "Hayward"); the manufacturer is
+    always "Sugar Valley". The driver's abbreviated "Hay" is shown as
+    "Hayward", and an unassigned type falls back to "NeoPool Controller"
   - **Firmware version**: Combined Tasmota and Powerunit versions
     (e.g., "Tasmota 14.4.1 / Powerunit V3.45")
   - **Configuration URL**: Links directly to the Tasmota device web UI

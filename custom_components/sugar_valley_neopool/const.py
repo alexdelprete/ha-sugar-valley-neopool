@@ -12,6 +12,15 @@ NAME: Final = "Sugar Valley NeoPool"
 VERSION = "2.1.4"
 MANUFACTURER: Final = "Sugar Valley"
 MODEL: Final = "NeoPool Controller"
+
+# NeoPool.Type is the controller's machine type (MBF_PAR_UICFG_MACHINE): the
+# Sugar Valley product line or OEM variant (Hidrolife, Oxilife, Bionet, Brilix,
+# Generic, Bayrol, Hay, ...), not the manufacturer. It is shown as the device
+# model while the manufacturer stays MANUFACTURER. Abbreviated driver names are
+# expanded for display; "NeoPool" is the driver's name for "no machine type
+# assigned" (MBV_PAR_MACH_NONE) and falls back to MODEL.
+MACHINE_TYPE_DISPLAY_NAMES: Final[dict[str, str]] = {"Hay": "Hayward"}
+MACHINE_TYPE_NONE: Final = "NeoPool"
 ATTRIBUTION: Final = "by @alexdelprete"
 ISSUE_URL: Final = "https://github.com/alexdelprete/ha-sugar-valley-neopool/issues"
 

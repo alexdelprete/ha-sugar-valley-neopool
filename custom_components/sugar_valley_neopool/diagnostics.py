@@ -8,14 +8,13 @@ from typing import Any
 from homeassistant.components.diagnostics import async_redact_data
 from homeassistant.core import HomeAssistant
 
-from . import NeoPoolConfigEntry
+from . import NeoPoolConfigEntry, device_model
 from .const import (
     CONF_DEVICE_NAME,
     CONF_DISCOVERY_PREFIX,
     CONF_NODEID,
     DOMAIN,
     MANUFACTURER,
-    MODEL,
     VERSION,
 )
 
@@ -51,7 +50,8 @@ async def async_get_config_entry_diagnostics(
         "mqtt_topic": "**REDACTED**",
         "nodeid": "**REDACTED**",
         "manufacturer": MANUFACTURER,
-        "model": MODEL,
+        "model": device_model(runtime_data.machine_type),
+        "machine_type": runtime_data.machine_type,
         "available": runtime_data.available,
     }
 

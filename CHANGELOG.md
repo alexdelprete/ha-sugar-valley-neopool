@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Device page: machine type is now the model, the manufacturer is always
+  Sugar Valley.** `NeoPool.Type` is the controller's machine type (the
+  Sugar Valley product line or OEM variant: Hidrolife, Oxilife, Bionet,
+  Generic, Bayrol, Hay, ...), not a manufacturer, but it was used as the
+  device's manufacturer since v0.2.11. It now fills the model field, with the
+  driver's abbreviated "Hay" shown as "Hayward"; an unassigned type falls
+  back to "NeoPool Controller". Diagnostics include the raw `machine_type`.
+  The System Model sensor is unchanged and still reports the raw value.
+
 ### Fixed
 
 - **Device firmware and IP now reach the device page.** The startup metadata

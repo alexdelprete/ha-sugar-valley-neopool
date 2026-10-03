@@ -993,7 +993,7 @@ class TestAsyncFetchDeviceMetadata:
 
             await task
 
-        assert entry.runtime_data.manufacturer == "Bayrol"
+        assert entry.runtime_data.machine_type == "Bayrol"
         assert entry.runtime_data.fw_version == "V6.0.0"
         assert entry.runtime_data.tasmota_version == "14.4.1"
         assert entry.runtime_data.device_ip == "192.168.1.50"
@@ -1063,7 +1063,7 @@ class TestAsyncFetchDeviceMetadata:
             await task
 
         # Nothing should be set
-        assert entry.runtime_data.manufacturer is None
+        assert entry.runtime_data.machine_type is None
         assert entry.runtime_data.tasmota_version is None
         assert entry.runtime_data.device_ip is None
 
@@ -1096,7 +1096,7 @@ class TestAsyncFetchDeviceMetadata:
             await async_fetch_device_metadata(hass, entry, wait_timeout=0.2)
 
         # Should not crash, just no data
-        assert entry.runtime_data.manufacturer is None
+        assert entry.runtime_data.machine_type is None
 
 
 # ---------------------------------------------------------------------------
@@ -1117,7 +1117,7 @@ class TestUpdateDeviceRegistryMetadata:
             device_name="Pool",
             mqtt_topic="T",
             nodeid="MISSING",
-            manufacturer="Bayrol",
+            machine_type="Bayrol",
         )
 
         # Should not raise
@@ -1192,7 +1192,7 @@ class TestUpdateDeviceRegistryMetadata:
             device_name="Pool",
             mqtt_topic="T",
             nodeid="ABC123",
-            manufacturer="Bayrol",
+            machine_type="Bayrol",
             # No device_ip
         )
 
