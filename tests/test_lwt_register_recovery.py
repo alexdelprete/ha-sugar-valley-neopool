@@ -42,6 +42,16 @@ _F1_ON = TIMER_BLOCKS["filtration1"] + TIMER_OFFSET_ON
 _READ_CONFIG_REGISTERS = "custom_components.sugar_valley_neopool._read_config_registers"
 
 
+@pytest.fixture(autouse=True)
+def mock_metadata_fetch():
+    """Stub the LWT-driven metadata refresh (covered in test_metadata_refresh)."""
+    with patch(
+        "custom_components.sugar_valley_neopool.async_fetch_device_metadata",
+        new_callable=AsyncMock,
+    ) as mock_fetch:
+        yield mock_fetch
+
+
 def _make_entry(hass: HomeAssistant) -> MockConfigEntry:
     """Create a config entry with real runtime data, added to hass."""
     entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})

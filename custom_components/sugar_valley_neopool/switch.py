@@ -192,12 +192,12 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
             if raw_value is None:
                 self._attr_is_on = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 return
 
             self._attr_is_on = self.entity_description.value_fn(raw_value)
             self._attr_available = True
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
@@ -252,13 +252,13 @@ class NeoPoolAutoTimeSyncSwitch(NeoPoolEntity, SwitchEntity, RestoreEntity):
         """Enable auto time-sync."""
         self._attr_is_on = True
         self._config_entry.runtime_data.auto_time_sync = True
-        self.async_write_ha_state()
+        self._async_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Disable auto time-sync."""
         self._attr_is_on = False
         self._config_entry.runtime_data.auto_time_sync = False
-        self.async_write_ha_state()
+        self._async_write_state()
 
 
 class NeoPoolRegisterSwitch(NeoPoolMQTTEntity, SwitchEntity):
@@ -304,14 +304,14 @@ class NeoPoolRegisterSwitch(NeoPoolMQTTEntity, SwitchEntity):
                 get_nested_value(payload, path) is not None
                 for path in self.entity_description.gating_paths
             )
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     @property
     def _register_value(self) -> int | None:
@@ -333,13 +333,13 @@ class NeoPoolRegisterSwitch(NeoPoolMQTTEntity, SwitchEntity):
         """Turn the switch on (write 1)."""
         await self._write_register(self.entity_description.register, 1)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = 1
-        self.async_write_ha_state()
+        self._async_write_state()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Turn the switch off (write 0)."""
         await self._write_register(self.entity_description.register, 0)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = 0
-        self.async_write_ha_state()
+        self._async_write_state()
 
 
 class NeoPoolRegisterBitSwitch(NeoPoolRegisterSwitch):
@@ -377,4 +377,4 @@ class NeoPoolRegisterBitSwitch(NeoPoolRegisterSwitch):
         new_value = current | mask if state else current & ~mask
         await self._write_register(self.entity_description.register, new_value)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = new_value
-        self.async_write_ha_state()
+        self._async_write_state()

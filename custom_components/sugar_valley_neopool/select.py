@@ -306,7 +306,7 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
             if raw_value is None:
                 self._attr_current_option = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 return
 
             # Convert raw value to option string
@@ -322,7 +322,7 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
             if option is not None:
                 self._attr_current_option = option
                 self._attr_available = True
-                self.async_write_ha_state()
+                self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
@@ -424,14 +424,14 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
                 self._pushed_mode = (
                     safe_int(modes[idx]) if isinstance(modes, list) and len(modes) > idx else None
                 )
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     @property
     def _in_push_ignore_window(self) -> bool:
@@ -523,7 +523,7 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         rs[desc.register] = mode
         self._pushed_mode = None
         self._push_ignore_until = dt_util.utcnow().timestamp() + AUX_MODE_PUSH_GRACE_SECONDS
-        self.async_write_ha_state()
+        self._async_write_state()
         _LOGGER.debug(
             "Set AUX mode %s (%d, bound via 0x%04X=0x%04X) for %s",
             option,
@@ -576,7 +576,7 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     @property
     def _vs_enabled(self) -> bool:
@@ -632,7 +632,7 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
         new_value = (current & ~(FILTRATION_TIMER_SPEED_MASK << shift)) | (field << shift)
         await self._write_register(REG_FILTRATION_CONF, new_value)
         self._config_entry.runtime_data.register_state[REG_FILTRATION_CONF] = new_value
-        self.async_write_ha_state()
+        self._async_write_state()
         _LOGGER.debug(
             "Set %s = %s (field %d) -> 0x%04X = 0x%04X",
             self.entity_description.key,
@@ -682,7 +682,7 @@ class NeoPoolTimerModeSelect(NeoPoolMQTTEntity, SelectEntity):
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     @property
     def _register_value(self) -> int | None:
@@ -720,7 +720,7 @@ class NeoPoolTimerModeSelect(NeoPoolMQTTEntity, SelectEntity):
         rs = self._config_entry.runtime_data.register_state
         rs[desc.function_register] = desc.function_code
         rs[desc.mode_register] = mode
-        self.async_write_ha_state()
+        self._async_write_state()
         _LOGGER.debug(
             "Set timer mode %s (%d, bound via 0x%04X=0x%04X) for %s",
             option,

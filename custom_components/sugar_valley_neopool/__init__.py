@@ -41,6 +41,8 @@ from .const import (
     JSON_PATH_TIME,
     JSON_PATH_TYPE,
     MANUFACTURER,
+    METADATA_STATUS_REPLY_TIMEOUT,
+    METADATA_SUBSCRIBE_TIMEOUT,
     MODEL,
     NPREAD_BURST_INTERVAL,
     PAYLOAD_OFFLINE,
@@ -65,6 +67,8 @@ from .helpers import (
 from .services import async_setup_services, async_unload_services
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from homeassistant.core import HomeAssistant
 
 _LOGGER = logging.getLogger(__name__)
@@ -138,6 +142,10 @@ class NeoPoolData:
     # time under a flapping link (restart semantics: a new trigger cancels the
     # stale sweep and starts a fresh, complete one).
     register_sweep_task: asyncio.Task[None] | None = None
+    # Handle of an in-flight background device-metadata refresh (LWT-driven
+    # retry when the setup-time fetch got no firmware/IP, or after the device
+    # comes back online). At most one runs at a time.
+    metadata_task: asyncio.Task[None] | None = None
 
 
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
@@ -1398,8 +1406,41 @@ def _async_start_register_sweep(
     )
 
 
+def _metadata_complete(entry: NeoPoolConfigEntry) -> bool:
+    """Return True when firmware, Powerunit version and IP are all known."""
+    data = entry.runtime_data
+    return bool(data.tasmota_version and data.fw_version and data.device_ip)
+
+
+@callback
+def _async_start_metadata_refresh(
+    hass: HomeAssistant, entry: NeoPoolConfigEntry, *, reason: str
+) -> None:
+    """Re-fetch device metadata in the background (at most one at a time).
+
+    The setup-time fetch is a one-shot with a short budget: if the broker
+    connection or Tasmota was not ready, firmware and IP stay unknown (and the
+    device page shows no firmware) until the next reload. The LWT watch calls
+    this to retry once the device is confirmed online.
+    """
+    task = entry.runtime_data.metadata_task
+    if task is not None and not task.done():
+        _LOGGER.debug("Metadata refresh already in flight - skipping (%s)", reason)
+        return
+    entry.runtime_data.metadata_task = entry.async_create_background_task(
+        hass,
+        async_fetch_device_metadata(hass, entry),
+        f"neopool_fetch_device_metadata_{reason}",
+    )
+
+
 async def _setup_register_recovery_watch(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
-    """Subscribe to LWT and re-run the register sweep on Offline -> Online.
+    """Subscribe to LWT: track availability and recover state on reconnect.
+
+    Keeps runtime_data.available in step with the device's LWT, and on
+    Online re-fetches device metadata in the background when it is still
+    incomplete (setup-time fetch missed its replies) or after a genuine
+    Offline -> Online transition (firmware or IP may have changed).
 
     The Group 2 / timer config registers are not in the SENSOR payload — they
     are only read by the paced NPRead sweep. Reads that fall into an offline
@@ -1423,12 +1464,18 @@ async def _setup_register_recovery_watch(hass: HomeAssistant, entry: NeoPoolConf
         was_offline = last_payload == PAYLOAD_OFFLINE
         if isinstance(payload, str):
             last_payload = payload
+        if payload in (PAYLOAD_ONLINE, PAYLOAD_OFFLINE):
+            entry.runtime_data.available = payload == PAYLOAD_ONLINE
         if payload == PAYLOAD_ONLINE and was_offline:
             _LOGGER.info(
                 "Device %s regained availability - re-reading config registers",
                 mqtt_topic,
             )
             _async_start_register_sweep(hass, entry, reason="lwt_recovery")
+        if payload == PAYLOAD_ONLINE and (was_offline or not _metadata_complete(entry)):
+            _async_start_metadata_refresh(
+                hass, entry, reason="lwt_recovery" if was_offline else "incomplete"
+            )
 
     unsub = await mqtt.async_subscribe(hass, lwt_topic, on_lwt, qos=1)
     entry.async_on_unload(unsub)
@@ -1724,6 +1771,44 @@ async def async_migrate_masked_unique_ids(
     return True
 
 
+async def _async_wait_subscribed(
+    hass: HomeAssistant, topics: list[str], qos: int, wait_timeout: float
+) -> bool:
+    """Wait until every topic's subscription is active at the broker.
+
+    HA's MQTT client queues new subscriptions and sends them after a cooldown,
+    so async_subscribe() returns before the broker knows about the topic. A
+    command whose reply is not retained must not be published until then, or
+    the reply is dropped. Returns False if the subscriptions did not complete
+    within ``wait_timeout`` (e.g. the broker connection is not up yet).
+    """
+    pending = set(topics)
+    done = asyncio.Event()
+    unsubs: list[Callable[[], None]] = []
+
+    for topic in topics:
+
+        @callback
+        def _on_done(topic: str = topic) -> None:
+            pending.discard(topic)
+            if not pending:
+                done.set()
+
+        unsubs.append(mqtt.async_on_subscribe_done(hass, topic, qos, _on_done))
+
+    try:
+        async with asyncio.timeout(wait_timeout):
+            await done.wait()
+    except TimeoutError:
+        _LOGGER.debug("Subscriptions not active after %.1f s: %s", wait_timeout, sorted(pending))
+        return False
+    else:
+        return True
+    finally:
+        for unsub in unsubs:
+            unsub()
+
+
 async def _send_and_wait(
     hass: HomeAssistant,
     topic: str,
@@ -1732,8 +1817,12 @@ async def _send_and_wait(
     label: str,
     deadline: float,
 ) -> None:
-    """Publish an MQTT command and wait for the response event."""
-    remaining = deadline - hass.loop.time()
+    """Publish an MQTT command and wait for the response event.
+
+    The wait is capped at METADATA_STATUS_REPLY_TIMEOUT so an unanswered
+    command leaves time for the next one within the overall deadline.
+    """
+    remaining = min(deadline - hass.loop.time(), METADATA_STATUS_REPLY_TIMEOUT)
     if remaining <= 0:
         return
     await mqtt.async_publish(hass, topic, payload, qos=1, retain=False)
@@ -1863,22 +1952,30 @@ async def async_fetch_device_metadata(  # noqa: C901
             _LOGGER.debug("Failed to parse Status 5 response: %s", err)
 
     # Subscribe to SENSOR and specific Status response topics
+    status2_topic = f"stat/{mqtt_topic}/STATUS2"
+    status5_topic = f"stat/{mqtt_topic}/STATUS5"
     unsub_sensor = await mqtt.async_subscribe(
         hass, f"tele/{mqtt_topic}/SENSOR", sensor_received, qos=1
     )
-    unsub_status2 = await mqtt.async_subscribe(
-        hass, f"stat/{mqtt_topic}/STATUS2", status2_received, qos=1
-    )
-    unsub_status5 = await mqtt.async_subscribe(
-        hass, f"stat/{mqtt_topic}/STATUS5", status5_received, qos=1
-    )
+    unsub_status2 = await mqtt.async_subscribe(hass, status2_topic, status2_received, qos=1)
+    unsub_status5 = await mqtt.async_subscribe(hass, status5_topic, status5_received, qos=1)
 
     try:
+        deadline = hass.loop.time() + wait_timeout
+        # The Status replies are not retained: publishing before the reply
+        # subscriptions reach the broker loses them (the subscribe cooldown is
+        # longer than Tasmota's reply time). Wait for both to be active.
+        await _async_wait_subscribed(
+            hass,
+            [status2_topic, status5_topic],
+            qos=1,
+            wait_timeout=min(METADATA_SUBSCRIBE_TIMEOUT, wait_timeout),
+        )
+
         # Send Status commands one at a time, waiting for each response
         # before sending the next. Backlog doesn't work reliably because
         # regular SENSOR telemetry interrupts Tasmota's command queue.
         cmnd_topic = f"cmnd/{mqtt_topic}/Status"
-        deadline = hass.loop.time() + wait_timeout
 
         await _send_and_wait(hass, cmnd_topic, "2", status2_event, "Status 2", deadline)
         await _send_and_wait(hass, cmnd_topic, "5", status5_event, "Status 5", deadline)

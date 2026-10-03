@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Device firmware and IP now reach the device page.** The startup metadata
+  fetch subscribed to the `Status 2` / `Status 5` reply topics and published
+  the commands 7 ms later, but HA's MQTT client sends new subscriptions to the
+  broker only after a cooldown (0.1 s, 0.5 s right after connecting). Tasmota
+  replies within ~100 ms and the reply is not retained, so it reached the
+  broker before the subscription did and was dropped: the device showed no
+  Tasmota version, and its link pointed at the Tasmota docs instead of the
+  device's web UI. The fetch now waits until its reply
+  subscriptions are active before publishing, gives each command its own 3 s
+  reply budget (an unanswered `Status 2` previously used up the whole 10 s
+  window, so `Status 5` was never sent), and is retried in the background from
+  the LWT watch when the result is incomplete or the device comes back online.
+- **No more "incorrectly being triggered for updates while it is disabled"
+  warnings.** When the integration disabled an entity for hardware the
+  controller does not report (for example the AUX operating-mode sensors on
+  firmware without `Relay.AuxMode`, on the first start after upgrading to
+  2.1.3), the entity's own handler for the same telemetry message still tried
+  to write its state while HA was removing it. Entity state writes now go
+  through a guard that skips disabled entities.
+- **`runtime_data.available` now reflects the device's LWT.** It was never
+  updated, so diagnostics always reported the device as unavailable and the
+  auto-disable routines' "no data yet" guard could not tell an offline device
+  from an online one with nothing to disable.
+
 ## [2.1.3] - 2026-10-03
 
 ### Added

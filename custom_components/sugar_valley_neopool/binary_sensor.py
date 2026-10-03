@@ -321,7 +321,7 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
             if raw_value is None:
                 self._attr_is_on = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 return
 
             # Apply transformation function
@@ -333,7 +333,7 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
 
             self._attr_is_on = is_on
             self._attr_available = True
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
         _LOGGER.debug(
@@ -398,4 +398,4 @@ class NeoPoolConnectionProblemBinarySensor(NeoPoolEntity, BinarySensorEntity):
             # unchanged. The next valid rate will flip the state correctly.
             return
         self._attr_is_on = rate > self._threshold
-        self.async_write_ha_state()
+        self._async_write_state()

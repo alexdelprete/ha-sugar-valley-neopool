@@ -23,6 +23,25 @@ def auto_enable_custom_integrations(
     """Enable custom integrations for all tests."""
 
 
+@pytest.fixture(autouse=True)
+def mock_mqtt_subscribe_done() -> Generator[MagicMock]:
+    """Report MQTT subscriptions as active at once (no broker in unit tests).
+
+    The metadata fetch waits for its reply subscriptions via
+    mqtt.async_on_subscribe_done, which needs a live MQTT client. Tests that
+    exercise the waiting itself patch it again locally.
+    """
+
+    def _done(_hass: Any, _topic: str, _qos: int, on_done: Any) -> Any:
+        on_done()
+        return MagicMock()
+
+    with patch(
+        "homeassistant.components.mqtt.async_on_subscribe_done", side_effect=_done
+    ) as mock_done:
+        yield mock_done
+
+
 @pytest.fixture
 def mock_setup_entry() -> Generator[AsyncMock]:
     """Override async_setup_entry."""

@@ -51,6 +51,21 @@ class NeoPoolEntity(Entity):
         """Return the MQTT topic prefix for this device."""
         return self._config_entry.data.get("discovery_prefix", "")
 
+    @callback
+    def _async_write_state(self) -> None:
+        """Write the state, unless the entity has just been disabled.
+
+        All NeoPool entities write through this instead of calling
+        async_write_ha_state() directly (which HA marks final). The
+        dynamic-disable watch can flip this entity's registry entry to disabled
+        while the same SENSOR message is still being delivered to the entity's
+        own callback; HA is then removing the entity, and a write would log
+        "incorrectly being triggered for updates while it is disabled".
+        """
+        if not self.enabled:
+            return
+        self.async_write_ha_state()
+
 
 class NeoPoolMQTTEntity(NeoPoolEntity):
     """Base class for NeoPool MQTT entities with subscription support."""
@@ -78,7 +93,7 @@ class NeoPoolMQTTEntity(NeoPoolEntity):
         def availability_received(msg: mqtt.ReceiveMessage) -> None:
             """Handle availability message."""
             self._attr_available = msg.payload == PAYLOAD_ONLINE
-            self.async_write_ha_state()
+            self._async_write_state()
 
         unsubscribe = await mqtt.async_subscribe(self.hass, lwt_topic, availability_received, qos=1)
         self._unsubscribe_callbacks.append(unsubscribe)

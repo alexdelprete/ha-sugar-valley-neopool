@@ -641,7 +641,7 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
             if raw_value is None:
                 self._attr_native_value = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 # Becoming-unavailable resets the throttle so the next available
                 # update goes through immediately rather than being silenced.
                 self._last_write_ts = None
@@ -652,14 +652,14 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
                 # payload_fn / cumulative logic signalled "unavailable"
                 self._attr_native_value = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 self._last_write_ts = None
                 return
 
             self._attr_native_value = new_value
             self._attr_available = True
             if self._should_write_now():
-                self.async_write_ha_state()
+                self._async_write_state()
                 self._record_write()
 
         await self._subscribe_topic(sensor_topic, message_received)
@@ -844,4 +844,4 @@ class NeoPoolConnectionRateSensor(NeoPoolEntity, SensorEntity):
         if tracker is None:
             return
         self._attr_native_value = tracker.rate
-        self.async_write_ha_state()
+        self._async_write_state()

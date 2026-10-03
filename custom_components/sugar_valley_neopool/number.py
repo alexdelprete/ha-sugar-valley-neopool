@@ -325,19 +325,19 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
                 elif not self._dynamic_max_received:
                     # Max not yet received, entity stays unavailable
                     self._attr_available = False
-                    self.async_write_ha_state()
+                    self._async_write_state()
                     return
 
             raw_value = get_nested_value(payload, self.entity_description.json_path)
             if raw_value is None:
                 self._attr_native_value = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 return
 
             self._attr_native_value = self.entity_description.value_fn(raw_value)
             self._attr_available = True
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
@@ -406,14 +406,14 @@ class NeoPoolRegisterNumber(NeoPoolMQTTEntity, NumberEntity):
                 get_nested_value(payload, path) is not None
                 for path in self.entity_description.gating_paths
             )
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     @property
     def _register_value(self) -> int | None:
@@ -435,7 +435,7 @@ class NeoPoolRegisterNumber(NeoPoolMQTTEntity, NumberEntity):
         int_value = int(value)
         await self._write_register(self.entity_description.register, int_value)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = int_value
-        self.async_write_ha_state()
+        self._async_write_state()
         _LOGGER.debug("Set %s to %s", self.entity_description.key, int_value)
 
 
@@ -469,5 +469,5 @@ class NeoPoolRegisterByteNumber(NeoPoolRegisterNumber):
         new_value = (current & ~(0xFF << shift)) | ((int(value) & 0xFF) << shift)
         await self._write_register(self.entity_description.register, new_value)
         self._config_entry.runtime_data.register_state[self.entity_description.register] = new_value
-        self.async_write_ha_state()
+        self._async_write_state()
         _LOGGER.debug("Set %s to %s", self.entity_description.key, int(value))

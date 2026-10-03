@@ -72,12 +72,12 @@ class NeoPoolLight(NeoPoolMQTTEntity, LightEntity):
             if raw_value is None:
                 self._attr_is_on = None
                 self._attr_available = False
-                self.async_write_ha_state()
+                self._async_write_state()
                 return
 
             self._attr_is_on = bit_to_bool(raw_value)
             self._attr_available = True
-            self.async_write_ha_state()
+            self._async_write_state()
 
         await self._subscribe_topic(sensor_topic, message_received)
 

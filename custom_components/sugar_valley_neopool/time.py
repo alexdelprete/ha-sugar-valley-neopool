@@ -164,7 +164,7 @@ class NeoPoolTimerTime(NeoPoolMQTTEntity, TimeEntity):
     @callback
     def _handle_register_update(self) -> None:
         """React to a config-register cache update."""
-        self.async_write_ha_state()
+        self._async_write_state()
 
     def _read_pair(self, low_register: int) -> int | None:
         """Reconstruct a 32-bit value from its low/high register pair.
@@ -228,7 +228,7 @@ class NeoPoolTimerTime(NeoPoolMQTTEntity, TimeEntity):
         if interval is not None:
             rs[desc.interval_register] = interval & 0xFFFF
             rs[desc.interval_register + 1] = (interval >> 16) & 0xFFFF
-        self.async_write_ha_state()
+        self._async_write_state()
 
         _LOGGER.debug(
             "Set %s = %s (%ds) -> 0x%04X; interval=%s",
