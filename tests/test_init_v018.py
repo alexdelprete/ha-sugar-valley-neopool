@@ -2171,6 +2171,7 @@ class TestSetupDynamicDisableWatch:
             available_modules={"Chlorine"},  # already what payload will report
             available_relays={"Acid"},
             hydrolysis_unit="g/h",
+            temperature_present=False,  # payload carries no Temperature key
             connection_rate_tracker=ConnectionRateTracker(60.0),
         )
 

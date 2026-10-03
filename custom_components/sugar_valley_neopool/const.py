@@ -98,12 +98,12 @@ DEFAULT_AUTO_TIME_SYNC: Final = False
 TIME_SYNC_DRIFT_THRESHOLD_SECONDS: Final = 60
 TIME_SYNC_COOLDOWN_SECONDS: Final = 300
 
-# Device metadata fetch (Status 2 firmware / Status 5 network). HA's MQTT client
+# Command replies (Status 2/5 metadata, NPRead register reads). HA's MQTT client
 # queues new subscriptions and sends them to the broker after a cooldown (0.1 s,
-# 0.5 s right after connecting); Tasmota answers a Status command within
-# ~100 ms with a non-retained reply, so the fetch must wait for its reply
-# subscriptions to be active before publishing, or the reply is lost.
-METADATA_SUBSCRIBE_TIMEOUT: Final = 5.0
+# 0.5 s right after connecting); Tasmota answers within ~100 ms with a
+# non-retained reply, so a command must not be published until its reply
+# subscription is active, or the reply is lost.
+REPLY_SUBSCRIBE_TIMEOUT: Final = 5.0
 # Per-command reply budget, so one unanswered Status cannot use up the whole
 # fetch window and starve the next command.
 METADATA_STATUS_REPLY_TIMEOUT: Final = 3.0

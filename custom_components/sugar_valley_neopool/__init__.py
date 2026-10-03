@@ -42,12 +42,12 @@ from .const import (
     JSON_PATH_TYPE,
     MANUFACTURER,
     METADATA_STATUS_REPLY_TIMEOUT,
-    METADATA_SUBSCRIBE_TIMEOUT,
     MODEL,
     NPREAD_BURST_INTERVAL,
     PAYLOAD_OFFLINE,
     PAYLOAD_ONLINE,
     PLATFORMS,
+    REPLY_SUBSCRIBE_TIMEOUT,
     TIME_SYNC_COOLDOWN_SECONDS,
     TIME_SYNC_DRIFT_THRESHOLD_SECONDS,
     TIMER_ENTITY_REGISTERS,
@@ -118,6 +118,10 @@ class NeoPoolData:
     # Hydrolysis.Unit ("%" or "g/h"); used to auto-disable g/h-labeled entities
     # when the controller is in % mode. None means we haven't seen it yet.
     hydrolysis_unit: str | None = None
+    # Whether SENSOR carries NeoPool.Temperature. The driver emits it only when
+    # the controller's temperature measurement is enabled (the probe is
+    # optional hardware). None means no NeoPool payload seen yet.
+    temperature_present: bool | None = None
     device_ip: str | None = None  # From Status 5 network info
     # Sliding-window tracker for the Modbus connection error rate.
     # Populated lazily on first SENSOR message by _setup_dynamic_disable_watch
@@ -225,6 +229,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
 
     # Disable g/h-labeled entities when the controller is in % display mode
     _disable_unavailable_mode_entities(hass, entry)
+
+    # Disable temperature-only entities when the controller has no probe
+    _disable_unavailable_temperature_entities(hass, entry)
 
     # Subscribe to stat/RESULT and request the config registers (not in SENSOR)
     # so the register-backed entities gain state shortly after startup. Subscribe
@@ -878,8 +885,9 @@ _MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
 # is present in telemetry. Same idea as _MODULE_ENTITY_MAP but keyed on
 # available_relays, so e.g. the heating/UV config controls are disabled on
 # controllers without those relays instead of sitting perpetually unavailable.
-# smart_antifreeze is intentionally omitted: it gates only on Temperature, which
-# is always present. "AuxMode" is not a relay but a firmware capability: the
+# smart_antifreeze is not here: its only dependency is the temperature
+# measurement, handled by _TEMPERATURE_ENTITIES. "AuxMode" is not a relay but a
+# firmware capability: the
 # Tasmota driver publishes NeoPool.Relay.AuxMode from 15.6.0.1 (PR #24998), so
 # on older builds the AUX operating-mode sensors are disabled rather than dead,
 # and they re-enable automatically after a firmware update.
@@ -899,6 +907,19 @@ _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
         ("sensor", "aux4_operating_mode"),
     ],
 }
+
+
+# Entities whose only hardware dependency is the water temperature measurement.
+# The driver publishes NeoPool.Temperature only when MBF_PAR_TEMPERATURE_ACTIVE
+# is set (the probe is optional), so without it these would sit unavailable
+# forever. Entities that also need a relay or module (climate_mode, the
+# hydrolysis temperature-shutdown controls) stay under those maps only: an
+# entity in two maps would be disabled by one rule and re-enabled, with a
+# reload, by the other.
+_TEMPERATURE_ENTITIES: Final[list[tuple[str, str]]] = [
+    ("sensor", "water_temperature"),
+    ("switch", "smart_antifreeze"),
+]
 
 
 @callback
@@ -1004,6 +1025,52 @@ def _disable_unavailable_relay_config_entities(
                 )
 
 
+@callback
+def _disable_unavailable_temperature_entities(
+    hass: HomeAssistant, entry: NeoPoolConfigEntry
+) -> None:
+    """Disable temperature-only entities when SENSOR carries no Temperature.
+
+    Uses temperature_present from the SENSOR payload. Only touches entities
+    disabled_by None or INTEGRATION; leaves user-disabled entities alone, and
+    re-enables ones the integration disabled once Temperature reappears.
+    """
+    present = entry.runtime_data.temperature_present
+    if present is None:
+        # No NeoPool payload seen yet — can't tell whether a probe is fitted
+        _LOGGER.debug("No temperature data yet, skipping temperature entity management")
+        return
+
+    entity_registry = er.async_get(hass)
+    nodeid = entry.data.get(CONF_NODEID, "")
+
+    for domain, entity_key in _TEMPERATURE_ENTITIES:
+        unique_id = f"neopool_mqtt_{nodeid}_{entity_key}"
+        entity_id = entity_registry.async_get_entity_id(domain, DOMAIN, unique_id)
+        if not entity_id:
+            continue
+
+        entity_entry = entity_registry.async_get(entity_id)
+        if not entity_entry:
+            continue
+
+        if not present and entity_entry.disabled_by is None:
+            entity_registry.async_update_entity(
+                entity_id,
+                disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+            )
+            _LOGGER.warning(
+                "Disabled temperature entity %s (no temperature measurement on controller)",
+                entity_id,
+            )
+        elif present and entity_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            entity_registry.async_update_entity(entity_id, disabled_by=None)
+            _LOGGER.warning(
+                "Re-enabled temperature entity %s (temperature measurement reported)",
+                entity_id,
+            )
+
+
 # (domain, entity_key) entries that go unavailable when the controller's
 # hydrolysis display unit is "%": the JSON values exist but in % mode the
 # absolute g/h amount is unrecoverable (Max collapses to 100).
@@ -1101,6 +1168,7 @@ def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry
     for entries in _RELAY_CONFIG_ENTITY_MAP.values():
         managed_keys.update(entries)
     managed_keys.update(_MODE_DEPENDENT_GH_ENTITIES)
+    managed_keys.update(_TEMPERATURE_ENTITIES)
 
     # Snapshot which managed entities are currently INTEGRATION-disabled
     was_disabled = set()
@@ -1118,6 +1186,7 @@ def _refresh_entity_disable_state(hass: HomeAssistant, entry: NeoPoolConfigEntry
     _disable_unavailable_module_entities(hass, entry)
     _disable_unavailable_relay_config_entities(hass, entry)
     _disable_unavailable_mode_entities(hass, entry)
+    _disable_unavailable_temperature_entities(hass, entry)
 
     # Detect re-enable transitions (INTEGRATION → None)
     reenabled = {
@@ -1249,22 +1318,35 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
         unit = get_nested_value(payload, "NeoPool.Hydrolysis.Unit")
         new_unit: str | None = unit if isinstance(unit, str) else entry.runtime_data.hydrolysis_unit
 
+        # Only a NeoPool payload can prove the probe absent: a SENSOR message
+        # from the driver's error path carries no NeoPool object at all.
+        neopool = payload.get("NeoPool") if isinstance(payload, dict) else None
+        new_temperature: bool | None = (
+            "Temperature" in neopool
+            if isinstance(neopool, dict)
+            else entry.runtime_data.temperature_present
+        )
+
         if (
             new_modules == entry.runtime_data.available_modules
             and new_relays == entry.runtime_data.available_relays
             and new_unit == entry.runtime_data.hydrolysis_unit
+            and new_temperature == entry.runtime_data.temperature_present
         ):
             return  # Nothing relevant changed — skip the refresh
 
         _LOGGER.debug(
-            "Detected change in module/relay/unit signals — modules=%s relays=%s unit=%s",
+            "Detected change in module/relay/unit/temperature signals — "
+            "modules=%s relays=%s unit=%s temperature=%s",
             new_modules,
             new_relays,
             new_unit,
+            new_temperature,
         )
         entry.runtime_data.available_modules = new_modules
         entry.runtime_data.available_relays = new_relays
         entry.runtime_data.hydrolysis_unit = new_unit
+        entry.runtime_data.temperature_present = new_temperature
         _refresh_entity_disable_state(hass, entry)
 
     unsub = await mqtt.async_subscribe(hass, sensor_topic, on_sensor, qos=1)
@@ -1361,12 +1443,22 @@ async def _read_config_registers(hass: HomeAssistant, entry: NeoPoolConfigEntry)
     registers (mode + ON/OFF pairs for filtration 1-3 + light), which are read
     the same way and kept current by the write-ACK.
 
-    The reads are spaced by NPREAD_BURST_INTERVAL: the controller drops reads
-    that arrive as one fast burst (verified on-device), which previously left the
-    first ~16 registers unread and their entities unavailable. Runs as a
-    background task, so the pacing does not block config-entry setup.
+    The sweep first waits for the reply subscription to be active (see the
+    comment below), then spaces the reads by NPREAD_BURST_INTERVAL. An earlier
+    unpaced burst left the first ~16 registers unread, blamed on the controller
+    at the time; the replies were more likely lost to the same subscription
+    race. The pacing is kept as a conservative bus-friendly default. Runs as a
+    background task, so neither wait blocks config-entry setup.
     """
     mqtt_topic = entry.runtime_data.mqtt_topic
+    # The stat/<topic>/+ reply subscription is queued behind HA's subscribe
+    # cooldown; reads published before it reaches the broker lose their
+    # (non-retained) replies, which is what left the first registers of the
+    # old unpaced burst unread. Immediate on the LWT recovery path, where the
+    # subscription is long active. Proceed anyway on timeout (best effort).
+    await _async_wait_subscribed(
+        hass, [f"stat/{mqtt_topic}/+"], qos=1, wait_timeout=REPLY_SUBSCRIBE_TIMEOUT
+    )
     addresses = (*CONFIG_REGISTERS, *TIMER_ENTITY_REGISTERS)
     for address in addresses:
         await mqtt.async_publish(
@@ -1858,6 +1950,7 @@ async def async_fetch_device_metadata(  # noqa: C901
     available_relays: set[str] = set()
     available_modules: set[str] = set()
     hydrolysis_unit: str | None = None
+    temperature_present: bool | None = None
     sensor_event = asyncio.Event()
     status2_event = asyncio.Event()
     status5_event = asyncio.Event()
@@ -1865,7 +1958,8 @@ async def async_fetch_device_metadata(  # noqa: C901
     @callback
     def sensor_received(msg: mqtt.ReceiveMessage) -> None:
         """Handle SENSOR telemetry for manufacturer, version, relay, module, and unit detection."""
-        nonlocal manufacturer, fw_version, available_relays, available_modules, hydrolysis_unit
+        nonlocal manufacturer, fw_version, available_relays, available_modules
+        nonlocal hydrolysis_unit, temperature_present
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -1905,6 +1999,10 @@ async def async_fetch_device_metadata(  # noqa: C901
             if isinstance(unit, str):
                 hydrolysis_unit = unit
                 _LOGGER.debug("Detected hydrolysis unit: %s", hydrolysis_unit)
+            # Temperature is emitted only when the controller has a probe
+            neopool = payload.get("NeoPool") if isinstance(payload, dict) else None
+            if isinstance(neopool, dict):
+                temperature_present = "Temperature" in neopool
             if manufacturer or fw_version:
                 sensor_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
@@ -1969,7 +2067,7 @@ async def async_fetch_device_metadata(  # noqa: C901
             hass,
             [status2_topic, status5_topic],
             qos=1,
-            wait_timeout=min(METADATA_SUBSCRIBE_TIMEOUT, wait_timeout),
+            wait_timeout=min(REPLY_SUBSCRIBE_TIMEOUT, wait_timeout),
         )
 
         # Send Status commands one at a time, waiting for each response
@@ -2021,6 +2119,10 @@ async def async_fetch_device_metadata(  # noqa: C901
     # Store hydrolysis unit (used to auto-disable g/h-labeled entities in % mode)
     if hydrolysis_unit:
         entry.runtime_data.hydrolysis_unit = hydrolysis_unit
+
+    # Store temperature presence (used to auto-disable temperature-only entities)
+    if temperature_present is not None:
+        entry.runtime_data.temperature_present = temperature_present
 
     # Update device registry if we got any metadata
     if manufacturer or fw_version or tasmota_version or device_ip:

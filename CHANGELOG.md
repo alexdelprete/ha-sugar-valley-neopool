@@ -28,6 +28,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   2.1.3), the entity's own handler for the same telemetry message still tried
   to write its state while HA was removing it. Entity state writes now go
   through a guard that skips disabled entities.
+- **Config registers are read reliably at startup.** The paced NPRead sweep
+  published its first reads before HA had sent the `stat/<topic>/+` reply
+  subscription to the broker (the same subscribe-cooldown race as the
+  metadata fetch), so their replies were lost. The sweep now waits for the
+  reply subscription first. This was likely the real cause of the "first
+  ~16 registers unread" seen in 2.1.0, which was attributed to the controller
+  dropping fast bursts at the time.
+- **Water Temperature and Smart Antifreeze are disabled on controllers
+  without a temperature probe.** The Tasmota driver publishes
+  `NeoPool.Temperature` only when the controller's temperature measurement is
+  enabled (the probe is optional hardware), so on probe-less installs both
+  entities sat unavailable forever. They now follow the same auto-disable
+  rule as other absent hardware, and re-enable automatically once a probe is
+  reported.
 - **`runtime_data.available` now reflects the device's LWT.** It was never
   updated, so diagnostics always reported the device as unavailable and the
   auto-disable routines' "no data yet" guard could not tell an offline device

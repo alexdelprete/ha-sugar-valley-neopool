@@ -610,7 +610,7 @@ entity settings manually.
 
 ### What gets managed
 
-Three signals from `tele/{topic}/SENSOR` drive the auto-management:
+These signals from `tele/{topic}/SENSOR` drive the auto-management:
 
 - **`NeoPool.Modules.{Chlorine,Ionization,Conductivity}`** — the matching
   sensor / number entities (`chlorine_data`, `chlorine_setpoint`,
@@ -623,6 +623,10 @@ Three signals from `tele/{topic}/SENSOR` drive the auto-management:
   hydrolysis sensors (`hydrolysis_data` g/h, `hydrolysis_setpoint_gh`,
   `hydrolysis_max`) are disabled in `%` mode, where the absolute g/h
   value isn't recoverable from telemetry.
+- **`NeoPool.Temperature`** — the driver only publishes it when the
+  controller has its temperature measurement enabled (the probe is
+  optional). Without it, `water_temperature` and the `smart_antifreeze`
+  switch are disabled.
 
 ### End-to-end scenarios
 

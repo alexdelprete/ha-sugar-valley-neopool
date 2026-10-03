@@ -25,6 +25,7 @@ from custom_components.sugar_valley_neopool import (
     _async_start_metadata_refresh,
     _async_wait_subscribed,
     _metadata_complete,
+    _read_config_registers,
     _setup_register_recovery_watch,
     async_fetch_device_metadata,
 )
@@ -176,6 +177,71 @@ class TestFetchSubscriptionOrdering:
         assert [c.args[2] for c in mock_pub.await_args_list] == ["2", "5"]
         assert entry.runtime_data.device_ip == "192.168.1.50"
         assert entry.runtime_data.tasmota_version is None
+
+
+class TestRegisterSweepWaitsForSubscription:
+    """The NPRead sweep only publishes once stat/<topic>/+ is active."""
+
+    @pytest.mark.asyncio
+    async def test_reads_wait_for_reply_subscription(self, hass: HomeAssistant) -> None:
+        """No NPRead goes out before the wildcard reply subscription completes."""
+        entry = _make_entry(hass)
+        done_cbs: dict[str, object] = {}
+
+        def capture(_hass, topic, _qos, on_done):
+            done_cbs[topic] = on_done
+            return MagicMock()
+
+        with (
+            patch(
+                "homeassistant.components.mqtt.async_publish", new_callable=AsyncMock
+            ) as mock_pub,
+            patch("homeassistant.components.mqtt.async_on_subscribe_done", side_effect=capture),
+            patch(f"{_PKG}.NPREAD_BURST_INTERVAL", 0),
+        ):
+            task = asyncio.create_task(_read_config_registers(hass, entry))
+            await asyncio.sleep(0.05)
+            assert list(done_cbs) == ["stat/MyPool/+"]
+            mock_pub.assert_not_awaited()
+
+            done_cbs["stat/MyPool/+"]()
+            await task
+
+        assert mock_pub.await_count > 0
+        assert all(c.args[1] == "cmnd/MyPool/NPRead" for c in mock_pub.await_args_list)
+
+
+class TestFetchRecordsTemperature:
+    """The metadata fetch records whether the SENSOR payload has Temperature."""
+
+    @pytest.mark.asyncio
+    async def test_temperature_presence_from_sensor(self, hass: HomeAssistant) -> None:
+        """A NeoPool payload without Temperature marks the probe absent."""
+        entry = _make_entry(hass)
+        callbacks: dict[str, object] = {}
+
+        async def mock_subscribe(_hass, topic, cb, **_kwargs):
+            callbacks[topic] = cb
+            return MagicMock()
+
+        async def send_sensor(_hass, _topic, payload, **_kwargs):
+            if payload == "5":
+                callbacks["tele/MyPool/SENSOR"](
+                    _msg(json.dumps({"NeoPool": {"Type": "Hay", "pH": {"Data": 7.2}}}))
+                )
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe),
+            patch(
+                "homeassistant.components.mqtt.async_publish",
+                new_callable=AsyncMock,
+                side_effect=send_sensor,
+            ),
+            patch(f"{_PKG}.METADATA_STATUS_REPLY_TIMEOUT", 0.05),
+        ):
+            await async_fetch_device_metadata(hass, entry, wait_timeout=0.5)
+
+        assert entry.runtime_data.temperature_present is False
 
 
 class TestStartMetadataRefresh:
