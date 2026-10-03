@@ -107,7 +107,7 @@ def _patch_registry(found: bool) -> AbstractContextManager[MagicMock]:
     registry = MagicMock()
     if found:
         device = MagicMock()
-        device.config_entries = {"eid"}
+        device.config_entry_id = "eid"
         registry.async_get.return_value = device
     else:
         registry.async_get.return_value = None
@@ -134,6 +134,22 @@ class TestResolveEntry:
         hass.config_entries.async_get_entry.return_value = mock_config_entry
         with _patch_registry(found=True):
             assert _resolve_entry(hass, "dev1") is mock_config_entry
+        hass.config_entries.async_get_entry.assert_called_once_with("eid")
+
+    def test_other_domain_entry_returns_none(self, mock_config_entry: MagicMock) -> None:
+        """A device owned by another integration's config entry returns None."""
+        hass = MagicMock()
+        mock_config_entry.domain = "other_domain"
+        hass.config_entries.async_get_entry.return_value = mock_config_entry
+        with _patch_registry(found=True):
+            assert _resolve_entry(hass, "dev1") is None
+
+    def test_missing_entry_returns_none(self) -> None:
+        """A device whose config entry no longer exists returns None."""
+        hass = MagicMock()
+        hass.config_entries.async_get_entry.return_value = None
+        with _patch_registry(found=True):
+            assert _resolve_entry(hass, "dev1") is None
 
     def test_unknown_device_returns_none(self) -> None:
         """A device_id the registry doesn't know returns None."""

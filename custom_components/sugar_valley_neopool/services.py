@@ -98,10 +98,11 @@ def _resolve_entry(hass: HomeAssistant, device_id: str) -> NeoPoolConfigEntry | 
     device = dr.async_get(hass).async_get(device_id)
     if device is None:
         return None
-    for entry_id in device.config_entries:
-        entry = hass.config_entries.async_get_entry(entry_id)
-        if entry is not None and entry.domain == DOMAIN:
-            return entry
+    # A device belongs to a single config entry; DeviceEntry.config_entries is a
+    # deprecated compatibility shim (warns from HA 2026.10, removed in 2027.10).
+    entry = hass.config_entries.async_get_entry(device.config_entry_id)
+    if entry is not None and entry.domain == DOMAIN:
+        return entry
     return None
 
 

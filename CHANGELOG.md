@@ -28,6 +28,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrapped in conditional cards so they stay hidden until the firmware
   publishes the array.
 
+### Fixed
+
+- **`set_timer` no longer uses the deprecated `DeviceEntry.config_entries`.**
+  Home Assistant now ties a device to a single config entry; the old
+  set-valued property logs a deprecation warning from HA 2026.10 and is
+  removed in 2027.10, which would break the service. The device is now
+  resolved through `DeviceEntry.config_entry_id`, available on every
+  supported HA version (2026.8.0 and later). Found by checking the
+  integration against the deprecation tables in HA's dev branch.
+
 ### Changed
 
 - **Mushroom dashboards now cover every entity the integration ships.** A
