@@ -988,6 +988,8 @@ class TestAsyncFetchDeviceMetadata:
                             "Powerunit": {"Version": "V6.0.0"},
                             "Relay": {
                                 "State": [1, 0, 0],
+                                "Aux": [0, 0, 0, 0],
+                                "AuxMode": [0, 1, 2, 0],
                                 "Acid": 1,
                                 "Redox": 0,
                             },
@@ -1004,7 +1006,10 @@ class TestAsyncFetchDeviceMetadata:
         assert entry.runtime_data.tasmota_version == "14.4.1"
         assert entry.runtime_data.tasmota_image == "tasmota"
         assert entry.runtime_data.device_ip == "192.168.1.50"
-        assert entry.runtime_data.available_relays == {"Acid", "Redox"}
+        # AuxMode must be recorded here exactly as the SENSOR watch records it
+        # (test_on_sensor_tracks_auxmode_capability); a mismatch makes every setup
+        # disable the AUX mode sensors the watch re-enables: an endless reload loop.
+        assert entry.runtime_data.available_relays == {"Acid", "Redox", "AuxMode"}
         # The firmware update entity re-reads the versions on this signal
         assert len(metadata_updates) == 1
 
@@ -1106,6 +1111,38 @@ class TestAsyncFetchDeviceMetadata:
 
         # Should not crash, just no data
         assert entry.runtime_data.machine_type is None
+
+    @pytest.mark.asyncio
+    async def test_safeboot_keeps_previous_firmware(self, hass: HomeAssistant) -> None:
+        """Mid-OTA the device reports its safeboot image: the known firmware is kept."""
+        entry = MockConfigEntry(domain=DOMAIN, data={CONF_NODEID: "ABC123"})
+        entry.add_to_hass(hass)
+        entry.runtime_data = NeoPoolData(
+            device_name="Pool", mqtt_topic="SmartPool", nodeid="ABC123"
+        )
+        entry.runtime_data.tasmota_version = "15.6.0"
+        entry.runtime_data.tasmota_image = "tasmota32-neopool"
+
+        callbacks: dict[str, object] = {}
+
+        async def mock_subscribe(hass, topic, callback, **kwargs):
+            callbacks[topic] = callback
+            return MagicMock()
+
+        with (
+            patch("homeassistant.components.mqtt.async_subscribe", side_effect=mock_subscribe),
+            patch("homeassistant.components.mqtt.async_publish", new_callable=AsyncMock),
+        ):
+            task = asyncio.create_task(async_fetch_device_metadata(hass, entry, wait_timeout=0.5))
+            await asyncio.sleep(0.1)
+            msg = MagicMock()
+            msg.payload = json.dumps({"StatusFWR": {"Version": "14.3.0.2(safeboot)"}})
+            msg.topic = "stat/SmartPool/STATUS2"
+            callbacks["stat/SmartPool/STATUS2"](msg)
+            await task
+
+        assert entry.runtime_data.tasmota_version == "15.6.0"
+        assert entry.runtime_data.tasmota_image == "tasmota32-neopool"
 
 
 # ---------------------------------------------------------------------------

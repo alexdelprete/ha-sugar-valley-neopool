@@ -14,6 +14,7 @@ from custom_components.sugar_valley_neopool.const import (
     CMD_UPGRADE,
     FIRMWARE_BASE_URL,
     FIRMWARE_MANIFEST_URL,
+    FIRMWARE_RETRY_SECONDS,
 )
 from custom_components.sugar_valley_neopool.update import (
     NeoPoolFirmwareUpdate,
@@ -227,25 +228,60 @@ class TestManifestFetch:
     async def test_fetch_errors_keep_last_manifest(
         self, hass: HomeAssistant, mock_config_entry: MagicMock, aioclient_mock: Any
     ) -> None:
-        """HTTP errors, bad JSON and bad shapes leave the previous manifest in place."""
+        """HTTP errors, bad JSON and bad shapes keep the previous manifest and retry once soon."""
         ent = _entity(mock_config_entry)
         ent.hass = hass
         previous = _manifest()
         ent._manifest = previous
 
-        aioclient_mock.get(FIRMWARE_MANIFEST_URL, status=500)
-        await ent.async_update()
-        assert ent._manifest is previous
+        with patch(f"{_UPDATE}.async_call_later", return_value=MagicMock()) as later:
+            aioclient_mock.get(FIRMWARE_MANIFEST_URL, status=500)
+            await ent.async_update()
+            assert ent._manifest is previous
 
-        aioclient_mock.clear_requests()
-        aioclient_mock.get(FIRMWARE_MANIFEST_URL, text="not json")
-        await ent.async_update()
-        assert ent._manifest is previous
+            aioclient_mock.clear_requests()
+            aioclient_mock.get(FIRMWARE_MANIFEST_URL, text="not json")
+            await ent.async_update()
+            assert ent._manifest is previous
 
-        aioclient_mock.clear_requests()
-        aioclient_mock.get(FIRMWARE_MANIFEST_URL, json={"unexpected": True})
+            aioclient_mock.clear_requests()
+            aioclient_mock.get(FIRMWARE_MANIFEST_URL, json={"unexpected": True})
+            await ent.async_update()
+            assert ent._manifest is previous
+
+        # One retry pending at a time, however many fetches fail
+        later.assert_called_once()
+        assert later.call_args.args[1] == FIRMWARE_RETRY_SECONDS
+        assert ent._cancel_retry is later.return_value
+
+    @pytest.mark.asyncio
+    async def test_fetch_success_cancels_pending_retry(
+        self, hass: HomeAssistant, mock_config_entry: MagicMock, aioclient_mock: Any
+    ) -> None:
+        """A good fetch drops a retry scheduled by an earlier failure."""
+        aioclient_mock.get(FIRMWARE_MANIFEST_URL, json=_manifest())
+        ent = _entity(mock_config_entry)
+        ent.hass = hass
+        cancel = MagicMock()
+        ent._cancel_retry = cancel
         await ent.async_update()
-        assert ent._manifest is previous
+        cancel.assert_called_once()
+        assert ent._cancel_retry is None
+
+    def test_retry_refetches(self, mock_config_entry: MagicMock) -> None:
+        """When the retry fires it clears itself and forces a manifest fetch."""
+        ent = _entity(mock_config_entry)
+        ent.async_schedule_update_ha_state = MagicMock()
+        ent._cancel_retry = MagicMock()
+        ent._async_retry_fetch(None)
+        assert ent._cancel_retry is None
+        ent.async_schedule_update_ha_state.assert_called_once_with(force_refresh=True)
+
+    def test_cancel_retry_without_pending_is_noop(self, mock_config_entry: MagicMock) -> None:
+        """Removing the entity with no retry pending does nothing."""
+        ent = _entity(mock_config_entry)
+        ent._async_cancel_retry()
+        assert ent._cancel_retry is None
 
     @pytest.mark.asyncio
     async def test_added_to_hass_subscribes_and_fetches(

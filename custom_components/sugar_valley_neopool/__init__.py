@@ -37,6 +37,7 @@ from .const import (
     DEFAULT_OFFLINE_TIMEOUT,
     DEFAULT_RECOVERY_SCRIPT,
     DOMAIN,
+    FIRMWARE_SAFEBOOT_IMAGE,
     JSON_PATH_POWERUNIT_VERSION,
     JSON_PATH_TIME,
     JSON_PATH_TYPE,
@@ -924,6 +925,15 @@ _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
     ],
 }
 
+# Keys of NeoPool.Relay recorded in available_relays: the named relays plus the
+# "AuxMode" capability. The startup metadata fetch and the persistent SENSOR
+# watch must use this same set: if one records a key the other drops, every
+# setup disables the entities the watch then re-enables, and the re-enable
+# reload starts the next setup — an endless reload loop.
+_TELEMETRY_RELAY_KEYS: Final[frozenset[str]] = frozenset(
+    {"Acid", "Base", "Redox", "Chlorine", "Conductivity", "Heating", "UV", "Valve", "AuxMode"}
+)
+
 
 # Entities whose only hardware dependency is the water temperature measurement.
 # The driver publishes NeoPool.Temperature only when MBF_PAR_TEMPERATURE_ACTIVE
@@ -1235,20 +1245,6 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
     mqtt_topic = entry.runtime_data.mqtt_topic
     sensor_topic = f"tele/{mqtt_topic}/SENSOR"
 
-    # Named relays plus "AuxMode", the per-AUX operating-mode array the Tasmota
-    # driver publishes from v16.0.0 — tracked here so the AUX operating-mode
-    # sensors are disabled/enabled with the firmware capability.
-    relay_names = {
-        "Acid",
-        "Base",
-        "Redox",
-        "Chlorine",
-        "Conductivity",
-        "Heating",
-        "UV",
-        "Valve",
-        "AuxMode",
-    }
     rate_signal = connection_rate_signal(entry)
 
     @callback
@@ -1326,7 +1322,7 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
 
         relay_data = get_nested_value(payload, "NeoPool.Relay")
         new_relays: set[str] = (
-            {k for k in relay_data if k in relay_names}
+            {k for k in relay_data if k in _TELEMETRY_RELAY_KEYS}
             if isinstance(relay_data, dict)
             else entry.runtime_data.available_relays
         )
@@ -2007,17 +2003,7 @@ async def async_fetch_device_metadata(  # noqa: C901
             # Detect which named relays are present in the payload
             relay_data = get_nested_value(payload, "NeoPool.Relay")
             if isinstance(relay_data, dict):
-                relay_names = {
-                    "Acid",
-                    "Base",
-                    "Redox",
-                    "Chlorine",
-                    "Conductivity",
-                    "Heating",
-                    "UV",
-                    "Valve",
-                }
-                available_relays = {k for k in relay_data if k in relay_names}
+                available_relays = {k for k in relay_data if k in _TELEMETRY_RELAY_KEYS}
                 _LOGGER.debug("Detected available relays: %s", available_relays)
             # Detect which modules are installed (value == 1)
             modules_data = get_nested_value(payload, "NeoPool.Modules")
@@ -2135,10 +2121,19 @@ async def async_fetch_device_metadata(  # noqa: C901
         entry.runtime_data.machine_type = machine_type
     if fw_version:
         entry.runtime_data.fw_version = fw_version
-    if tasmota_version:
-        entry.runtime_data.tasmota_version = tasmota_version
-    if tasmota_image:
-        entry.runtime_data.tasmota_image = tasmota_image
+    if tasmota_image == FIRMWARE_SAFEBOOT_IMAGE:
+        # Mid-OTA: the safeboot image is flashing the new firmware. Keep the firmware the
+        # device runs (and will report again after the upgrade) instead of the safeboot one.
+        _LOGGER.debug(
+            "%s is in safeboot (OTA in progress): keeping Tasmota %s",
+            mqtt_topic,
+            entry.runtime_data.tasmota_version,
+        )
+    else:
+        if tasmota_version:
+            entry.runtime_data.tasmota_version = tasmota_version
+        if tasmota_image:
+            entry.runtime_data.tasmota_image = tasmota_image
     if device_ip:
         entry.runtime_data.device_ip = device_ip
 

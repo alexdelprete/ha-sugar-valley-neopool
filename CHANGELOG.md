@@ -5,7 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-10-18
+
+Stable release of everything in [2.2.0-beta.1](#220-beta1---2026-10-18)
+(firmware update entity, automated NeoPool firmware builds), plus the fixes
+below. Users of v2.1.3 / v2.1.4 who upgrade Tasmota to v16.0.0 need this
+release: see the first fix.
+
+### Fixed
+
+- **Endless integration reload loop on Tasmota v16.0.0.** The startup
+  metadata fetch did not record `Relay.AuxMode`, while the SENSOR watch did.
+  With firmware that publishes it, every setup disabled the four AUX
+  operating-mode sensors, the watch re-enabled them on the next telemetry
+  message and reloaded the integration, and the reload started the next
+  setup: the integration reloaded continuously (about twice a second),
+  re-reading the controller's registers each time. Both now use one shared
+  set of keys. Affects v2.1.3 and v2.1.4 as soon as the device runs Tasmota
+  v16.0.0 or later.
+- **Firmware update entity: a failed manifest check is retried after 5
+  minutes.** The first check runs while Home Assistant is still starting and
+  can time out; the entity then stayed unavailable until the next regular
+  check, 6 hours later.
+- **Firmware update entity: no "safeboot build" during an upgrade.** On ESP32
+  the upgrade runs through Tasmota's safeboot image for about a minute, and
+  the device reported that image's version and build: the entity briefly
+  showed the device as an unsupported build, and the device page showed the
+  safeboot version. The firmware the device runs is now kept until it
+  reports in again.
 
 ## [2.2.0-beta.1] - 2026-10-18
 

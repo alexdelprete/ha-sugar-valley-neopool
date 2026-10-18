@@ -9,7 +9,7 @@ from homeassistant.const import Platform
 # Integration identity
 DOMAIN: Final = "sugar_valley_neopool"
 NAME: Final = "Sugar Valley NeoPool"
-VERSION = "2.2.0-beta.2"
+VERSION = "2.2.0"
 MANUFACTURER: Final = "Sugar Valley"
 MODEL: Final = "NeoPool Controller"
 
@@ -668,6 +668,7 @@ FIRMWARE_README_URL: Final = (
     "https://github.com/alexdelprete/ha-sugar-valley-neopool/blob/main/firmware/README.md"
 )
 FIRMWARE_CHECK_INTERVAL_HOURS: Final = 6  # manifest polling interval
+FIRMWARE_RETRY_SECONDS: Final = 300  # retry a failed manifest fetch sooner than the next poll
 FIRMWARE_INSTALL_TIMEOUT_SECONDS: Final = 600  # OtaUrl + Upgrade until the new version reports in
 # Build names Tasmota reports in Status 2 ("16.0.0(tasmota32-neopool)") that the entity may upgrade,
 # mapped to the manifest's build key. Only ESP32-family NeoPool builds: OTA from Home Assistant is
@@ -679,3 +680,7 @@ FIRMWARE_INSTALLABLE_IMAGES: Final[dict[str, str]] = {
     "tasmota32s3-neopool": "esp32s3",
 }
 FIRMWARE_ESP8266_IMAGE: Final = "tasmota-neopool"
+# Build name of the minimal image an ESP32 with a safeboot partition runs during an OTA: Upgrade 1
+# reboots into it, it downloads and flashes the new firmware, then reboots into that. It is a
+# transient state of the device, not the firmware it runs.
+FIRMWARE_SAFEBOOT_IMAGE: Final = "safeboot"

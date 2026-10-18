@@ -18,10 +18,11 @@ from aiohttp import ClientError, ClientTimeout
 
 from homeassistant.components.update import UpdateDeviceClass, UpdateEntity, UpdateEntityFeature
 from homeassistant.const import EntityCategory
-from homeassistant.core import callback
+from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.event import async_call_later
 from homeassistant.util import dt as dt_util
 
 from . import metadata_signal
@@ -36,6 +37,7 @@ from .const import (
     FIRMWARE_INSTALLABLE_IMAGES,
     FIRMWARE_MANIFEST_URL,
     FIRMWARE_README_URL,
+    FIRMWARE_RETRY_SECONDS,
 )
 from .entity import NeoPoolMQTTEntity
 
@@ -93,6 +95,7 @@ class NeoPoolFirmwareUpdate(NeoPoolMQTTEntity, UpdateEntity):
         self._manifest: dict[str, Any] | None = None
         self._install_target: str | None = None
         self._install_done: asyncio.Event | None = None
+        self._cancel_retry: CALLBACK_TYPE | None = None
 
     async def async_added_to_hass(self) -> None:
         """Subscribe to LWT and metadata updates, then fetch the manifest once."""
@@ -104,10 +107,16 @@ class NeoPoolFirmwareUpdate(NeoPoolMQTTEntity, UpdateEntity):
                 self._handle_metadata_update,
             )
         )
+        self.async_on_remove(self._async_cancel_retry)
         self.async_schedule_update_ha_state(force_refresh=True)
 
     async def async_update(self) -> None:
-        """Fetch firmware/manifest.json; keep the last good copy on any error."""
+        """Fetch firmware/manifest.json; keep the last good copy on any error.
+
+        A failed fetch is retried after FIRMWARE_RETRY_SECONDS instead of waiting for the next
+        poll: the first fetch runs while Home Assistant is still starting and can time out,
+        and without a manifest the entity stays unavailable until it succeeds.
+        """
         session = async_get_clientsession(self.hass)
         try:
             async with session.get(FIRMWARE_MANIFEST_URL, timeout=_MANIFEST_TIMEOUT) as resp:
@@ -115,13 +124,38 @@ class NeoPoolFirmwareUpdate(NeoPoolMQTTEntity, UpdateEntity):
                 # raw.githubusercontent.com serves JSON as text/plain
                 data = await resp.json(content_type=None)
         except (ClientError, TimeoutError, ValueError) as err:
-            _LOGGER.debug("Firmware manifest fetch failed: %s", err)
+            # TimeoutError has an empty str(): log the type too
+            _LOGGER.debug("Firmware manifest fetch failed: %s %s", type(err).__name__, err)
+            self._async_schedule_retry()
             return
         manifest = _parse_manifest(data)
         if manifest is None:
             _LOGGER.debug("Firmware manifest has an unexpected format, ignoring it")
+            self._async_schedule_retry()
             return
         self._manifest = manifest
+        self._async_cancel_retry()
+
+    @callback
+    def _async_schedule_retry(self) -> None:
+        """Fetch the manifest again soon (at most one retry pending)."""
+        if self._cancel_retry is None:
+            self._cancel_retry = async_call_later(
+                self.hass, FIRMWARE_RETRY_SECONDS, self._async_retry_fetch
+            )
+
+    @callback
+    def _async_retry_fetch(self, _now: Any) -> None:
+        """Run the scheduled manifest retry."""
+        self._cancel_retry = None
+        self.async_schedule_update_ha_state(force_refresh=True)
+
+    @callback
+    def _async_cancel_retry(self) -> None:
+        """Drop a pending manifest retry."""
+        if self._cancel_retry is not None:
+            self._cancel_retry()
+            self._cancel_retry = None
 
     @callback
     def _handle_metadata_update(self) -> None:
