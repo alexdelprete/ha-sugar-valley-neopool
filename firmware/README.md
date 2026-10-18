@@ -36,11 +36,11 @@ use one of the files listed below that corresponds to your ESP chip type:
 - [NeoPool_ESP8266_tasmota.bin.gz][esp8266-gz] - all ESP8266 chip types
 
 <!-- Link references -->
-[esp32-factory]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32_tasmota32.factory.bin
-[esp32s3-factory]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32S3_tasmota32s3.factory.bin
-[esp32c3-factory]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32C3_tasmota32c3.factory.bin
-[esp8266]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP8266_tasmota.bin
-[esp32]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32_tasmota32.bin
-[esp32s3]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32S3_tasmota32s3.bin
-[esp32c3]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP32C3_tasmota32c3.bin
-[esp8266-gz]: https://github.com/alexdelprete/HA-NeoPool-MQTT/raw/refs/heads/main/firmware/NeoPool_ESP8266_tasmota.bin.gz
+[esp32-factory]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32_tasmota32.factory.bin
+[esp32s3-factory]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32S3_tasmota32s3.factory.bin
+[esp32c3-factory]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32C3_tasmota32c3.factory.bin
+[esp8266]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP8266_tasmota.bin
+[esp32]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32_tasmota32.bin
+[esp32s3]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32S3_tasmota32s3.bin
+[esp32c3]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP32C3_tasmota32c3.bin
+[esp8266-gz]: https://github.com/alexdelprete/ha-sugar-valley-neopool/raw/refs/heads/main/firmware/NeoPool_ESP8266_tasmota.bin.gz
