@@ -358,7 +358,7 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
 
     The displayed option has two sources, in order of preference:
 
-    1. Push (Tasmota 15.6.0.1+, PR #24998): SENSOR NeoPool.Relay.AuxMode[n]
+    1. Push (Tasmota v16.0.0+, PR #24998): SENSOR NeoPool.Relay.AuxMode[n]
        (0 Manual / 1 Timer / 2 Countdown) combined with the physical
        NeoPool.Relay.Aux[n] gives Manual+on → "on", Manual+off → "off",
        Timer → "auto"; Countdown has no select option (None). Keypad edits are

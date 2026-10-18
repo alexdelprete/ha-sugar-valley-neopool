@@ -374,7 +374,7 @@
                 entity: select.neopool_aux4_mode
                 name: Aux4
               # Hidden until the Tasmota firmware publishes Relay.AuxMode
-              # (15.6.0.1+); the integration disables the entity before that.
+              # (Tasmota v16.0.0+); the integration disables the entity before that.
               - type: conditional
                 conditions:
                   - entity: sensor.neopool_aux1_operating_mode

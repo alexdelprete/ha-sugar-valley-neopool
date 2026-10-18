@@ -478,7 +478,7 @@ class TestDisableUnavailableRelayConfigEntities:
     def test_auxmode_gates_operating_mode_sensors(self, hass: HomeAssistant) -> None:
         """The AUX operating-mode sensors follow the AuxMode firmware capability.
 
-        Tasmota publishes NeoPool.Relay.AuxMode from 15.6.0.1 (PR #24998); on
+        Tasmota publishes NeoPool.Relay.AuxMode from v16.0.0 (PR #24998); on
         older builds the four sensors are disabled (not left dead), and they
         come back once the key appears in telemetry.
         """

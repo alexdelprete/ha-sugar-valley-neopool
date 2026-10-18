@@ -149,8 +149,9 @@ def _hydrolysis_percent_fn(payload: dict[str, Any]) -> float | None:
 def _aux_operating_mode_fn(index: int) -> Callable[[dict[str, Any]], str | None]:
     """Build a payload_fn mapping NeoPool.Relay.AuxMode[index] to its enum option.
 
-    The Tasmota driver publishes AuxMode from 15.6.0.1 (PR #24998) as one int
-    per AUX: 0 Manual, 1 Timer, 2 Countdown, -1 Unknown. A missing array, a
+    The Tasmota driver publishes AuxMode from v16.0.0 (PR #24998) as one int
+    per AUX: 0 Manual, 1 Timer, 2 Countdown, -1 Unknown (sent as 65535: the
+    driver prints an unsigned 16-bit value). A missing array, a
     short array, or an unknown value yields None (entity unavailable).
     """
 
@@ -500,7 +501,7 @@ SENSOR_DESCRIPTIONS: tuple[NeoPoolSensorEntityDescription, ...] = (
         min_update_interval=3600.0,
     ),
     # AUX operating mode (Manual / Timer / Countdown), pushed by the Tasmota
-    # driver in NeoPool.Relay.AuxMode (15.6.0.1+). Complements the aux<n>_mode
+    # driver in NeoPool.Relay.AuxMode (v16.0.0+). Complements the aux<n>_mode
     # selects (which cannot express Countdown) and the aux<n> binary sensors
     # (physical relay state). Disabled by the dynamic-disable watch when the
     # firmware does not publish the array.

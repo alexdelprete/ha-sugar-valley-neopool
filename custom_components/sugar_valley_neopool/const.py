@@ -291,13 +291,14 @@ AUX_MODE_MAP: Final[dict[int, str]] = {
 }
 
 # AUX operating mode pushed by the Tasmota driver in SENSOR NeoPool.Relay.AuxMode
-# (arendst/Tasmota PR #24998, merged 2026-09-03 into 15.6.0.1 — absent on
-# stable 15.6.0 and earlier). One int per AUX, derived by the driver from the
-# low byte of the AUX INT1 timer-block mode word (MBV_TIMER_OFFMB_TIMER_ENABLE):
+# (arendst/Tasmota PR #24998, merged 2026-09-03 into 15.6.0.1; first stable
+# release with it is v16.0.0, 2026-10-16 — absent on 15.6.0 and earlier).
+# One int per AUX, derived by the driver from the low byte of the AUX INT1
+# timer-block mode word (MBV_TIMER_OFFMB_TIMER_ENABLE):
 #   0 = Manual    (MBV_PAR_CTIMER_ALWAYS_ON / ALWAYS_OFF)
 #   1 = Timer     (MBV_PAR_CTIMER_DISABLE / ENABLED / ENABLED_LINKED)
 #   2 = Countdown (MBV_PAR_CTIMER_COUNTDOWN_KEY_*)
-#  -1 = Unknown   (anything else)
+#  -1 = Unknown   (anything else; sent as 65535, the driver prints a uint16_t)
 # Together with the physical Relay.Aux[n] this yields the aux<n>_mode select's
 # option push-natively (Manual+on → "on", Manual+off → "off", Timer → "auto").
 # Note the numbering differs from an earlier proposal (Countdown=2, Timer=3).

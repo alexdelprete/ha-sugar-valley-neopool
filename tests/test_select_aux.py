@@ -189,7 +189,7 @@ class TestNeoPoolAuxModeSelect:
 
 
 class TestNeoPoolAuxModeSelectPush:
-    """Push-native option from NeoPool.Relay.AuxMode (Tasmota 15.6.0.1+, PR #24998)."""
+    """Push-native option from NeoPool.Relay.AuxMode (Tasmota v16.0.0+, PR #24998)."""
 
     def _make(self, entry: MagicMock) -> tuple[NeoPoolAuxModeSelect, Any]:
         desc = AUX_MODE_SELECT_DESCRIPTIONS[1]  # aux2_mode -> index 1
@@ -245,6 +245,8 @@ class TestNeoPoolAuxModeSelectPush:
         cb(self._msg([0, 1, 0, 0], [0, AUX_OPERATING_MODE_COUNTDOWN, 0, 0]))
         assert sel.current_option is None
         cb(self._msg([0, 1, 0, 0], [0, -1, 0, 0]))
+        assert sel.current_option is None
+        cb(self._msg([0, 1, 0, 0], [0, 65535, 0, 0]))  # Unknown as sent on the wire
         assert sel.current_option is None
 
     @pytest.mark.asyncio

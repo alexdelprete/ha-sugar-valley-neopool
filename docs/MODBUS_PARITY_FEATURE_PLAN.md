@@ -483,7 +483,8 @@ to follow rather than a separate phase.
   2026-06-30). Reason: generating it is complex and bloats the ESP82xx code, and
   the driver is kept lean. So it is not coming.
 - **AUX operating mode: SHIPPED upstream as `Relay.AuxMode`** (@curzon01,
-  arendst/Tasmota #24998, merged 2026-09-03 into 15.6.0.1). He took the
+  arendst/Tasmota #24998, merged 2026-09-03 into 15.6.0.1, first stable release
+  v16.0.0 on 2026-10-16). He took the
   "supplement" option below: `Relay.Aux` stays physical 0/1 and a separate
   `Relay.AuxMode` array carries `0 Manual / 1 Timer / 2 Countdown / -1 Unknown`
   per AUX (derived from the low byte of each AUX INT1 timer-block mode word:

@@ -890,7 +890,7 @@ _MODULE_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
 # smart_antifreeze is not here: its only dependency is the temperature
 # measurement, handled by _TEMPERATURE_ENTITIES. "AuxMode" is not a relay but a
 # firmware capability: the
-# Tasmota driver publishes NeoPool.Relay.AuxMode from 15.6.0.1 (PR #24998), so
+# Tasmota driver publishes NeoPool.Relay.AuxMode from v16.0.0 (PR #24998), so
 # on older builds the AUX operating-mode sensors are disabled rather than dead,
 # and they re-enable automatically after a firmware update.
 _RELAY_CONFIG_ENTITY_MAP: Final[dict[str, list[tuple[str, str]]]] = {
@@ -1222,7 +1222,7 @@ async def _setup_dynamic_disable_watch(hass: HomeAssistant, entry: NeoPoolConfig
     sensor_topic = f"tele/{mqtt_topic}/SENSOR"
 
     # Named relays plus "AuxMode", the per-AUX operating-mode array the Tasmota
-    # driver publishes from 15.6.0.1 — tracked here so the AUX operating-mode
+    # driver publishes from v16.0.0 — tracked here so the AUX operating-mode
     # sensors are disabled/enabled with the firmware capability.
     relay_names = {
         "Acid",

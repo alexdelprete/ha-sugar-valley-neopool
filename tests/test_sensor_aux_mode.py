@@ -1,4 +1,4 @@
-"""Tests for the AUX operating-mode sensors (NeoPool.Relay.AuxMode, Tasmota 15.6.0.1+)."""
+"""Tests for the AUX operating-mode sensors (NeoPool.Relay.AuxMode, Tasmota v16.0.0+)."""
 
 from __future__ import annotations
 
@@ -68,6 +68,11 @@ class TestAuxOperatingModeFn:
         """Garbage element -> None."""
         assert _aux_operating_mode_fn(0)({"NeoPool": {"Relay": {"AuxMode": ["x"]}}}) is None
 
+    def test_unknown_as_sent_by_tasmota(self) -> None:
+        """The driver's Unknown (-1) arrives as 65535 (uint16_t printed with %d) -> None."""
+        payload = {"NeoPool": {"Relay": {"AuxMode": [65535, 0, 0, 0]}}}
+        assert _aux_operating_mode_fn(0)(payload) is None
+
     def test_string_digits_accepted(self) -> None:
         """Numeric strings map like ints."""
         assert _aux_operating_mode_fn(0)({"NeoPool": {"Relay": {"AuxMode": ["2"]}}}) == "countdown"
@@ -114,6 +119,13 @@ class TestAuxOperatingModeSensor:
         assert sensor._attr_native_value == "timer"
 
         payload["NeoPool"]["Relay"]["AuxMode"] = [0, -1, 2, 0]
+        msg.payload = json.dumps(payload)
+        sensor_cb(msg)
+        assert sensor._attr_available is False
+        assert sensor._attr_native_value is None
+
+        # What Tasmota v16.0.0 actually sends for Unknown (uint16_t -1)
+        payload["NeoPool"]["Relay"]["AuxMode"] = [0, 65535, 2, 0]
         msg.payload = json.dumps(payload)
         sensor_cb(msg)
         assert sensor._attr_available is False

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Docs name Tasmota v16.0.0 as the firmware that publishes `Relay.AuxMode`.**
+  @curzon01's driver change (arendst/Tasmota #24998) shipped in the first
+  stable release containing it, Tasmota v16.0.0 (2026-10-16). The README,
+  the MQTT reference, the dashboards' comments and the code comments now
+  say "v16.0.0 or later" instead of "15.6.0.1" / "the next stable after
+  15.6.0". No code change was needed: the v16.0.0 driver emits exactly what
+  2.1.3 was built against. Tests now also cover the value the driver
+  actually sends for an unknown mode (`65535`, an unsigned `-1`), which the
+  integration already treats as "no mode".
+
 ## [2.1.4] - 2026-10-03
 
 ### Changed
