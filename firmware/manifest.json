@@ -1,0 +1,62 @@
+{
+  "tasmota_version": "16.0.0",
+  "tasmota_tag": "v16.0.0",
+  "tasmota_codename": "Theo",
+  "release_url": "https://github.com/arendst/Tasmota/releases/tag/v16.0.0",
+  "published_at": "2026-10-18T18:35:19Z",
+  "available_from": "2026-10-19T18:35:19Z",
+  "builds": {
+    "esp8266": {
+      "env": "tasmota",
+      "ota": {
+        "file": "NeoPool_ESP8266_tasmota.bin.gz",
+        "size": 480497,
+        "sha256": "5f26ad24a8dc27d487c013deae2919576da91523155dd10fef7a9590107a4fea"
+      },
+      "serial": {
+        "file": "NeoPool_ESP8266_tasmota.bin",
+        "size": 683872,
+        "sha256": "90d9396631d09ab92455fd52fa63278f3c2322ffb3d9baf6fa416e4e76479317"
+      }
+    },
+    "esp32": {
+      "env": "tasmota32",
+      "ota": {
+        "file": "NeoPool_ESP32_tasmota32.bin",
+        "size": 2231792,
+        "sha256": "e414ce745f364186f75fbe5c3872b04fea3576021e0597ca3ded9bf5c09c359d"
+      },
+      "factory": {
+        "file": "NeoPool_ESP32_tasmota32.factory.bin",
+        "size": 3149296,
+        "sha256": "4b71726ada066d7a859cece0e44c22ee84973a7c91f46fd8dc2f07ddc1db9b24"
+      }
+    },
+    "esp32c3": {
+      "env": "tasmota32c3",
+      "ota": {
+        "file": "NeoPool_ESP32C3_tasmota32c3.bin",
+        "size": 2234224,
+        "sha256": "1c8970e8a7754d6b91cea0031f717331dbbb136d59bb32eb681c6d693fa7d229"
+      },
+      "factory": {
+        "file": "NeoPool_ESP32C3_tasmota32c3.factory.bin",
+        "size": 3151728,
+        "sha256": "39543b6bb51ebc8fca4ecd0b116ba52b10b5f43280c42283128d488c35cbcbaa"
+      }
+    },
+    "esp32s3": {
+      "env": "tasmota32s3",
+      "ota": {
+        "file": "NeoPool_ESP32S3_tasmota32s3.bin",
+        "size": 2155520,
+        "sha256": "b55f4e576b5087db601300ec3b06ba16126e735f8782b38ec715e92f2e5994e2"
+      },
+      "factory": {
+        "file": "NeoPool_ESP32S3_tasmota32s3.factory.bin",
+        "size": 3073024,
+        "sha256": "cdcb3e3e4e8b9d084ed3bef8d67992e5f74fceb9bc5cf9e9e707acec8a6993a9"
+      }
+    }
+  }
+}
