@@ -5,6 +5,14 @@ This folder contains [Tasmota](https://github.com/arendst/Tasmota) binary files 
 
 The binaries are based on [Tasmota v16.0.0 Theo](https://github.com/arendst/Tasmota/tree/v16.0.0).
 
+## Updating from Home Assistant
+
+The Sugar Valley NeoPool integration has a firmware update entity that offers
+new versions of these binaries 24 hours after they are published. **Install**
+from Home Assistant works only on ESP32, ESP32-S3 and ESP32-C3 devices that
+already run one of these NeoPool builds. ESP8266 devices must be upgraded by
+hand with the files below.
+
 ## Files for initial flash
 
 These files are for initial flashing an ESP only. Do not use these for OTA or file upload updates.

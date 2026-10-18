@@ -64,6 +64,7 @@ from .helpers import (
     get_nested_value,
     is_masked_unique_id,
     normalize_nodeid,
+    parse_tasmota_version,
     validate_nodeid,
 )
 from .services import async_setup_services, async_unload_services
@@ -98,6 +99,16 @@ def config_register_signal(entry: ConfigEntry) -> str:
     return f"{DOMAIN}_config_register_updated_{entry.entry_id}"
 
 
+def metadata_signal(entry: ConfigEntry) -> str:
+    """Return the dispatcher signal name for device-metadata updates.
+
+    Fired at the end of every async_fetch_device_metadata run (setup and the LWT-driven refresh);
+    consumed by the firmware update entity, which waits for the new Tasmota version to report in
+    after an upgrade.
+    """
+    return f"{DOMAIN}_metadata_updated_{entry.entry_id}"
+
+
 @dataclass
 class NeoPoolData:
     """Runtime data for the NeoPool integration."""
@@ -113,6 +124,9 @@ class NeoPoolData:
     machine_type: str | None = None  # Raw NeoPool.Type, e.g. "Hay" (shown as model)
     fw_version: str | None = None  # From NeoPool.Powerunit.Version
     tasmota_version: str | None = None  # From StatusFWR.Version
+    # Build name from StatusFWR.Version, e.g. "tasmota32-neopool"; decides which firmware the
+    # update entity may install.
+    tasmota_image: str | None = None
     available_relays: set[str] = field(default_factory=set)  # Relay keys present in SENSOR
     # Module keys reported as installed (value == 1) in NeoPool.Modules; used to
     # auto-disable sensor/number entities for modules the controller doesn't have.
@@ -1961,6 +1975,7 @@ async def async_fetch_device_metadata(  # noqa: C901
     machine_type: str | None = None
     fw_version: str | None = None
     tasmota_version: str | None = None
+    tasmota_image: str | None = None
     device_ip: str | None = None
     available_relays: set[str] = set()
     available_modules: set[str] = set()
@@ -2026,7 +2041,7 @@ async def async_fetch_device_metadata(  # noqa: C901
     @callback
     def status2_received(msg: mqtt.ReceiveMessage) -> None:
         """Handle Status 2 (firmware) response."""
-        nonlocal tasmota_version
+        nonlocal tasmota_version, tasmota_image
         try:
             payload = json.loads(
                 msg.payload.decode("utf-8")
@@ -2037,8 +2052,10 @@ async def async_fetch_device_metadata(  # noqa: C901
             if status_fwr:
                 ver = status_fwr.get("Version", "")
                 if ver:
-                    tasmota_version = ver.split("(")[0].strip()
-                    _LOGGER.debug("Extracted Tasmota version: %s", tasmota_version)
+                    tasmota_version, tasmota_image = parse_tasmota_version(str(ver))
+                    _LOGGER.debug(
+                        "Extracted Tasmota version: %s (image %s)", tasmota_version, tasmota_image
+                    )
                     status2_event.set()
         except (json.JSONDecodeError, UnicodeDecodeError) as err:
             _LOGGER.debug("Failed to parse Status 2 response: %s", err)
@@ -2120,6 +2137,8 @@ async def async_fetch_device_metadata(  # noqa: C901
         entry.runtime_data.fw_version = fw_version
     if tasmota_version:
         entry.runtime_data.tasmota_version = tasmota_version
+    if tasmota_image:
+        entry.runtime_data.tasmota_image = tasmota_image
     if device_ip:
         entry.runtime_data.device_ip = device_ip
 
@@ -2149,6 +2168,9 @@ async def async_fetch_device_metadata(  # noqa: C901
             tasmota_version or "unknown",
             device_ip or "unknown",
         )
+
+    # Let the firmware update entity pick up a new Tasmota version (e.g. after an upgrade)
+    async_dispatcher_send(hass, metadata_signal(entry))
 
 
 async def _update_device_registry_metadata(

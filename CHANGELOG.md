@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Tasmota firmware update entity.** Each device gets
+  `update.<device>_tasmota_firmware`, which compares the Tasmota version
+  the device reports (`Status 2`) with the newest NeoPool build in
+  `firmware/` (read from `firmware/manifest.json` every 6 hours). On
+  ESP32, ESP32-S3 and ESP32-C3 devices that run a NeoPool build
+  (`tasmota32-neopool`, `tasmota32s3-neopool`, `tasmota32c3-neopool`),
+  **Install** sends `OtaUrl` + `Upgrade 1`: a normal OTA upgrade that keeps
+  the device's settings. ESP8266 devices and other builds get a read-only
+  entity. A new version is offered 24 hours after it is published.
+- **Automated NeoPool firmware builds.** A daily GitHub workflow builds
+  Tasmota with the NeoPool driver (ESP8266, ESP32, ESP32-S3, ESP32-C3) for
+  each new Tasmota stable release and publishes the binaries and a
+  manifest to `firmware/`. The images report themselves as
+  `tasmota32-neopool` etc., like the earlier hand-made builds.
+
 ### Changed
 
 - **Docs name Tasmota v16.0.0 as the firmware that publishes `Relay.AuxMode`.**

@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Lystidsur Stopp"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Tasmota-fastvare"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Fant ingen NeoPool-kontroller for enhet {device_id}."
+    },
+    "firmware_not_installable": {
+      "message": "Denne enheten kjører en '{image}'-versjon. Bare NeoPool-versjonene for ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) kan oppdateres fra Home Assistant."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "Fastvaremanifestet er ikke tilgjengelig eller har ingen versjon for denne enheten. Prøv igjen senere."
+    },
+    "firmware_device_offline": {
+      "message": "Tasmota-enheten er frakoblet. Oppdater den når den er tilkoblet igjen."
+    },
+    "firmware_install_timeout": {
+      "message": "Enheten rapporterte ikke Tasmota {version} innen {minutes} minutter. Sjekk Tasmotas webgrensesnitt: oppdateringen kan fortsatt pågå, eller den mislyktes og enheten beholdt gjeldende fastvare."
     }
   }
 }

@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Light Timer Stop"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Tasmota Firmware"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "No NeoPool controller found for device {device_id}."
+    },
+    "firmware_not_installable": {
+      "message": "This device runs a '{image}' build. Only the NeoPool ESP32 builds (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) can be upgraded from Home Assistant."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "The firmware manifest is not available or has no build for this device. Try again later."
+    },
+    "firmware_device_offline": {
+      "message": "The Tasmota device is offline. Upgrade it once it is back online."
+    },
+    "firmware_install_timeout": {
+      "message": "The device did not report Tasmota {version} within {minutes} minutes. Check the Tasmota web UI: the upgrade may still be running, or it failed and the device kept its current firmware."
     }
   }
 }

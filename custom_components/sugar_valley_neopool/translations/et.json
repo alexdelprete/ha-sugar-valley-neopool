@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Valgustaimer Lõpp"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Tasmota püsivara"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Seadme {device_id} jaoks NeoPool kontrollerit ei leitud."
+    },
+    "firmware_not_installable": {
+      "message": "See seade kasutab '{image}' versiooni. Home Assistantist saab uuendada ainult NeoPooli ESP32 versioone (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool)."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "Püsivara manifest pole saadaval või selles pole selle seadme versiooni. Proovi hiljem uuesti."
+    },
+    "firmware_device_offline": {
+      "message": "Tasmota seade on võrguühenduseta. Uuenda seda, kui see on taas võrgus."
+    },
+    "firmware_install_timeout": {
+      "message": "Seade ei teatanud Tasmota versiooni {version} {minutes} minuti jooksul. Kontrolli Tasmota veebiliidest: uuendus võib veel käia või see ebaõnnestus ja seade jäi praeguse püsivara juurde."
     }
   }
 }

@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Minuterie de lumière Fin"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Firmware Tasmota"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Aucun contrôleur NeoPool trouvé pour l'appareil {device_id}."
+    },
+    "firmware_not_installable": {
+      "message": "Cet appareil utilise une compilation '{image}'. Seules les compilations NeoPool pour ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) peuvent être mises à jour depuis Home Assistant."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "Le manifeste du firmware n'est pas disponible ou ne contient pas de compilation pour cet appareil. Réessayez plus tard."
+    },
+    "firmware_device_offline": {
+      "message": "L'appareil Tasmota est hors ligne. Mettez-le à jour lorsqu'il sera de nouveau en ligne."
+    },
+    "firmware_install_timeout": {
+      "message": "L'appareil n'a pas signalé Tasmota {version} dans les {minutes} minutes. Vérifiez l'interface web de Tasmota : la mise à jour est peut-être encore en cours, ou elle a échoué et l'appareil a conservé son firmware actuel."
     }
   }
 }

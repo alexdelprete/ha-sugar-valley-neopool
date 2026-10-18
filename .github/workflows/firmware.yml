@@ -88,7 +88,18 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        env: [tasmota, tasmota32, tasmota32c3, tasmota32s3]
+        # image = the build name Tasmota reports in Status 2 ("16.0.0(tasmota32-neopool)"). Same names
+        # as the earlier hand-made builds, so devices keep identifying as NeoPool builds and the
+        # integration's update entity can tell which binary a device needs.
+        include:
+          - env: tasmota
+            image: tasmota-neopool
+          - env: tasmota32
+            image: tasmota32-neopool
+          - env: tasmota32c3
+            image: tasmota32c3-neopool
+          - env: tasmota32s3
+            image: tasmota32s3-neopool
     steps:
       - name: Checkout this repository (build configuration)
         uses: actions/checkout@v7
@@ -128,6 +139,8 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
           PYTHONUTF8: "1"
+          # Appended to the env's build_flags; Tasmota only sets its default CODE_IMAGE_STR if undefined.
+          PLATFORMIO_BUILD_FLAGS: -DCODE_IMAGE_STR='"${{ matrix.image }}"'
         run: platformio run -e ${{ matrix.env }}
 
       - name: Upload firmware
@@ -177,21 +190,28 @@ jobs:
           dl = pathlib.Path("dl")
           fw = pathlib.Path("firmware")
 
-          # chip key -> (PlatformIO env, chip label in file names, {role: source file name})
+          # chip key -> (PlatformIO env, chip label in file names, image name, {role: source file name})
           builds = {
-              "esp8266": ("tasmota", "ESP8266", {"ota": "tasmota.bin.gz", "serial": "tasmota.bin"}),
-              "esp32": ("tasmota32", "ESP32", {"ota": "tasmota32.bin", "factory": "tasmota32.factory.bin"}),
+              "esp8266": (
+                  "tasmota", "ESP8266", "tasmota-neopool", {"ota": "tasmota.bin.gz", "serial": "tasmota.bin"}
+              ),
+              "esp32": (
+                  "tasmota32", "ESP32", "tasmota32-neopool",
+                  {"ota": "tasmota32.bin", "factory": "tasmota32.factory.bin"},
+              ),
               "esp32c3": (
-                  "tasmota32c3", "ESP32C3", {"ota": "tasmota32c3.bin", "factory": "tasmota32c3.factory.bin"}
+                  "tasmota32c3", "ESP32C3", "tasmota32c3-neopool",
+                  {"ota": "tasmota32c3.bin", "factory": "tasmota32c3.factory.bin"},
               ),
               "esp32s3": (
-                  "tasmota32s3", "ESP32S3", {"ota": "tasmota32s3.bin", "factory": "tasmota32s3.factory.bin"}
+                  "tasmota32s3", "ESP32S3", "tasmota32s3-neopool",
+                  {"ota": "tasmota32s3.bin", "factory": "tasmota32s3.factory.bin"},
               ),
           }
 
           manifest_builds = {}
-          for chip, (env, label, files) in builds.items():
-              entry = {"env": env}
+          for chip, (env, label, image, files) in builds.items():
+              entry = {"env": env, "image": image}
               for role, src_name in files.items():
                   src = dl / env / src_name
                   if not src.is_file():
@@ -204,10 +224,10 @@ jobs:
                       "size": len(data),
                       "sha256": hashlib.sha256(data).hexdigest(),
                   }
-              # Sanity check on the uncompressed application image: the NeoPool driver and its
-              # connection statistics must be compiled in.
+              # Sanity check on the uncompressed application image: the NeoPool driver, its
+              # connection statistics and the build's image name must be compiled in.
               app = (dl / env / files["serial" if chip == "esp8266" else "ota"]).read_bytes()
-              for marker in (b"NeoPool", b"MBRequests"):
+              for marker in (b"NeoPool", b"MBRequests", image.encode()):
                   if marker not in app:
                       raise SystemExit(f"{env}: {marker.decode()!r} not found in the image")
               manifest_builds[chip] = entry

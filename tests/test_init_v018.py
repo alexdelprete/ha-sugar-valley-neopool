@@ -43,6 +43,7 @@ from custom_components.sugar_valley_neopool import (
     config_register_signal,
     connection_rate_signal,
     get_device_info,
+    metadata_signal,
 )
 from custom_components.sugar_valley_neopool.const import (
     CONF_DEVICE_NAME,
@@ -56,8 +57,9 @@ from custom_components.sugar_valley_neopool.const import (
     TIMER_ENTITY_REGISTERS,
 )
 from custom_components.sugar_valley_neopool.helpers import ConnectionRateTracker
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 
 # ---------------------------------------------------------------------------
@@ -933,6 +935,10 @@ class TestAsyncFetchDeviceMetadata:
         )
 
         callbacks: dict[str, object] = {}
+        metadata_updates: list[None] = []
+        async_dispatcher_connect(
+            hass, metadata_signal(entry), callback(lambda: metadata_updates.append(None))
+        )
 
         async def mock_subscribe(hass, topic, callback, **kwargs):
             callbacks[topic] = callback
@@ -996,8 +1002,11 @@ class TestAsyncFetchDeviceMetadata:
         assert entry.runtime_data.machine_type == "Bayrol"
         assert entry.runtime_data.fw_version == "V6.0.0"
         assert entry.runtime_data.tasmota_version == "14.4.1"
+        assert entry.runtime_data.tasmota_image == "tasmota"
         assert entry.runtime_data.device_ip == "192.168.1.50"
         assert entry.runtime_data.available_relays == {"Acid", "Redox"}
+        # The firmware update entity re-reads the versions on this signal
+        assert len(metadata_updates) == 1
 
         # Check device registry was updated
         device = device_registry.async_get_device_by_identifier((DOMAIN, "ABC123"), entry.entry_id)

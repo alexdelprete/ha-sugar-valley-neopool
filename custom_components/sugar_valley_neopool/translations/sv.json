@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Ljustimer Stopp"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Tasmota-firmware"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Ingen NeoPool-styrenhet hittades för enhet {device_id}."
+    },
+    "firmware_not_installable": {
+      "message": "Den här enheten kör en '{image}'-version. Endast NeoPool-versionerna för ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) kan uppdateras från Home Assistant."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "Firmwaremanifestet är inte tillgängligt eller saknar en version för den här enheten. Försök igen senare."
+    },
+    "firmware_device_offline": {
+      "message": "Tasmota-enheten är offline. Uppdatera den när den är online igen."
+    },
+    "firmware_install_timeout": {
+      "message": "Enheten rapporterade inte Tasmota {version} inom {minutes} minuter. Kontrollera Tasmotas webbgränssnitt: uppdateringen kan fortfarande pågå, eller så misslyckades den och enheten behöll sin nuvarande firmware."
     }
   }
 }

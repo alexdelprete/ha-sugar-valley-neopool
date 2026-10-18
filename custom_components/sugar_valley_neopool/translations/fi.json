@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Valoajastin Lopetus"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Tasmota-laiteohjelmisto"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Laitteelle {device_id} ei löytynyt NeoPool-ohjainta."
+    },
+    "firmware_not_installable": {
+      "message": "Tämä laite käyttää '{image}'-koontiversiota. Home Assistantista voi päivittää vain NeoPoolin ESP32-koontiversioita (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool)."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "Laiteohjelmiston manifesti ei ole saatavilla tai siinä ei ole koontiversiota tälle laitteelle. Yritä myöhemmin uudelleen."
+    },
+    "firmware_device_offline": {
+      "message": "Tasmota-laite on offline-tilassa. Päivitä se, kun se on taas yhteydessä."
+    },
+    "firmware_install_timeout": {
+      "message": "Laite ei ilmoittanut Tasmota-versiota {version} {minutes} minuutin kuluessa. Tarkista Tasmotan verkkokäyttöliittymä: päivitys voi olla vielä käynnissä, tai se epäonnistui ja laite säilytti nykyisen laiteohjelmistonsa."
     }
   }
 }

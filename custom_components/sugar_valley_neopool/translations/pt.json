@@ -551,6 +551,11 @@
       "light_timer_stop": {
         "name": "Temporizador de luz Fim"
       }
+    },
+    "update": {
+      "tasmota_firmware": {
+        "name": "Firmware Tasmota"
+      }
     }
   },
   "services": {
@@ -617,6 +622,18 @@
   "exceptions": {
     "set_timer_unknown_device": {
       "message": "Nenhum controlador NeoPool encontrado para o dispositivo {device_id}."
+    },
+    "firmware_not_installable": {
+      "message": "Este dispositivo usa uma compilação '{image}'. Apenas as compilações NeoPool para ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) podem ser atualizadas a partir do Home Assistant."
+    },
+    "firmware_manifest_unavailable": {
+      "message": "O manifesto do firmware não está disponível ou não tem uma compilação para este dispositivo. Tente novamente mais tarde."
+    },
+    "firmware_device_offline": {
+      "message": "O dispositivo Tasmota está offline. Atualize-o quando voltar a estar online."
+    },
+    "firmware_install_timeout": {
+      "message": "O dispositivo não reportou o Tasmota {version} em {minutes} minutos. Verifique a interface web do Tasmota: a atualização pode ainda estar a decorrer, ou falhou e o dispositivo manteve o firmware atual."
     }
   }
 }

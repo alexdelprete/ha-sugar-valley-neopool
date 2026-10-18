@@ -13,6 +13,7 @@ from custom_components.sugar_valley_neopool.helpers import (
     lookup_by_value,
     parse_json_payload,
     parse_runtime_duration,
+    parse_tasmota_version,
     safe_float,
     safe_int,
     validate_nodeid,
@@ -422,3 +423,26 @@ class TestConnectionRateTracker:
         tracker.update(timestamp=1520.0, requests=10200, errors=100)
         # Old sample pruned. (100 - 50) errors / (10200 - 10100) reqs * 100 = 50%
         assert tracker.rate == 50.0
+
+
+class TestParseTasmotaVersion:
+    """Tests for parse_tasmota_version (StatusFWR.Version -> version, image)."""
+
+    @pytest.mark.parametrize(
+        ("value", "expected"),
+        [
+            ("15.6.0(tasmota32-neopool)", ("15.6.0", "tasmota32-neopool")),
+            ("16.0.0(release-tasmota32)", ("16.0.0", "tasmota32")),
+            ("15.6.0.3(85cff52-tasmota32s3-neopool)", ("15.6.0.3", "tasmota32s3-neopool")),
+            ("14.4.1(release-tasmota)", ("14.4.1", "tasmota")),
+            ("16.0.0(tasmota-4M)", ("16.0.0", "tasmota-4M")),
+            ("16.0.0 (lvgl-haspmota)", ("16.0.0", "lvgl-haspmota")),
+            ("15.0.0", ("15.0.0", None)),
+            ("16.0.0()", ("16.0.0", None)),
+            ("  ", (None, None)),
+            ("", (None, None)),
+        ],
+    )
+    def test_parse(self, value: str, expected: tuple[str | None, str | None]) -> None:
+        """Release, development and custom build names are split correctly."""
+        assert parse_tasmota_version(value) == expected

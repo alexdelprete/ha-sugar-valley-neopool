@@ -34,6 +34,7 @@ PLATFORMS: Final[list[Platform]] = [
     Platform.BUTTON,
     Platform.LIGHT,
     Platform.TIME,
+    Platform.UPDATE,
 ]
 
 # Configuration keys (data - changed via reconfigure)
@@ -199,6 +200,9 @@ CMD_HYDROLYSIS: Final = "NPHydrolysis"
 CMD_IONIZATION: Final = "NPIonization"
 CMD_CHLORINE: Final = "NPChlorine"
 CMD_TIME: Final = "NPTime"
+# Tasmota core commands used by the firmware update entity
+CMD_OTAURL: Final = "OtaUrl"
+CMD_UPGRADE: Final = "Upgrade"
 CMD_ESCAPE: Final = "NPEscape"
 
 # Generic register access commands (built-in Tasmota NeoPool driver commands).
@@ -650,3 +654,28 @@ YAML_ENTITIES_TO_DELETE: Final[list[tuple[str, str]]] = [
     # single problem-class "Hydrolysis Flow Alarm" (hydrolysis_fl1). Refs #23.
     ("binary_sensor", "hydrolysis_ctrl_fl1_water_flow"),
 ]
+
+
+# Tasmota firmware update entity. firmware/ in this repo holds the NeoPool Tasmota builds made by
+# .github/workflows/firmware.yml; firmware/manifest.json describes the current version. Files are
+# fetched from raw.githubusercontent.com, which serves them directly (the github.com/.../raw/...
+# form redirects, and release assets redirect to expiring URLs: neither suits Tasmota's OtaUrl).
+FIRMWARE_BASE_URL: Final = (
+    "https://raw.githubusercontent.com/alexdelprete/ha-sugar-valley-neopool/main/firmware/"
+)
+FIRMWARE_MANIFEST_URL: Final = f"{FIRMWARE_BASE_URL}manifest.json"
+FIRMWARE_README_URL: Final = (
+    "https://github.com/alexdelprete/ha-sugar-valley-neopool/blob/main/firmware/README.md"
+)
+FIRMWARE_CHECK_INTERVAL_HOURS: Final = 6  # manifest polling interval
+FIRMWARE_INSTALL_TIMEOUT_SECONDS: Final = 600  # OtaUrl + Upgrade until the new version reports in
+# Build names Tasmota reports in Status 2 ("16.0.0(tasmota32-neopool)") that the entity may upgrade,
+# mapped to the manifest's build key. Only ESP32-family NeoPool builds: OTA from Home Assistant is
+# not offered for ESP8266 (1 MB flash, two-step minimal upgrades), and a device running any other
+# build (an own compile, another flavour) is left alone, because installing ours would swap it out.
+FIRMWARE_INSTALLABLE_IMAGES: Final[dict[str, str]] = {
+    "tasmota32-neopool": "esp32",
+    "tasmota32c3-neopool": "esp32c3",
+    "tasmota32s3-neopool": "esp32s3",
+}
+FIRMWARE_ESP8266_IMAGE: Final = "tasmota-neopool"

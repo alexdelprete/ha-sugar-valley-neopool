@@ -109,6 +109,10 @@ of your pool system through Home Assistant.
 - **Recovery script**: Optionally execute a script when failure threshold
   is reached
 - **Diagnostics**: Downloadable diagnostics file for troubleshooting
+- **Tasmota firmware updates**: A firmware update entity shows the Tasmota
+  version the device runs and the latest NeoPool build in this repository's
+  [firmware/](firmware/README.md) folder. See
+  [Tasmota Firmware Updates](#tasmota-firmware-updates)
 - **Automatic NodeID migration**: Detects and fixes entities created with
   masked NodeIDs on startup
 - All changes apply immediately without Home Assistant restart
@@ -592,6 +596,32 @@ The integration expects MQTT messages on these topics:
 For detailed Tasmota NeoPool setup instructions, see the
 [official documentation](https://tasmota.github.io/docs/NeoPool/).
 NodeID handling is covered in [Requirements](#nodeid-and-setoption157).
+
+## Tasmota Firmware Updates
+
+The integration adds a firmware update entity
+(`update.<device>_tasmota_firmware`) to the device. It compares the Tasmota
+version the device reports (`Status 2`) with the newest build published in
+[firmware/](firmware/README.md), which a GitHub workflow rebuilds from every
+Tasmota stable release with the NeoPool driver included. A new version is
+offered 24 hours after it is published.
+
+**Install from Home Assistant (ESP32, ESP32-S3, ESP32-C3)**: when the device
+already runs one of the NeoPool builds (Tasmota reports `tasmota32-neopool`,
+`tasmota32s3-neopool` or `tasmota32c3-neopool`), the entity has an
+**Install** button. It sends Tasmota's own OTA commands (`OtaUrl` +
+`Upgrade 1`) with the matching file from this repository. This is a normal
+upgrade: the device keeps its settings. The entity shows the update as in
+progress until the device comes back and reports the new version (up to 10
+minutes).
+
+**Read-only (ESP8266 and other builds)**: on ESP8266 devices and on any
+other Tasmota build, the entity reports new versions but has no Install
+button. Upgrade these by hand with the files listed in
+[firmware/README.md](firmware/README.md).
+
+> **Tip:** Make a backup of the Tasmota configuration (Tasmota web UI →
+> Configuration → Backup Configuration) before upgrading.
 
 ## Known Limitations
 

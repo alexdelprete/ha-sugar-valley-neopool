@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import deque
 import json
 import logging
+import re
 from typing import TYPE_CHECKING, Any, overload
 
 if TYPE_CHECKING:
@@ -113,6 +114,24 @@ def get_nested_value(data: dict[str, Any], path: str) -> Any | None:
         return None
     else:
         return value
+
+
+def parse_tasmota_version(value: str) -> tuple[str | None, str | None]:
+    """Split a Tasmota StatusFWR.Version into (version, image name).
+
+    Tasmota reports "<version>(<prefix><image>)", e.g. "15.6.0(tasmota32-neopool)" or
+    "16.0.0(release-tasmota32)"; the prefix is "release-" on official release builds or a short
+    commit hash on development builds, and empty on custom builds. Returns (None, None) for an
+    empty value and (version, None) when there is no image part.
+    """
+    value = value.strip()
+    if not value:
+        return None, None
+    match = re.match(r"^([^(\s]+)\s*\(([^)]*)\)", value)
+    if not match:
+        return value, None
+    image = re.sub(r"^(release-|[0-9a-f]{7,40}-)", "", match.group(2).strip())
+    return match.group(1), image or None
 
 
 def parse_runtime_duration(duration_str: str) -> float | None:
