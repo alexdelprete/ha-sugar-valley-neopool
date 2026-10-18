@@ -624,7 +624,7 @@
       "message": "Nenhum controlador NeoPool encontrado para o dispositivo {device_id}."
     },
     "firmware_not_installable": {
-      "message": "Este dispositivo usa uma compilação '{image}'. Apenas as compilações NeoPool para ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) podem ser atualizadas a partir do Home Assistant."
+      "message": "Este dispositivo usa uma compilação {image}. Apenas as compilações NeoPool para ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) podem ser atualizadas a partir do Home Assistant."
     },
     "firmware_manifest_unavailable": {
       "message": "O manifesto do firmware não está disponível ou não tem uma compilação para este dispositivo. Tente novamente mais tarde."

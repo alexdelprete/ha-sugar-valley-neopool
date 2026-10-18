@@ -624,7 +624,7 @@
       "message": "Ingen NeoPool-styrenhet hittades för enhet {device_id}."
     },
     "firmware_not_installable": {
-      "message": "Den här enheten kör en '{image}'-version. Endast NeoPool-versionerna för ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) kan uppdateras från Home Assistant."
+      "message": "Den här enheten kör en {image}-version. Endast NeoPool-versionerna för ESP32 (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) kan uppdateras från Home Assistant."
     },
     "firmware_manifest_unavailable": {
       "message": "Firmwaremanifestet är inte tillgängligt eller saknar en version för den här enheten. Försök igen senare."

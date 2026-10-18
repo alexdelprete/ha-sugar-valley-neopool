@@ -624,7 +624,7 @@
       "message": "Laitteelle {device_id} ei löytynyt NeoPool-ohjainta."
     },
     "firmware_not_installable": {
-      "message": "Tämä laite käyttää '{image}'-koontiversiota. Home Assistantista voi päivittää vain NeoPoolin ESP32-koontiversioita (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool)."
+      "message": "Tämä laite käyttää {image}-koontiversiota. Home Assistantista voi päivittää vain NeoPoolin ESP32-koontiversioita (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool)."
     },
     "firmware_manifest_unavailable": {
       "message": "Laiteohjelmiston manifesti ei ole saatavilla tai siinä ei ole koontiversiota tälle laitteelle. Yritä myöhemmin uudelleen."

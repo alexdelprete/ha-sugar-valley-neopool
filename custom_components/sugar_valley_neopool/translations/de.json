@@ -624,7 +624,7 @@
       "message": "Kein NeoPool-Controller für Gerät {device_id} gefunden."
     },
     "firmware_not_installable": {
-      "message": "Dieses Gerät verwendet einen '{image}'-Build. Nur die NeoPool-ESP32-Builds (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) können aus Home Assistant aktualisiert werden."
+      "message": "Dieses Gerät verwendet einen {image}-Build. Nur die NeoPool-ESP32-Builds (tasmota32-neopool, tasmota32c3-neopool, tasmota32s3-neopool) können aus Home Assistant aktualisiert werden."
     },
     "firmware_manifest_unavailable": {
       "message": "Das Firmware-Manifest ist nicht verfügbar oder enthält keinen Build für dieses Gerät. Bitte später erneut versuchen."
