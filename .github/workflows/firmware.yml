@@ -1,0 +1,258 @@
+name: Firmware
+
+# Builds the Tasmota binaries in firmware/ (Tasmota + the Sugar Valley NeoPool driver) for each new
+# Tasmota stable release and commits them straight to main (zero-touch). Build configuration:
+# firmware/tasmota/user_config_override.h. The toolchain mirrors Tasmota's own release workflow
+# (Python 3.13 + pioarduino) so the images match official builds apart from the override.
+#
+# Staged rollout: firmware/manifest.json carries "available_from" = build time + HOLD_HOURS. The
+# integration's update entity only offers a version to users once that time has passed, which gives
+# the maintainer a window to test it first: in the Tasmota web UI, Firmware Upgrade -> OTA URL =
+# https://raw.githubusercontent.com/alexdelprete/ha-sugar-valley-neopool/main/firmware/<OTA .bin>
+# (the same OtaUrl + Upgrade 1 the update entity sends). To pull a bad build during that window,
+# revert the commit or move "available_from" into the future.
+
+on:
+  schedule:
+    - cron: "0 5 * * *"  # daily, 05:00 UTC
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tasmota release tag to build (e.g. v16.0.0). Empty = latest stable."
+        required: false
+        default: ""
+      force:
+        description: "Build even if firmware/ is already on this version."
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firmware
+  cancel-in-progress: false
+
+env:
+  PIOARDUINO_VERSION: "6.2.0"  # keep in step with arendst/Tasmota .github/workflows/Tasmota_build_master.yml
+  HOLD_HOURS: "24"  # staged rollout: hours between publishing and the update entity offering a version
+
+jobs:
+  check:
+    name: Check for a new Tasmota release
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.decide.outputs.build }}
+      tag: ${{ steps.decide.outputs.tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Decide whether to build
+        id: decide
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          if [ -n "${INPUT_TAG}" ]; then
+            tag="${INPUT_TAG}"
+          else
+            tag=$(git ls-remote --tags https://github.com/arendst/Tasmota \
+              | awk '{print $2}' | grep -E '^refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sed 's#refs/tags/##' | sort -V | tail -1)
+          fi
+          echo "Target Tasmota tag: ${tag}"
+
+          current=""
+          if [ -f firmware/manifest.json ]; then
+            current=$(python3 -c 'import json; print(json.load(open("firmware/manifest.json"))["tasmota_tag"])')
+          else
+            current=$(grep -oE 'Tasmota/tree/v[0-9.]+' firmware/README.md | head -1 | sed 's#Tasmota/tree/##')
+          fi
+          echo "Current firmware/ version: ${current:-unknown}"
+
+          build=false
+          if [ "${FORCE}" = "true" ] || [ "${tag}" != "${current}" ]; then
+            build=true
+          fi
+          echo "build: ${build}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "build=${build}" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ matrix.env }}
+    needs: check
+    if: needs.check.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        env: [tasmota, tasmota32, tasmota32c3, tasmota32s3]
+    steps:
+      - name: Checkout this repository (build configuration)
+        uses: actions/checkout@v7
+        with:
+          path: integration
+
+      - name: Checkout Tasmota ${{ needs.check.outputs.tag }}
+        uses: actions/checkout@v7
+        with:
+          repository: arendst/Tasmota
+          ref: ${{ needs.check.outputs.tag }}
+          path: tasmota-src
+
+      - name: Apply the NeoPool build configuration
+        run: cp integration/firmware/tasmota/user_config_override.h tasmota-src/tasmota/user_config_override.h
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Install pioarduino
+        run: uv pip install --system "pioarduino==${PIOARDUINO_VERSION}"
+
+      - name: Cache PlatformIO packages
+        uses: actions/cache@v6
+        with:
+          path: ~/.platformio
+          key: pio-${{ runner.os }}-${{ matrix.env }}-${{ needs.check.outputs.tag }}
+          restore-keys: pio-${{ runner.os }}-${{ matrix.env }}-
+
+      - name: Build
+        working-directory: tasmota-src
+        env:
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: platformio run -e ${{ matrix.env }}
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.env }}
+          path: tasmota-src/build_output/firmware/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to main
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # the push uses WORKFLOW_PAT, which can bypass main's branch protection
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.WORKFLOW_PAT }}
+
+      - name: Download firmware
+        uses: actions/download-artifact@v8
+        with:
+          path: dl
+
+      - name: Package binaries, write manifest, update README
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          set -euo pipefail
+          codename=$(curl -sfL "https://raw.githubusercontent.com/arendst/Tasmota/${TAG}/RELEASENOTES.md" \
+            | sed -nE "s/^## Changelog ${TAG} (.+)$/\1/p" | head -1)
+          export CODENAME="${codename}"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import re
+          import shutil
+          from datetime import UTC, datetime, timedelta
+
+          tag = os.environ["TAG"]
+          codename = os.environ.get("CODENAME", "").strip()
+          hold_hours = int(os.environ["HOLD_HOURS"])
+          dl = pathlib.Path("dl")
+          fw = pathlib.Path("firmware")
+
+          # chip key -> (PlatformIO env, chip label in file names, {role: source file name})
+          builds = {
+              "esp8266": ("tasmota", "ESP8266", {"ota": "tasmota.bin.gz", "serial": "tasmota.bin"}),
+              "esp32": ("tasmota32", "ESP32", {"ota": "tasmota32.bin", "factory": "tasmota32.factory.bin"}),
+              "esp32c3": (
+                  "tasmota32c3", "ESP32C3", {"ota": "tasmota32c3.bin", "factory": "tasmota32c3.factory.bin"}
+              ),
+              "esp32s3": (
+                  "tasmota32s3", "ESP32S3", {"ota": "tasmota32s3.bin", "factory": "tasmota32s3.factory.bin"}
+              ),
+          }
+
+          manifest_builds = {}
+          for chip, (env, label, files) in builds.items():
+              entry = {"env": env}
+              for role, src_name in files.items():
+                  src = dl / env / src_name
+                  if not src.is_file():
+                      raise SystemExit(f"missing build output: {src}")
+                  dst = fw / f"NeoPool_{label}_{src_name}"
+                  shutil.copyfile(src, dst)
+                  data = dst.read_bytes()
+                  entry[role] = {
+                      "file": dst.name,
+                      "size": len(data),
+                      "sha256": hashlib.sha256(data).hexdigest(),
+                  }
+              # Sanity check on the uncompressed application image: the NeoPool driver and its
+              # connection statistics must be compiled in.
+              app = (dl / env / files["serial" if chip == "esp8266" else "ota"]).read_bytes()
+              for marker in (b"NeoPool", b"MBRequests"):
+                  if marker not in app:
+                      raise SystemExit(f"{env}: {marker.decode()!r} not found in the image")
+              manifest_builds[chip] = entry
+
+          now = datetime.now(UTC).replace(microsecond=0)
+          manifest = {
+              "tasmota_version": tag.removeprefix("v"),
+              "tasmota_tag": tag,
+              "tasmota_codename": codename,
+              "release_url": f"https://github.com/arendst/Tasmota/releases/tag/{tag}",
+              "published_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "available_from": (now + timedelta(hours=hold_hours)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "builds": manifest_builds,
+          }
+          (fw / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+
+          readme = fw / "README.md"
+          title = f"Tasmota {tag} {codename}".rstrip()
+          line = f"The binaries are based on [{title}](https://github.com/arendst/Tasmota/tree/{tag})."
+          text, n = re.subn(r"^The binaries are based on \[.*\]\(.*\)\.$", line, readme.read_text(), flags=re.M)
+          if n != 1:
+              raise SystemExit("README version line not found")
+          readme.write_text(text)
+          print(json.dumps(manifest, indent=2))
+          PY
+
+      - name: Commit and push to main
+        env:
+          TAG: ${{ needs.check.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firmware/
+          if git diff --cached --quiet; then
+            echo "No changes in firmware/ - nothing to publish"
+            exit 0
+          fi
+          git commit -m "chore(firmware): Tasmota NeoPool binaries ${TAG}" \
+            -m "Automated build from the ${TAG} tag with firmware/tasmota/user_config_override.h." \
+            -m "Offered by the update entity from available_from in firmware/manifest.json (+${HOLD_HOURS} h)."
+          # main may have moved during the build: rebase onto it before pushing (firmware/ only changes here)
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            echo "Push attempt ${attempt} failed - retrying"
+            sleep 10
+          done
+          exit 1
