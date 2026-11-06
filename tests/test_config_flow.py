@@ -70,7 +70,7 @@ def neopool_setup_fixture():
     """Mock neopool entry setup to avoid loading the full integration."""
     with patch(
         "custom_components.sugar_valley_neopool.async_setup_entry",
-        return_value=True,
+        return_value=None,
     ):
         yield
 

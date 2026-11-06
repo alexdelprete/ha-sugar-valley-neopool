@@ -564,7 +564,7 @@ class TestSetupEntryLogging:
         ):
             result = await async_setup_entry(hass, entry)
 
-        assert result is True
+        assert result is None
 
 
 # =============================================================================

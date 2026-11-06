@@ -37,7 +37,7 @@ from custom_components.sugar_valley_neopool.const import (
     DOMAIN,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
 from homeassistant.helpers import device_registry as dr
 
 
@@ -101,7 +101,7 @@ class TestAsyncSetupEntry:
         ):
             result = await async_setup_entry(hass, entry)
 
-        assert result is True
+        assert result is None
         assert entry.runtime_data is not None
         assert entry.runtime_data.device_name == "Test Pool"
         assert entry.runtime_data.mqtt_topic == "SmartPool"
@@ -183,7 +183,7 @@ class TestAsyncSetupEntry:
             # Exercise the same-entry metadata lookup as well.
             await _update_device_registry_metadata(hass, entry)
 
-        assert result is True
+        assert result is None
         # Device was migrated to the canonical identifier via the real registry.
         device = device_registry.async_get_device_by_identifier(
             (DOMAIN, "AA55HASHED"), entry.entry_id
@@ -298,11 +298,11 @@ class TestAsyncUnloadEntry:
         with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
             result = await async_unload_entry(hass, entry)
 
-        assert result is True
+        assert result is None
 
     @pytest.mark.asyncio
     async def test_unload_entry_failure(self, hass: HomeAssistant) -> None:
-        """Test unload entry returns False on failure."""
+        """Test a failed platform unload raises ConfigEntryError."""
         entry = MockConfigEntry(
             domain=DOMAIN,
             data={
@@ -318,10 +318,11 @@ class TestAsyncUnloadEntry:
             nodeid="ABC123",
         )
 
-        with patch.object(hass.config_entries, "async_unload_platforms", return_value=False):
-            result = await async_unload_entry(hass, entry)
-
-        assert result is False
+        with (
+            patch.object(hass.config_entries, "async_unload_platforms", return_value=False),
+            pytest.raises(ConfigEntryError),
+        ):
+            await async_unload_entry(hass, entry)
 
 
 class TestAsyncMigrateEntry:

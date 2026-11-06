@@ -208,7 +208,7 @@ class TestAsyncUnloadEntryExtended:
         with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
             result = await async_unload_entry(hass, entry)
 
-        assert result is True
+        assert result is None
 
 
 class TestAsyncMigrateEntryExtended:
