@@ -1,6 +1,7 @@
 {
   "domain": "sugar_valley_neopool",
   "name": "Sugar Valley NeoPool",
+  "categories": ["water.pools_spas"],
   "after_dependencies": ["recorder"],
   "codeowners": ["@alexdelprete"],
   "config_flow": true,
