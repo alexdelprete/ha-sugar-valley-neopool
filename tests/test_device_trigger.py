@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import probatio
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-import voluptuous as vol
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool.const import DOMAIN
 from custom_components.sugar_valley_neopool.device_trigger import (
@@ -208,5 +208,5 @@ class TestTriggerSchema:
             CONF_DEVICE_ID: "test_device",
             CONF_TYPE: "invalid_type",
         }
-        with pytest.raises(vol.Invalid):
+        with pytest.raises(probatio.Invalid):
             TRIGGER_SCHEMA(config)

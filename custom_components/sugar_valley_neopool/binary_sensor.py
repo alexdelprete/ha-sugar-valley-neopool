@@ -42,7 +42,7 @@ from .const import (
     JSON_PATH_RELAY_UV,
     JSON_PATH_RELAY_VALVE,
 )
-from .entity import NeoPoolEntity, NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity, renamed_in_place
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
 if TYPE_CHECKING:
@@ -274,6 +274,7 @@ async def async_setup_entry(
     _LOGGER.info("Added %d NeoPool binary sensors", len(sensors))
 
 
+@renamed_in_place
 class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
     """Representation of a NeoPool binary sensor."""
 
@@ -344,6 +345,7 @@ class NeoPoolBinarySensor(NeoPoolMQTTEntity, BinarySensorEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolConnectionProblemBinarySensor(NeoPoolEntity, BinarySensorEntity):
     """Binary sensor that turns ON when the rolling error rate exceeds the threshold.
 

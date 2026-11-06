@@ -172,8 +172,12 @@ class NeoPoolData:
 type NeoPoolConfigEntry = ConfigEntry[NeoPoolData]
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> bool:
-    """Set up NeoPool MQTT from a config entry."""
+async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Set up NeoPool MQTT from a config entry.
+
+    Returns None; failure is signalled by raising a ConfigEntry* exception, as
+    Home Assistant 2026.11 expects.
+    """
     _LOGGER.debug("Setting up NeoPool MQTT integration")
 
     # Wait for MQTT to be available
@@ -305,25 +309,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> b
     # Note: No manual update listener needed - OptionsFlowWithReload handles reload automatically
 
     _LOGGER.info("NeoPool MQTT integration setup complete for %s", device_name)
-    return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> bool:
-    """Unload a config entry."""
+async def async_unload_entry(hass: HomeAssistant, entry: NeoPoolConfigEntry) -> None:
+    """Unload a config entry.
+
+    async_unload_platforms_or_raise raises a translated ConfigEntryError when a
+    platform fails to unload, so the cleanup below only runs after a successful
+    unload (Home Assistant 2026.11 pattern: return None, signal failure by raising).
+    """
     _LOGGER.debug("Unloading NeoPool MQTT integration")
 
-    # Unload platforms - only cleanup runtime_data if successful
-    # ref.: https://developers.home-assistant.io/blog/2025/02/19/new-config-entry-states/
-    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
-        _LOGGER.info("NeoPool MQTT integration unloaded successfully")
-        # Remove integration services once the last entry is gone. async_entries
-        # still includes this entry during unload, so <=1 means it's the only one.
-        if len(hass.config_entries.async_entries(DOMAIN)) <= 1:
-            async_unload_services(hass)
-    else:
-        _LOGGER.debug("Platform unload failed, skipping cleanup")
-
-    return unload_ok
+    await hass.config_entries.async_unload_platforms_or_raise(entry, PLATFORMS)
+    _LOGGER.info("NeoPool MQTT integration unloaded successfully")
+    # Remove integration services once the last entry is gone. async_entries
+    # still includes this entry during unload, so <=1 means it's the only one.
+    if len(hass.config_entries.async_entries(DOMAIN)) <= 1:
+        async_unload_services(hass)
 
 
 async def async_migrate_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> bool:

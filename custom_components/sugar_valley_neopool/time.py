@@ -36,7 +36,7 @@ from .const import (
     TIMER_OFFSET_OFF,
     TIMER_OFFSET_ON,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolMQTTEntity, renamed_in_place
 
 if TYPE_CHECKING:
     from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -135,6 +135,7 @@ def _time_to_seconds(value: dt_time) -> int:
     return value.hour * 3600 + value.minute * 60 + value.second
 
 
+@renamed_in_place
 class NeoPoolTimerTime(NeoPoolMQTTEntity, TimeEntity):
     """A scheduled timer's start or stop time, backed by a 32-bit register pair."""
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import NeoPoolData
 from custom_components.sugar_valley_neopool.binary_sensor import (

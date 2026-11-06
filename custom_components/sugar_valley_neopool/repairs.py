@@ -47,6 +47,7 @@ def create_device_offline_issue(
         hass,
         DOMAIN,
         f"{ISSUE_DEVICE_OFFLINE}_{entry_id}",
+        config_entry_id=entry_id,
         is_fixable=False,
         is_persistent=True,
         severity=ir.IssueSeverity.ERROR,

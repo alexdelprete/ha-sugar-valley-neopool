@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Minimum supported Home Assistant version raised to 2026.11.0** - the
+  integration uses APIs introduced in 2026.11; the Marketplace will not offer
+  this update to older cores.
+- **Entities are renamed in place** - changing an entity ID, including the
+  entity ID mapping applied after setup, now updates the entity instead of
+  removing and re-adding it (Home Assistant 2026.11). MQTT subscriptions and
+  dispatcher listeners stay in place across the rename.
+- **Marketplace category and quality tier** - the manifest declares the
+  `water.pools_spas` category and the Platinum quality scale tier.
+- **Validation engine** - forms and actions use probatio, Home Assistant's
+  validation engine, instead of voluptuous. No user-visible change.
+- **Development tooling** - tests run on `pytest-homeassistant` 2026.11.0, the
+  test package published by Home Assistant core.
+
 ## [2.2.0] - 2026-10-18
 
 Stable release of everything in [2.2.0-beta.1](#220-beta1---2026-10-18)

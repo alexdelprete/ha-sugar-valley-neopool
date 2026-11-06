@@ -2,6 +2,7 @@
   "domain": "sugar_valley_neopool",
   "name": "Sugar Valley NeoPool",
   "after_dependencies": ["recorder"],
+  "categories": ["water.pools_spas"],
   "codeowners": ["@alexdelprete"],
   "config_flow": true,
   "dependencies": ["mqtt"],
@@ -11,6 +12,7 @@
   "issue_tracker": "https://github.com/alexdelprete/ha-sugar-valley-neopool/issues",
   "loggers": ["custom_components.sugar_valley_neopool"],
   "mqtt": ["+/tele/+/SENSOR"],
+  "quality_scale": "platinum",
   "requirements": [],
   "version": "2.2.1"
 }

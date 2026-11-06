@@ -14,7 +14,7 @@ from datetime import time as dt_time
 import logging
 from typing import TYPE_CHECKING, Any
 
-import voluptuous as vol
+import probatio
 
 from homeassistant.components import mqtt
 from homeassistant.core import HomeAssistant, ServiceCall, callback
@@ -62,26 +62,26 @@ def _validate_set_timer(data: dict[str, Any]) -> dict[str, Any]:
     derived from the pair), and a call must change at least one field.
     """
     if (ATTR_START in data) != (ATTR_STOP in data):
-        raise vol.Invalid("'start' and 'stop' must be set together")
+        raise probatio.Invalid("'start' and 'stop' must be set together")
     if not any(k in data for k in (ATTR_START, ATTR_PERIOD, ATTR_MODE)):
-        raise vol.Invalid("provide at least one of 'start'/'stop', 'period', or 'mode'")
+        raise probatio.Invalid("provide at least one of 'start'/'stop', 'period', or 'mode'")
     return data
 
 
-SET_TIMER_SCHEMA = vol.Schema(
-    vol.All(
+SET_TIMER_SCHEMA = probatio.Schema(
+    probatio.All(
         {
-            vol.Required(ATTR_DEVICE_ID): cv.string,
-            vol.Required(ATTR_TIMER): vol.In(list(TIMER_BLOCKS)),
+            probatio.Required(ATTR_DEVICE_ID): cv.string,
+            probatio.Required(ATTR_TIMER): probatio.In(list(TIMER_BLOCKS)),
             # All schedule fields optional → only the ones provided are written
             # (granular edit). No defaults, so an omitted field keeps its current
             # value on the controller (we simply don't write that register).
-            vol.Optional(ATTR_START): cv.time,
-            vol.Optional(ATTR_STOP): cv.time,
-            vol.Optional(ATTR_PERIOD): vol.All(
-                vol.Coerce(int), vol.Range(min=0, max=7 * SECONDS_PER_DAY)
+            probatio.Optional(ATTR_START): cv.time,
+            probatio.Optional(ATTR_STOP): cv.time,
+            probatio.Optional(ATTR_PERIOD): probatio.All(
+                probatio.Coerce(int), probatio.Range(min=0, max=7 * SECONDS_PER_DAY)
             ),
-            vol.Optional(ATTR_MODE): vol.In(list(TIMER_MODE_MAP)),
+            probatio.Optional(ATTR_MODE): probatio.In(list(TIMER_MODE_MAP)),
         },
         _validate_set_timer,
     )

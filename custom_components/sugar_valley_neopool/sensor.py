@@ -74,7 +74,7 @@ from .const import (
     PH_PUMP_MAP,
     PH_STATE_MAP,
 )
-from .entity import NeoPoolEntity, NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity, renamed_in_place
 from .helpers import (
     get_nested_value,
     parse_json_payload,
@@ -575,6 +575,7 @@ async def async_setup_entry(
     _LOGGER.info("Added %d NeoPool sensors", len(sensors))
 
 
+@renamed_in_place
 class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
     """Representation of a NeoPool sensor."""
 
@@ -672,6 +673,7 @@ class NeoPoolSensor(NeoPoolMQTTEntity, SensorEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
     """Sensor that accumulates lifetime deltas from a Tasmota-RAM counter.
 
@@ -802,6 +804,7 @@ class NeoPoolCumulativeSensor(NeoPoolSensor, RestoreEntity):
         return self._cumulative
 
 
+@renamed_in_place
 class NeoPoolConnectionRateSensor(NeoPoolEntity, SensorEntity):
     """Sliding-window error-rate sensor for the Modbus connection.
 

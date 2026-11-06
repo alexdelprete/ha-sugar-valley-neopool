@@ -13,7 +13,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import (
     NeoPoolData,
@@ -763,7 +763,7 @@ class TestSetupEntryWithEntityIdMapping:
         ):
             result = await async_setup_entry(hass, entry)
 
-        assert result is True
+        assert result is None
         # Verify _apply_entity_id_mapping was called with the mapping
         mock_apply.assert_called_once()
         call_args = mock_apply.call_args
@@ -827,4 +827,4 @@ class TestSetupEntryWithEntityIdMapping:
             result = await async_setup_entry(hass, entry)
 
         # Setup should still succeed
-        assert result is True
+        assert result is None

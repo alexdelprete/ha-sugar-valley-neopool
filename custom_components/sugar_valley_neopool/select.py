@@ -59,7 +59,7 @@ from .const import (
     TIMER_OFFSET_ENABLE,
     TIMER_OFFSET_FUNCTION,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolMQTTEntity, renamed_in_place
 from .helpers import get_nested_value, lookup_by_value, parse_json_payload, safe_int
 
 if TYPE_CHECKING:
@@ -272,6 +272,7 @@ async def async_setup_entry(
     _LOGGER.info("Added %d NeoPool selects", len(selects))
 
 
+@renamed_in_place
 class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
     """Representation of a NeoPool select."""
 
@@ -347,6 +348,7 @@ class NeoPoolSelect(NeoPoolMQTTEntity, SelectEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
     """AUX relay mode select (auto/on/off) backed by a timer-block register.
 
@@ -534,6 +536,7 @@ class NeoPoolAuxModeSelect(NeoPoolMQTTEntity, SelectEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
     """Per-timer filtration speed for variable-speed pumps (Group 5).
 
@@ -643,6 +646,7 @@ class NeoPoolTimerSpeedSelect(NeoPoolMQTTEntity, SelectEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolTimerModeSelect(NeoPoolMQTTEntity, SelectEntity):
     """Per-timer mode select (disabled/auto/on/off) for a scheduled timer (#1).
 

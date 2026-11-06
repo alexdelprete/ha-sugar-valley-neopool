@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import (
     CONFIG_ENTRY_VERSION,
@@ -208,7 +208,7 @@ class TestAsyncUnloadEntryExtended:
         with patch.object(hass.config_entries, "async_unload_platforms", return_value=True):
             result = await async_unload_entry(hass, entry)
 
-        assert result is True
+        assert result is None
 
 
 class TestAsyncMigrateEntryExtended:

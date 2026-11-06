@@ -27,7 +27,7 @@ from .const import (
     REG_SMART_ANTI_FREEZE,
     REG_UV_MODE,
 )
-from .entity import NeoPoolEntity, NeoPoolMQTTEntity
+from .entity import NeoPoolEntity, NeoPoolMQTTEntity, renamed_in_place
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
 if TYPE_CHECKING:
@@ -158,6 +158,7 @@ async def async_setup_entry(
     _LOGGER.info("Added %d NeoPool switches", len(switches))
 
 
+@renamed_in_place
 class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
     """Representation of a NeoPool switch."""
 
@@ -218,6 +219,7 @@ class NeoPoolSwitch(NeoPoolMQTTEntity, SwitchEntity):
         _LOGGER.debug("Turned off switch %s", self.entity_description.key)
 
 
+@renamed_in_place
 class NeoPoolAutoTimeSyncSwitch(NeoPoolEntity, SwitchEntity, RestoreEntity):
     """HA-side toggle that keeps the controller clock synced to Home Assistant.
 
@@ -261,6 +263,7 @@ class NeoPoolAutoTimeSyncSwitch(NeoPoolEntity, SwitchEntity, RestoreEntity):
         self._async_write_state()
 
 
+@renamed_in_place
 class NeoPoolRegisterSwitch(NeoPoolMQTTEntity, SwitchEntity):
     """A switch backed by a config register read via NPRead / written via NPWrite.
 

@@ -14,7 +14,7 @@ import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant.common import MockConfigEntry
 
 from custom_components.sugar_valley_neopool import (
     NeoPoolData,
@@ -564,7 +564,7 @@ class TestSetupEntryLogging:
         ):
             result = await async_setup_entry(hass, entry)
 
-        assert result is True
+        assert result is None
 
 
 # =============================================================================
