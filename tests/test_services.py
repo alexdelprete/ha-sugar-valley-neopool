@@ -6,8 +6,8 @@ from contextlib import AbstractContextManager
 from datetime import time as dt_time
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import probatio
 import pytest
-import voluptuous as vol
 
 from custom_components.sugar_valley_neopool.const import DOMAIN
 from custom_components.sugar_valley_neopool.services import (
@@ -55,19 +55,19 @@ def test_set_timer_schema_mode_only_is_valid() -> None:
 
 def test_set_timer_schema_start_requires_stop() -> None:
     """start without stop is rejected (they are coupled)."""
-    with pytest.raises(vol.Invalid):
+    with pytest.raises(probatio.Invalid):
         SET_TIMER_SCHEMA({"device_id": "dev1", "timer": "filtration1", "start": "10:00:00"})
 
 
 def test_set_timer_schema_requires_at_least_one_field() -> None:
     """A call with no editable field is rejected."""
-    with pytest.raises(vol.Invalid):
+    with pytest.raises(probatio.Invalid):
         SET_TIMER_SCHEMA({"device_id": "dev1", "timer": "filtration1"})
 
 
 def test_set_timer_schema_rejects_unknown_timer() -> None:
     """An unknown timer name fails validation."""
-    with pytest.raises(vol.Invalid):
+    with pytest.raises(probatio.Invalid):
         SET_TIMER_SCHEMA(
             {
                 "device_id": "dev1",

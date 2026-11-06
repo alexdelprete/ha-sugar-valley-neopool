@@ -7,7 +7,7 @@ import json
 import logging
 from typing import Any
 
-import voluptuous as vol
+import probatio
 
 from homeassistant.components import mqtt
 from homeassistant.components.mqtt import valid_subscribe_topic
@@ -107,10 +107,10 @@ def get_topics_from_config(hass: HomeAssistant) -> set[str | None]:
     }
 
 
-STEP_USER_DATA_SCHEMA = vol.Schema(
+STEP_USER_DATA_SCHEMA = probatio.Schema(
     {
-        vol.Required(CONF_DEVICE_NAME, default=DEFAULT_DEVICE_NAME): cv.string,
-        vol.Required(CONF_DISCOVERY_PREFIX, default="SmartPool"): cv.string,
+        probatio.Required(CONF_DEVICE_NAME, default=DEFAULT_DEVICE_NAME): cv.string,
+        probatio.Required(CONF_DISCOVERY_PREFIX, default="SmartPool"): cv.string,
     }
 )
 
@@ -152,9 +152,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required("confirm_no_yaml", default=False): cv.boolean,
+                    probatio.Required("confirm_no_yaml", default=False): cv.boolean,
                 }
             ),
         )
@@ -174,9 +174,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_migration",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_MIGRATE_YAML, default=False): cv.boolean,
+                    probatio.Required(CONF_MIGRATE_YAML, default=False): cv.boolean,
                 }
             ),
         )
@@ -241,9 +241,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_topic",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required("yaml_topic", default=DEFAULT_MQTT_TOPIC): cv.string,
+                    probatio.Required("yaml_topic", default=DEFAULT_MQTT_TOPIC): cv.string,
                 }
             ),
             errors=errors,
@@ -407,9 +407,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_no_entities",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required("try_custom_prefix", default=False): cv.boolean,
+                    probatio.Required("try_custom_prefix", default=False): cv.boolean,
                 }
             ),
         )
@@ -452,9 +452,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_prefix",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_UNIQUE_ID_PREFIX): cv.string,
+                    probatio.Required(CONF_UNIQUE_ID_PREFIX): cv.string,
                 }
             ),
             errors=errors,
@@ -494,9 +494,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_detect_confirm",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required("confirm_detection", default=True): cv.boolean,
+                    probatio.Required("confirm_detection", default=True): cv.boolean,
                 }
             ),
             description_placeholders={
@@ -523,7 +523,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 entity_list = self._format_entity_list(active_entities)
                 return self.async_show_form(
                     step_id="yaml_active_warning",
-                    data_schema=vol.Schema({}),
+                    data_schema=probatio.Schema({}),
                     description_placeholders={
                         "active_count": str(len(active_entities)),
                         "entity_list": entity_list,
@@ -541,7 +541,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_active_warning",
-            data_schema=vol.Schema({}),
+            data_schema=probatio.Schema({}),
             description_placeholders={
                 "active_count": str(len(active_entities)),
                 "entity_list": entity_list,
@@ -570,9 +570,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_confirm",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_CONFIRM_MIGRATION, default=False): cv.boolean,
+                    probatio.Required(CONF_CONFIRM_MIGRATION, default=False): cv.boolean,
                 }
             ),
             description_placeholders={
@@ -749,7 +749,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="yaml_migration_result",
-            data_schema=vol.Schema({}),
+            data_schema=probatio.Schema({}),
             description_placeholders={
                 "entities_found": str(result.get("entities_found", 0)),
                 "entities_migrated": str(result.get("entities_migrated", 0)),
@@ -772,7 +772,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             # Validate MQTT topic format
             try:
                 valid_subscribe_topic(f"tele/{discovery_prefix}/SENSOR")
-            except vol.Invalid:
+            except probatio.Invalid:
                 errors["base"] = "invalid_topic"
 
             if not errors:
@@ -870,9 +870,9 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="mqtt_confirm",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(CONF_DEVICE_NAME, default=self._device_name): cv.string,
+                    probatio.Required(CONF_DEVICE_NAME, default=self._device_name): cv.string,
                 }
             ),
             description_placeholders={
@@ -1160,7 +1160,7 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
             # Validate MQTT topic format
             try:
                 valid_subscribe_topic(f"tele/{discovery_prefix}/SENSOR")
-            except vol.Invalid:
+            except probatio.Invalid:
                 errors[CONF_DISCOVERY_PREFIX] = "invalid_topic"
 
             if not errors:
@@ -1206,17 +1206,17 @@ class NeoPoolConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="reconfigure",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
-                    vol.Required(
+                    probatio.Required(
                         CONF_DEVICE_NAME,
                         default=reconfigure_entry.data.get(CONF_DEVICE_NAME, DEFAULT_DEVICE_NAME),
                     ): cv.string,
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_REGENERATE_ENTITY_IDS,
                         default=False,
                     ): cv.boolean,
-                    vol.Required(
+                    probatio.Required(
                         CONF_DISCOVERY_PREFIX,
                         default=reconfigure_entry.data.get(
                             CONF_DISCOVERY_PREFIX, DEFAULT_MQTT_TOPIC
@@ -1310,26 +1310,26 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=vol.Schema(
+            data_schema=probatio.Schema(
                 {
                     # 1. Recovery script (runs when device goes offline after threshold)
                     # Use suggested_value (not default) so clearing the EntitySelector
-                    # actually unsets the option. With default=, voluptuous resurrects
+                    # actually unsets the option. With default=, the schema resurrects
                     # the saved value when the field is submitted empty, making the
                     # script impossible to clear via the UI.
-                    vol.Optional(
+                    probatio.Optional(
                         CONF_RECOVERY_SCRIPT,
                         description={"suggested_value": recovery_script},
                     ): EntitySelector(
                         EntitySelectorConfig(domain="script"),
                     ),
                     # 2. Enable repair notifications checkbox
-                    vol.Required(
+                    probatio.Required(
                         CONF_ENABLE_REPAIR_NOTIFICATION,
                         default=enable_repair,
                     ): cv.boolean,
                     # 3. Failures threshold as input box (not slider)
-                    vol.Required(
+                    probatio.Required(
                         CONF_FAILURES_THRESHOLD,
                         default=failures_threshold,
                     ): NumberSelector(
@@ -1340,7 +1340,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                         )
                     ),
                     # 4. Offline timeout (how long device must be offline before notification)
-                    vol.Required(
+                    probatio.Required(
                         CONF_OFFLINE_TIMEOUT,
                         default=offline_timeout,
                     ): NumberSelector(
@@ -1353,7 +1353,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                     ),
                     # 5. Connection error-rate threshold (% above which
                     # binary_sensor.connection_problem turns on)
-                    vol.Required(
+                    probatio.Required(
                         CONF_CONNECTION_ERROR_RATE_THRESHOLD,
                         default=connection_error_rate_threshold,
                     ): NumberSelector(
@@ -1368,7 +1368,7 @@ class NeoPoolOptionsFlow(OptionsFlowWithReload):
                     # 6. Filtration pump type — gates the per-timer speed selects.
                     # "auto" trusts the controller's self-report (variable-speed
                     # pumps emit Filtration.Speed); override forces on/off.
-                    vol.Required(
+                    probatio.Required(
                         CONF_PUMP_TYPE,
                         default=pump_type,
                     ): SelectSelector(

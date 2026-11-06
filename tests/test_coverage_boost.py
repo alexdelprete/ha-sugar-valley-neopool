@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
+import probatio
 import pytest
 from pytest_homeassistant.common import MockConfigEntry
-import voluptuous as vol
 
 from custom_components.sugar_valley_neopool import (
     NeoPoolData,
@@ -829,10 +829,10 @@ class TestDiscoverDeviceInvalidTopic:
         flow.hass = hass
         flow.context = {"source": SOURCE_USER}
 
-        # Mock valid_subscribe_topic to raise vol.Invalid
+        # Mock valid_subscribe_topic to raise probatio.Invalid
         with patch(
             "custom_components.sugar_valley_neopool.config_flow.valid_subscribe_topic",
-            side_effect=vol.Invalid("Invalid topic"),
+            side_effect=probatio.Invalid("Invalid topic"),
         ):
             result = await flow.async_step_discover_device(
                 {
