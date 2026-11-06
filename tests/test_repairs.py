@@ -35,6 +35,8 @@ class TestCreateDeviceOfflineIssue:
             assert call_args[0][0] == hass
             assert call_args[0][1] == DOMAIN
             assert call_args[0][2] == f"{ISSUE_DEVICE_OFFLINE}_test_entry_id"
+            # Linked to the config entry (HA 2026.11): shown on its page, removed with it
+            assert call_args[1]["config_entry_id"] == "test_entry_id"
 
     def test_issue_parameters(self, hass: HomeAssistant) -> None:
         """Test issue is created with correct parameters."""
