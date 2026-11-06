@@ -634,7 +634,7 @@ was added alongside these tests when the persistent SENSOR watch
 landed.
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-09-26 -->
+<!-- Synced by repo-sync on 2026-11-06 -->
 
 <!--
 ==============================================================================
@@ -896,6 +896,9 @@ ty and ruff are pre-1.0 / fast-moving and add rules between releases; unpinned t
 turn CI red on code that passes locally. The venv copies of ruff and ty only serve
 the VS Code extensions; `repo-sync` rewrites their `pyproject.toml` entries to the same
 pins on every sync (and dependabot ignores them), so the editor matches CI too.
+`homeassistant-stubs` is pinned the same way, to the Home Assistant release
+`pytest-homeassistant-custom-component` installs (2026.9.3),
+so ty checks against the HA the tests run on rather than the newest stubs on PyPI.
 
 ## Pre-Commit Checks (MANDATORY)
 
