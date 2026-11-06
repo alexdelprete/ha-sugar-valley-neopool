@@ -16,6 +16,33 @@ from .const import CMD_NPEXEC, CMD_NPSAVE, CMD_NPWRITE, PAYLOAD_ONLINE
 _LOGGER = logging.getLogger(__name__)
 
 
+def renamed_in_place[EntityT: type[Entity]](cls: EntityT) -> EntityT:
+    """Opt an entity class in to in-place entity id changes (Home Assistant 2026.11).
+
+    From 2026.11 a renamed entity is updated in place, unless a class of its own
+    overrides async_added_to_hass / async_will_remove_from_hass without also
+    defining async_entity_id_changed: then core still removes and re-adds it (until
+    2027.11). Every class here that overrides one of those methods carries this
+    decorator, which defines the hook as a plain super() call. That is enough
+    because nothing those methods set up is keyed on the entity id: MQTT
+    subscriptions are keyed on topics, dispatcher signals on the config entry, and
+    the entity id only appears in log messages. A class that starts keying on the
+    entity id needs a real async_entity_id_changed instead.
+    """
+
+    owner: type[Entity] = cls
+
+    @callback
+    def async_entity_id_changed(self: Entity, old_entity_id: str) -> None:
+        # ty only accepts a class literal in super(); owner is the decorated class.
+        super(owner, self).async_entity_id_changed(old_entity_id)  # ty: ignore[invalid-super-argument]
+
+    async_entity_id_changed.__qualname__ = f"{owner.__qualname__}.async_entity_id_changed"
+    # Must land in the class's own __dict__: that is what core's rename check reads.
+    setattr(owner, "async_entity_id_changed", async_entity_id_changed)  # noqa: B010
+    return cls
+
+
 class NeoPoolEntity(Entity):
     """Base class for NeoPool entities."""
 
@@ -67,6 +94,7 @@ class NeoPoolEntity(Entity):
         self.async_write_ha_state()
 
 
+@renamed_in_place
 class NeoPoolMQTTEntity(NeoPoolEntity):
     """Base class for NeoPool MQTT entities with subscription support."""
 

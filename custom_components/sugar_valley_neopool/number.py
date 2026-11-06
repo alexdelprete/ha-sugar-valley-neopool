@@ -63,7 +63,7 @@ from .const import (
     SHIFT_HIDRO_COVER_REDUCTION,
     SHIFT_HIDRO_SHUTDOWN_TEMP,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolMQTTEntity, renamed_in_place
 from .helpers import get_nested_value, parse_json_payload, safe_float
 
 if TYPE_CHECKING:
@@ -285,6 +285,7 @@ async def async_setup_entry(
     _LOGGER.info("Added %d NeoPool numbers", len(numbers))
 
 
+@renamed_in_place
 class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
     """Representation of a NeoPool number."""
 
@@ -363,6 +364,7 @@ class NeoPoolNumber(NeoPoolMQTTEntity, NumberEntity):
         )
 
 
+@renamed_in_place
 class NeoPoolRegisterNumber(NeoPoolMQTTEntity, NumberEntity):
     """A number backed by a config register read via NPRead / written via NPWrite.
 

@@ -39,7 +39,7 @@ from .const import (
     FIRMWARE_README_URL,
     FIRMWARE_RETRY_SECONDS,
 )
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolMQTTEntity, renamed_in_place
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -74,6 +74,7 @@ def _parse_manifest(data: Any) -> dict[str, Any] | None:
     return data
 
 
+@renamed_in_place
 class NeoPoolFirmwareUpdate(NeoPoolMQTTEntity, UpdateEntity):
     """Tasmota firmware of the NeoPool bridge device.
 

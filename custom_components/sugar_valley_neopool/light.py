@@ -9,7 +9,7 @@ from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.core import HomeAssistant, callback
 
 from .const import CMD_LIGHT, JSON_PATH_LIGHT
-from .entity import NeoPoolMQTTEntity
+from .entity import NeoPoolMQTTEntity, renamed_in_place
 from .helpers import bit_to_bool, get_nested_value, parse_json_payload
 
 if TYPE_CHECKING:
@@ -33,6 +33,7 @@ async def async_setup_entry(
     _LOGGER.info("Added NeoPool light")
 
 
+@renamed_in_place
 class NeoPoolLight(NeoPoolMQTTEntity, LightEntity):
     """Representation of the NeoPool pool light.
 

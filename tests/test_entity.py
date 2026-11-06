@@ -282,3 +282,42 @@ class TestWriteRegister:
         mock_publish.assert_awaited_once_with(
             mock_hass, "cmnd/SmartPool/NPWrite", "0x042D 255", qos=0, retain=False
         )
+
+
+def test_every_entity_class_is_renamed_in_place() -> None:
+    """No NeoPool entity class makes core remove and re-add it on a rename.
+
+    Home Assistant 2026.11 changes entity ids in place unless a class of the
+    integration overrides a lifecycle method without async_entity_id_changed;
+    those classes carry @renamed_in_place. A new class that overrides
+    async_added_to_hass without it fails here.
+    """
+    import importlib  # noqa: PLC0415
+    import inspect  # noqa: PLC0415
+    import pkgutil  # noqa: PLC0415
+
+    import custom_components.sugar_valley_neopool as integration  # noqa: PLC0415
+    from homeassistant.helpers import entity as entity_helper  # noqa: PLC0415
+
+    checked = []
+    for module_info in pkgutil.iter_modules(integration.__path__):
+        module = importlib.import_module(f"{integration.__name__}.{module_info.name}")
+        for _, cls in inspect.getmembers(module, inspect.isclass):
+            if cls.__module__ == module.__name__ and issubclass(cls, entity_helper.Entity):
+                checked.append(cls)
+                assert entity_helper._entity_class_requires_readd(cls) is False, cls.__name__
+    assert len(checked) >= 18
+
+
+async def test_renamed_in_place_hook_delegates() -> None:
+    """The generated hook calls the base implementation and does nothing else."""
+    from unittest.mock import patch  # noqa: PLC0415
+
+    from custom_components.sugar_valley_neopool.entity import NeoPoolMQTTEntity  # noqa: PLC0415
+    from homeassistant.helpers.entity import Entity  # noqa: PLC0415
+
+    assert "async_entity_id_changed" in NeoPoolMQTTEntity.__dict__
+    entity = NeoPoolMQTTEntity.__new__(NeoPoolMQTTEntity)
+    with patch.object(Entity, "async_entity_id_changed") as base_hook:
+        NeoPoolMQTTEntity.async_entity_id_changed(entity, "sensor.old")
+    base_hook.assert_called_once_with("sensor.old")
