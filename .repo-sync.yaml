@@ -53,6 +53,11 @@ vars:
       url: https://tasmota.github.io/docs/NeoPool/
       about: Official Tasmota NeoPool documentation
 
+  # ── Dev dependencies ──
+  # Integration-specific packages appended to the shared dev extra / dev group
+  # that repo-sync renders into pyproject.toml.
+  dev_extra_requirements: []
+
 copy_files:
   - .gitattributes
   - .pymarkdownlint.json
