@@ -1,8 +1,8 @@
 {
   "domain": "sugar_valley_neopool",
   "name": "Sugar Valley NeoPool",
-  "categories": ["water.pools_spas"],
   "after_dependencies": ["recorder"],
+  "categories": ["water.pools_spas"],
   "codeowners": ["@alexdelprete"],
   "config_flow": true,
   "dependencies": ["mqtt"],
