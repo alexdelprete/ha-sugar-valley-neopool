@@ -634,7 +634,7 @@ was added alongside these tests when the persistent SENSOR watch
 landed.
 
 <!-- BEGIN SHARED:repo-sync -->
-<!-- Synced by repo-sync on 2026-11-06 -->
+<!-- Synced by repo-sync on 2026-11-21 -->
 
 <!--
 ==============================================================================
@@ -867,6 +867,11 @@ These repos are standardized on the **Python 3.14+** toolchain:
   to a config entry and the `async_entity_id_changed` hook; raise a consumer's floor
   when adopting those. Tests always run on the fleet-pinned `pytest-homeassistant`
   release, not on the floor.
+- `.python-version`: the exact Python Home Assistant core pins for that
+  `pytest-homeassistant` release. The template follows both automatically (daily
+  `follow-ha.yml`, merged after the fleet tests pass, then propagated); never edit either
+  by hand in a consumer. A Python minor bump (3.14 to 3.15) is a fleet migration done by
+  hand in the template.
 
 **Implication for source code**: code in these repos may use 3.14-only
 syntax (e.g. PEP 758's parenthesis-free `except A, B:`) and is **not**
