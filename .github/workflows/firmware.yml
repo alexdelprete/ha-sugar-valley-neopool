@@ -40,13 +40,15 @@ env:
 jobs:
   check:
     name: Check for a new Tasmota release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       build: ${{ steps.decide.outputs.build }}
       tag: ${{ steps.decide.outputs.tag }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Decide whether to build
         id: decide
@@ -84,7 +86,7 @@ jobs:
     name: Build ${{ matrix.env }}
     needs: check
     if: needs.check.outputs.build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     strategy:
       fail-fast: true
       matrix:
@@ -102,33 +104,35 @@ jobs:
             image: tasmota32s3-neopool
     steps:
       - name: Checkout this repository (build configuration)
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: integration
+          persist-credentials: false
 
       - name: Checkout Tasmota ${{ needs.check.outputs.tag }}
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: arendst/Tasmota
           ref: ${{ needs.check.outputs.tag }}
           path: tasmota-src
+          persist-credentials: false
 
       - name: Apply the NeoPool build configuration
         run: cp integration/firmware/tasmota/user_config_override.h tasmota-src/tasmota/user_config_override.h
 
       - name: Setup Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.13"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
 
       - name: Install pioarduino
         run: uv pip install --system "pioarduino==${PIOARDUINO_VERSION}"
 
       - name: Cache PlatformIO packages
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.platformio
           key: pio-${{ runner.os }}-${{ matrix.env }}-${{ needs.check.outputs.tag }}
@@ -144,7 +148,7 @@ jobs:
         run: platformio run -e ${{ matrix.env }}
 
       - name: Upload firmware
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ matrix.env }}
           path: tasmota-src/build_output/firmware/
@@ -153,17 +157,17 @@ jobs:
   publish:
     name: Publish to main
     needs: [check, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read  # the push uses WORKFLOW_PAT, which can bypass main's branch protection
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          token: ${{ secrets.WORKFLOW_PAT }}
+          persist-credentials: false
 
       - name: Download firmware
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           path: dl
 
@@ -257,6 +261,7 @@ jobs:
       - name: Commit and push to main
         env:
           TAG: ${{ needs.check.outputs.tag }}
+          WORKFLOW_PAT: ${{ secrets.WORKFLOW_PAT }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
@@ -269,6 +274,14 @@ jobs:
           git commit -m "chore(firmware): Tasmota NeoPool binaries ${TAG}" \
             -m "Automated build from the ${TAG} tag with firmware/tasmota/user_config_override.h." \
             -m "Offered by the update entity from available_from in firmware/manifest.json (+${HOLD_HOURS} h)."
+          # The checkout keeps no credentials: WORKFLOW_PAT (which can bypass main's branch protection)
+          # is handed only to the pull and push below, through git's environment config, so it is
+          # never written to .git/config nor shown on a command line.
+          auth=$(printf 'x-access-token:%s' "${WORKFLOW_PAT}" | base64 -w0)
+          echo "::add-mask::${auth}"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.https://github.com/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${auth}"
           # main may have moved during the build: rebase onto it before pushing (firmware/ only changes here)
           for attempt in 1 2 3; do
             git pull --rebase origin main && git push origin HEAD:main && exit 0
