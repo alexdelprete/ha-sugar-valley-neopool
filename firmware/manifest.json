@@ -3,21 +3,21 @@
   "tasmota_tag": "v16.0.0",
   "tasmota_codename": "Theo",
   "release_url": "https://github.com/arendst/Tasmota/releases/tag/v16.0.0",
-  "published_at": "2026-10-18T19:54:23Z",
-  "available_from": "2026-10-19T19:54:23Z",
+  "published_at": "2026-11-21T16:32:37Z",
+  "available_from": "2026-11-22T16:32:37Z",
   "builds": {
     "esp8266": {
       "env": "tasmota",
       "image": "tasmota-neopool",
       "ota": {
         "file": "NeoPool_ESP8266_tasmota.bin.gz",
-        "size": 480511,
-        "sha256": "4b407e81d0535975b1c44a39785e29bba6e2fb23e185133b29cf270a4745e612"
+        "size": 480495,
+        "sha256": "8df30cdb895f5583c7efcbb78ec6613a03d49d29a2e888e879145af1a71f43bf"
       },
       "serial": {
         "file": "NeoPool_ESP8266_tasmota.bin",
         "size": 683888,
-        "sha256": "cb0566a8c03ddd656a6785e4f67b1511cc56ee43206d558d2c477ff248d2a9fd"
+        "sha256": "b3d5b2cbda2a570b55cc204e559c927080662f0ae985e2789c0f8d22c9467656"
       }
     },
     "esp32": {
@@ -26,12 +26,12 @@
       "ota": {
         "file": "NeoPool_ESP32_tasmota32.bin",
         "size": 2231792,
-        "sha256": "1838eb10176f28163c7a503939bfda853643e8fc146f92057d4be877a9b2b0b6"
+        "sha256": "6c8ff5a2970f83b5fef0a16001285a67aa77b97f4b636c7dbfc3ddd21e5dec1d"
       },
       "factory": {
         "file": "NeoPool_ESP32_tasmota32.factory.bin",
         "size": 3149296,
-        "sha256": "c0dcf6295be7e8494a2c18267d2e933d4199cd53120ae29642279a864e6a2905"
+        "sha256": "4fce071cad49085b0a4105eb2631ce8168cf81bfb24db98a9ce0bb5391f55258"
       }
     },
     "esp32c3": {
@@ -40,12 +40,12 @@
       "ota": {
         "file": "NeoPool_ESP32C3_tasmota32c3.bin",
         "size": 2234224,
-        "sha256": "1cff34d1aeaea84a9b7e775ce1dbd75b1cb683f32b36c2f3c653dfd1cc5a498a"
+        "sha256": "bf3aeaad5fdac546cfcc4d8f7b25bb5936cd39b7f71f828a4ab897a886e430c6"
       },
       "factory": {
         "file": "NeoPool_ESP32C3_tasmota32c3.factory.bin",
         "size": 3151728,
-        "sha256": "60835c01d319fe7da7e5082116a9bb0316c3edbb989d891289cc1c0fe72a29f7"
+        "sha256": "b6f2c3b3e417982c53cfb9631c4dc9f1ad3e1fed61a602a6c051fba2603f5a1b"
       }
     },
     "esp32s3": {
@@ -54,12 +54,12 @@
       "ota": {
         "file": "NeoPool_ESP32S3_tasmota32s3.bin",
         "size": 2155536,
-        "sha256": "a413521f6291e3a4d3606c49658ea34d033e2e6cdc39c498e5f4d4c95df29864"
+        "sha256": "99a6176a6290e4a7b99f521743fcbb67b8578bee2402745356dbc17e229ff5e6"
       },
       "factory": {
         "file": "NeoPool_ESP32S3_tasmota32s3.factory.bin",
         "size": 3073040,
-        "sha256": "d5175cbd6c79a469f294949ccfc937635b4eb164a9ba3fb0a0a43684d0f6b5ce"
+        "sha256": "c6156ce7022899487421583d86b338fba1fa9119aede9b41a0a7c6f83b0b80b8"
       }
     }
   }
